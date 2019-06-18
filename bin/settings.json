@@ -1,0 +1,14 @@
+{
+    "learning_rate" : 0.0005,
+    "tackOn" : 0,
+    "L1_regularization" : 0,
+    "L2_regularization" : 0,
+    "learning_margin" : 0.05,
+    "testing_margin" : 0.2,
+    "nb_epoch" : 10000,
+    "weights_seed" : 0,
+    "dataset_seed": 666,
+    "dropOut" : 0,
+    "dropConnect" : 0,
+    "maxNorm" : 10000
+}
