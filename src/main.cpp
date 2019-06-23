@@ -16,6 +16,7 @@ using json = nlohmann::json;
 
 int main()
 {
+/*
     std::fstream settingFile("settings.json");
     json j = json::parse(settingFile);
 
@@ -29,6 +30,6 @@ int main()
     unsigned datasetSeed = j["dataset_seed"];
     double maxNorm = j["maxNorm"];
     // batchSize ?
-
+*/
     return 0;
 }

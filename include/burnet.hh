@@ -14,7 +14,8 @@
 namespace burnet
 {
 
-
+template <typename T>
+using Matrix = std::vector<std::vector<T>>;
 
 //=============================================================================
 //=============================================================================
@@ -114,6 +115,17 @@ double dot(std::vector<double> const& a, std::vector<double> const& b)
 }
 
 
+double dot(Matrix<double> const& a, Matrix<double> const& b)
+{
+    double result = 0;
+    for(unsigned i = 0; i < a.size(); i++)
+    {
+        result += dot(a[i], b[i]);
+    }
+    return result;
+}
+
+
 double distance(std::vector<double> const& a, std::vector<double> const& b, double order = 2)
 {
     if(a.size() != b.size())
@@ -130,6 +142,20 @@ double distance(std::vector<double> const& a, std::vector<double> const& b, doub
 }
 
 
+double distance(Matrix<double> const& a, Matrix<double> const& b, double order = 2)
+{
+    double result = 0;
+    for(unsigned i=0; i<a.size(); i++)
+    {
+        for(unsigned j=0; j<a[i].size(); j++)
+        {
+            result += std::pow((a[i][j] - b[i][j]), order);
+        }
+    }
+    return std::pow(result, 1/order);
+}
+
+
 double average(std::vector<double> const& a)
 {
     double sum = 0;
@@ -139,6 +165,61 @@ double average(std::vector<double> const& a)
     }
     return sum / a.size();
 }
+
+
+double average(Matrix<double> const& a)
+{
+    double sum = 0;
+    double nbElem = 0;
+    for(std::vector<double> const& b : a)
+    {
+        nbElem += b.size();
+        for(double val : b)
+        {
+            sum += val;
+        }
+    }
+    return sum / nbElem;
+}
+
+
+double absoluteSum(std::vector<double> const& vec)
+{
+    double result = 0;
+    for(double a : vec)
+        result += std::abs(a);
+    return result;
+}
+
+
+double absoluteSum(Matrix<double> const& vec)
+{
+    double result = 0;
+    for(std::vector<double> const& a : vec)
+        for(double val : a)
+            result += std::abs(val);
+    return result;
+}
+
+
+double quadraticSum(std::vector<double> const& vec)
+{
+    double result = 0;
+    for(double a : vec)
+        result += std::pow(a, 2);
+    return result;
+}
+
+
+double quadraticSum(Matrix<double> const& vec)
+{
+    double result = 0;
+    for(std::vector<double> a : vec)
+        for(double val : a)
+            result += std::pow(val, 2);
+    return result;
+}
+
 
 //=============================================================================
 //=============================================================================
@@ -156,7 +237,7 @@ class Aggregation //abstract class
 public:
     Aggregation(unsigned k):
     _k(k),
-    _weights(std::vector<std::vector<double>>()),
+    _weights(std::vector<Matrix<double>>()),
     _bias(std::vector<double>())
     {
         if (_k == 0)
@@ -165,7 +246,7 @@ public:
         }
     }
 
-    Aggregation(std::vector<std::vector<double>> const& weights, std::vector<double> const& bias):
+    Aggregation(std::vector<Matrix<double>> const& weights, std::vector<double> const& bias):
     _k(_weights.size()),
     _weights(weights),
     _bias(bias)
@@ -181,8 +262,8 @@ public:
     }
 
     virtual ~Aggregation();
-    virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs) = 0; //double is the result, unsigned is the index of the weight set used
-    virtual std::vector<double> prime(std::vector<double> const& inputs, unsigned index) = 0; //return derivatives according to each weight (weights from the index "index")
+    virtual std::pair<double, unsigned> aggregate(Matrix<double> const& inputs) = 0; //double is the result, unsigned is the index of the weight set used
+    virtual Matrix<double> prime(Matrix<double> const& inputs, unsigned index) = 0; //return derivatives according to each weight (weights from the index "index")
     virtual void learn(double gradient, double learningRate, double momentum) = 0;
 
     double k() const
@@ -190,7 +271,7 @@ public:
         return _k;
     }
 
-    std::vector<std::vector<double>> weights() const
+    std::vector<Matrix<double>> weights() const
     {
         return _weights;
     }
@@ -201,14 +282,14 @@ public:
     }
 
 private:
-    virtual std::pair<std::vector<double>&, double&> weightRef(unsigned index) final
+    virtual std::pair<Matrix<double>&, double&> weightRef(unsigned index) final
     {
         return {_weights[index], _bias[index]};
     }
 
 protected:
     unsigned const _k; // number of weight set
-    std::vector<std::vector<double>> _weights;
+    std::vector<Matrix<double>> _weights;
     std::vector<double> _bias;
 };
 
@@ -221,7 +302,7 @@ public:
     {
     }
 
-    Dot(std::vector<std::vector<double>> weights, std::vector<double> bias):
+    Dot(std::vector<Matrix<double>> weights, std::vector<double> bias):
     Aggregation(weights, bias)
     {
         if (_k > 1)
@@ -230,18 +311,13 @@ public:
         }
     }
 
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs)
+    std::pair<double, unsigned> aggregate(Matrix<double> const& inputs)
     {
-        double result = 0;
-        for(unsigned i = 0; i < _weights[0].size(); i++)
-        {
-            result += (_weights[0][i] * inputs[i]);
-        }
         return {dot(inputs, _weights[0]) + _bias[0], 0};
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] unsigned index)
+    Matrix<double> prime(Matrix<double> const& inputs, [[maybe_unused]] unsigned index)
     {
         return inputs;
     }
@@ -265,20 +341,23 @@ public:
     }
 
 
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs)
+    std::pair<double, unsigned> aggregate(Matrix<double> const& inputs)
     {
-        return {distance(inputs, _weights[0], _order), 0};
+        return {distance(inputs, _weights[0], _order) + _bias[0], 0};
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] unsigned index)
+    Matrix<double> prime(Matrix<double> const& inputs, [[maybe_unused]] unsigned index)
     {
         double a = std::pow(aggregate(inputs).first, (1-_order));
-        std::vector<double> result(_weights[0].size(), 0);
+        Matrix<double> result(_weights[0].size(), std::vector<double>(_weights[0][0].size(), 0));
 
         for(unsigned i = 0; i < _weights[0].size(); i++)
         {
-            result[i] += (-std::pow((inputs[i] - _weights[0][i]) + _bias[0], _order-1) * a);
+            for(unsigned j = 0; j < _weights[0][0].size(); j++)
+            {
+                result[i][j] += (-std::pow((inputs[i][j] - _weights[0][i][j]), _order-1) * a);
+            }
         }
         return result;
     }
@@ -304,8 +383,9 @@ public:
     }
 
 
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs)
+    std::pair<double, unsigned> aggregate(Matrix<double> const& inputs)
     {
+        //each index represents a weight set
         std::vector<double> dots(_k, 0);
 
         for(unsigned i = 0; i < _k; i++)
@@ -313,6 +393,7 @@ public:
             dots[i] = dot(inputs, _weights[i]) + _bias[i];
         }
 
+        //max and index of the max
         std::pair<double, unsigned> max = {dots[0], 0};
         for(unsigned i = 0; i < _k; i++)
         {
@@ -327,7 +408,7 @@ public:
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] unsigned index)
+    Matrix<double> prime(Matrix<double> const& inputs, [[maybe_unused]] unsigned index)
     {
         return inputs;
     }
@@ -627,13 +708,14 @@ protected:
 
 class Neuron
 {
-    double process(std::vector<double> const& inputs)
+public:
+    double process(Matrix<double> const& inputs)
     {
         return _Activation->activate(_Aggregation->aggregate(inputs).first);
     }
 
 
-    double processToLearn(std::vector<double> const& inputs)
+    double processToLearn(Matrix<double> const& inputs)
     {
         if(_currentFeature >= (_batchSize - 1))
         {
@@ -689,14 +771,20 @@ class Neuron
         _Activation->learn(average(_inputGradients), 0, 0);
         _Aggregation->learn(_averageActGradient, 0, 0);
 
+        //for each weight set
         for(unsigned i = 0; i < _Aggregation->k(); i++)
         {
-            std::pair<std::vector<double>&, double&> w = _Aggregation->weightRef(i);
+            std::pair<Matrix<double>&, double&> w = _Aggregation->weightRef(i);
             double gradient = average(_gradients[i]);
 
+            //for each line of the weight set
             for(unsigned j = 0; j < w.first.size(); j++)
             {
-                w.first[j] += (learningRate*(gradient + (L2*w.first[j]) + L1) + tackOn);
+                //for each column
+                for(unsigned k = 0; k < w.first[0].size(); k++)
+                {
+                    w.first[j][k] += (learningRate*(gradient + (L2*w.first[j][k]) + L1) + tackOn);
+                }
             }
             w.second += learningRate * gradient; // to divide by inputs
         }
@@ -734,9 +822,16 @@ protected:
 class Layer
 {
 public:
-    std::vector<double> process()
+    //2D output (because 2D layer)
+    std::vector<std::vector<double>> process(Matrix<double> const& inputs)
     {
-
+        for(unsigned y = 0; y < _neurons.size(); y++)
+        {
+             for(unsigned x = 0; x < _neurons.size(); x++)
+            {
+                _neurons[x][y].process(inputs);
+            }
+        }
     }
 
     std::vector<double> processToLearn()
@@ -755,6 +850,7 @@ public:
     }
 
 protected:
+    Matrix<Neuron> _neurons;
     double const _dropout;
     double const _dropconnect;
     double const _maxNorm;
