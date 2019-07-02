@@ -14,6 +14,23 @@ namespace burnet
 class Neuron
 {
 public:
+    Neuron(std::shared_ptr<Activation> const& act, std::shared_ptr<Aggregation> const& aggr, unsigned batchSize):
+    _Activation(act),
+    _Aggregation(aggr),
+    _batchSize(batchSize),
+    _currentFeature(0),
+    _inputs(),
+    _aggregResults(),
+    _activResults(),
+    _previousWeightUpdate(),
+    _previousBiasUpdate(),
+    _inputGradients(),
+    _averageActGradient(0),
+    _gradients()
+    {
+    }
+
+
     double process(std::vector<double> const& inputs)
     {
         return _Activation->activate(_Aggregation->aggregate(inputs).first);
@@ -22,11 +39,12 @@ public:
 
     double processToLearn(std::vector<double> const& inputs)
     {
-        if(_currentFeature >= (_batchSize - 1))
+        if(_currentFeature == (_batchSize - 1))
         {
             throw Exception("Batch size have been reashed, gradients must be calculated then parameters must be updated before processing new features.");
         }
         _currentFeature++;
+        _inputs[_currentFeature-1] = inputs;
         _aggregResults[_currentFeature-1] = _Aggregation->aggregate(inputs);
         _activResults[_currentFeature-1] = _Activation->activate(_aggregResults[_currentFeature-1].first);
         return _activResults[_currentFeature-1];
@@ -57,7 +75,7 @@ public:
         _gradients = std::vector<std::vector<double>>(_Aggregation->k(), std::vector<double>(_batchSize, 0));
 
         //storing new partial gradients
-        for(_currentFeature = 0; _currentFeature < _currentFeature; _currentFeature++)
+        for(_currentFeature = 0; _currentFeature < _batchSize; _currentFeature++)
         {
             _gradients[_aggregResults[_currentFeature].second][_currentFeature] = _aggregResults[_currentFeature].first * actGradients[_currentFeature];
         }
@@ -97,6 +115,7 @@ protected:
     unsigned const _batchSize;
 
     unsigned _currentFeature; // current feature number in mini-batch
+    std::vector<std::vector<double>> _inputs; // inputs for each feature
     std::vector<std::pair<double, unsigned>> _aggregResults; // results obtained by aggregation and weight set used, for each feature in the batch
     std::vector<double> _activResults; // results obtained by activation, for each feature in the batch
 

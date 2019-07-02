@@ -43,7 +43,7 @@ public:
     virtual std::vector<double> prime(std::vector<double> const& inputs, unsigned index) = 0; //return derivatives according to each weight (weights from the index "index")
     virtual void learn(double gradient, double learningRate, double momentum) = 0;
 
-    double k() const
+    unsigned k() const
     {
         return _k;
     }

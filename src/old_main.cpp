@@ -1,7 +1,7 @@
 //main.cpp
 
-#include "old.hh"
-#include "json.hh"
+#include "old/old.hh"
+#include "old/json.hh"
 
 
 #include <iostream>
