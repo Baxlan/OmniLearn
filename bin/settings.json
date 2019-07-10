@@ -5,10 +5,10 @@
     "L2_regularization" : 0,
     "learning_margin" : 0.05,
     "testing_margin" : 0.2,
-    "nb_epoch" : 1500,
+    "nb_epoch" : 300,
     "weights_seed" : 0,
     "dataset_seed": 666,
-    "dropOut" : 0,
-    "dropConnect" : 0,
+    "dropOut" : 0.4,
+    "dropConnect" : 0.4,
     "maxNorm" : 10000
 }

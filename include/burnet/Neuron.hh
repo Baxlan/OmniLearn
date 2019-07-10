@@ -5,126 +5,145 @@
 #include "Aggregation.hh"
 
 #include <memory>
+#include <type_traits>
 
 namespace burnet
 {
 
 
 
+template<typename Act_t, typename Aggr_t,
+typename = typename std::enable_if<
+std::is_base_of<Activation, Act_t>::value &&
+std::is_base_of<Aggregation, Aggr_t>::value,
+void>::type>
 class Neuron
 {
 public:
-    Neuron(std::shared_ptr<Activation> const& act, std::shared_ptr<Aggregation> const& aggr, unsigned batchSize):
-    _Activation(act),
-    _Aggregation(aggr),
-    _batchSize(batchSize),
-    _currentFeature(0),
+    Neuron(Act_t const& activation, Aggr_t const& aggregation):
+    _activation(activation),
+    _aggregation(aggregation),
+    _initialized(false),
+    _weights(),
+    _bias(),
     _inputs(),
     _aggregResults(),
-    _activResults(),
-    _previousWeightUpdate(),
-    _previousBiasUpdate(),
-    _inputGradients(),
-    _averageActGradient(0),
-    _gradients()
+    _actResults()
     {
     }
 
 
-    double process(std::vector<double> const& inputs)
+    Neuron(Act_t const& activation, Aggr_t const& aggregation, Matrix weights, std::vector<double> const& bias):
+    _activation(activation),
+    _aggregation(aggregation),
+    _initialized(true),
+    _weights(weights),
+    _bias(bias),
+    _inputs(),
+    _aggregResults(),
+    _actResults()
     {
-        return _Activation->activate(_Aggregation->aggregate(inputs).first);
     }
 
 
-    double processToLearn(std::vector<double> const& inputs)
+    void init(unsigned batchSize)
     {
-        if(_currentFeature == (_batchSize - 1))
-        {
-            throw Exception("Batch size have been reashed, gradients must be calculated then parameters must be updated before processing new features.");
-        }
-        _currentFeature++;
-        _inputs[_currentFeature-1] = inputs;
-        _aggregResults[_currentFeature-1] = _Aggregation->aggregate(inputs);
-        _activResults[_currentFeature-1] = _Activation->activate(_aggregResults[_currentFeature-1].first);
-        return _activResults[_currentFeature-1];
+        _aggregResults = std::vector<std::pair<double, unsigned>>(batchSize, {0.0, 0});
+        _actResults = std::vector<double>(batchSize, 0);
     }
 
 
-    void computeGradient(std::vector<double> inputGradients) //one input by feature in the batch
+    void initWeights()
     {
-        if(_currentFeature < (_batchSize - 1))
+        if(_initialized)
+            return;
+    }
+
+
+    //each line of the input matrix is a feature of the batch. Returns one result per feature.
+    std::vector<double> process(Matrix const& inputs)
+    {
+        std::vector<double> results(inputs.size(), 0);
+
+        for(unsigned i = 0; i < inputs.size(); i++)
         {
-            throw Exception("Calculating gradient but the batch size have not been reashed.");
+            results[i] = _activation.activate(_aggregation.aggregate(inputs[i], _weights, _bias).first);
         }
-        else if(_currentFeature > (_batchSize - 1))
+    }
+
+
+    //each line of the input matrix is a feature of the batch. Returns one result per feature.
+    std::vector<double> processToLearn(Matrix const& inputs)
+    {
+        _inputs = inputs;
+
+        //dropConnect
+        if(drop > std::numeric_limits<double>::epsilon())
         {
-            throw Exception("Calculating gradient but parameters have not be updated.");
+            double denominator = 1 - drop;
+            for(unsigned i=0; i<_inputs.size(); i++)
+            {
+                for(unsigned j=0; j<_inputs[0].size(); i++)
+                {
+                    if(dropDist(dropGen))
+                        _inputs[i][j] = 0;
+                    else
+                        _inputs[i][j] /= denominator;
+                }
+            }
         }
 
-        std::vector<double> actGradients(_batchSize, 0); //store gradients between activation and aggregation for each feature of the batch
-
-        for(_currentFeature = 0; _currentFeature < _batchSize; _currentFeature++)
+        //processing
+        for(unsigned i = 0; i < inputs.size(); i++)
         {
-            _inputGradients[_currentFeature] = inputGradients[_currentFeature];
-            actGradients[_currentFeature] = _inputGradients[_currentFeature] * _Activation->prime(_activResults[_currentFeature]); // * aggreg.prime ?
-            _averageActGradient = average(actGradients);
+            _aggregResults[i] = _aggregation.aggregate(inputs[i], _weights, _bias);
+            _actResults[i] = _activation.activate(_aggregResults[i].first);
         }
 
-        //setting all partial gradients on 0
-        _gradients = std::vector<std::vector<double>>(_Aggregation->k(), std::vector<double>(_batchSize, 0));
+        return _actResults;
+    }
 
-        //storing new partial gradients
-        for(_currentFeature = 0; _currentFeature < _batchSize; _currentFeature++)
-        {
-            _gradients[_aggregResults[_currentFeature].second][_currentFeature] = _aggregResults[_currentFeature].first * actGradients[_currentFeature];
-        }
 
-        _currentFeature++;
+    //one input gradient per feature
+    void computeGradient(std::vector<double> inputGradients)
+    {
+
     }
 
 
     void updateWeights(double learningRate, double L1, double L2, double tackOn, double maxNorm, double momentum)
     {
-        if(_currentFeature <= _batchSize - 1)
-        {
-            throw Exception("Updating parameters but gradients have not been calculated.");
-        }
 
-        _Activation->learn(average(_inputGradients), 0, 0);
-        _Aggregation->learn(_averageActGradient, 0, 0);
+    }
 
-        //for each weight set
-        for(unsigned i = 0; i < _Aggregation->k(); i++)
-        {
-            std::pair<std::vector<double>&, double&> w = _Aggregation->weightRef(i);
-            double gradient = average(_gradients[i]);
 
-            for(unsigned j = 0; j < w.first.size(); j++)
-            {
-                w.first[j] += (learningRate*(gradient + (L2*w.first[j]) + L1) + tackOn);
-            }
-            w.second += learningRate * gradient; // to divide by inputs
-        }
+    static initDropConnect(double dropConnect, unsigned seed)
+    {
+        drop = dropConnect;
+
+        if(seed == 0)
+            seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
+        dropGen = std::mt19937(seed);
+
+        dropDist = std::bernoulli_distribution(dropConnect);
     }
 
 protected:
-    std::shared_ptr<Activation> _Activation;   //should be a value but polymorphism is needed
-    std::shared_ptr<Aggregation> _Aggregation; //should be a value but polymorphism is needed
+    static double drop;
+    static std::mt19937 dropGen;
+    static std::bernoulli_distribution dropDist;
 
-    unsigned const _batchSize;
+    Act_t _activation;
+    Aggr_t _aggregation;
 
-    unsigned _currentFeature; // current feature number in mini-batch
-    std::vector<std::vector<double>> _inputs; // inputs for each feature
-    std::vector<std::pair<double, unsigned>> _aggregResults; // results obtained by aggregation and weight set used, for each feature in the batch
-    std::vector<double> _activResults; // results obtained by activation, for each feature in the batch
+    bool _initialized;
+    Matrix _weights;
+    std::vector<double> _bias;
 
-    std::vector<std::vector<double>> _previousWeightUpdate; // previous update aplied to each weight in each weight set
-    std::vector<double> _previousBiasUpdate; // previous update aplied to bias for each weight set
-    std::vector<double> _inputGradients; //for each feature of the batch, gradients entered from previous layers
-    double _averageActGradient; //averaged gradient over all features of the batch, between activation and aggregation
-    std::vector<std::vector<double>> _gradients; // partial gradient obtained for each feature of the batch and for each weight set
-    //weight set //feature //partial gradient
+    Matrix _inputs;
+    std::vector<std::pair<double, unsigned>> _aggregResults;
+    std::vector<double> _actResults;
+
 };
 
 

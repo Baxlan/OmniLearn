@@ -14,7 +14,6 @@ public:
 
 
 protected:
-    std::vector<Neuron> _neurons;
 
     double const _maxNorm;
 };

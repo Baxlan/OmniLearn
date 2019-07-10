@@ -1,12 +1,18 @@
 #ifndef BURNET_UTILITY_HH_
 #define BURNET_UTILITY_HH_
 
+#include <chrono>
 #include <exception>
+#include <random>
 #include <string>
 #include <vector>
 
 namespace burnet
 {
+
+
+
+typedef std::vector<std::vector<double>> Matrix;
 
 
 

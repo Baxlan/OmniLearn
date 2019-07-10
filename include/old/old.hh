@@ -275,6 +275,7 @@ public:
             std::bernoulli_distribution distribution(dropConnect); //uniform law
             for(unsigned i=0; i<_inputs.size(); i++)
             {
+                _inputs[i] /= (1-dropConnect);
                 if(distribution(generator))
                     _inputs[i] = 0;
             }

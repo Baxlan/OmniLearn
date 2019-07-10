@@ -10,64 +10,11 @@ namespace burnet
 
 class Aggregation //abstract class
 {
-    friend class Neuron;
 public:
-    Aggregation(unsigned k):
-    _k(k),
-    _weights(std::vector<std::vector<double>>()),
-    _bias(std::vector<double>())
-    {
-        if (_k == 0)
-        {
-            throw Exception("An aggregation structure must manage at least one wheight set.");
-        }
-    }
-
-    Aggregation(std::vector<std::vector<double>> const& weights, std::vector<double> const& bias):
-    _k(_weights.size()),
-    _weights(weights),
-    _bias(bias)
-    {
-        if (_k == 0)
-        {
-            throw Exception("An aggregation structure must handle at least one weight set.");
-        }
-        if (_weights.size() != _bias.size())
-        {
-            throw Exception("An aggregation structure must handle the same amount of weight set and bias.");
-        }
-    }
-
     virtual ~Aggregation();
-    virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs) = 0; //double is the result, unsigned is the index of the weight set used
-    virtual std::vector<double> prime(std::vector<double> const& inputs, unsigned index) = 0; //return derivatives according to each weight (weights from the index "index")
+    virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) = 0; //double is the result, unsigned is the index of the weight set used
+    virtual std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights, unsigned index) = 0; //return derivatives according to each weight (weights from the index "index")
     virtual void learn(double gradient, double learningRate, double momentum) = 0;
-
-    unsigned k() const
-    {
-        return _k;
-    }
-
-    std::vector<std::vector<double>> weights() const
-    {
-        return _weights;
-    }
-
-    std::vector<double> bias() const
-    {
-        return _bias;
-    }
-
-private:
-    virtual std::pair<std::vector<double>&, double&> weightRef(unsigned index) final
-    {
-        return {_weights[index], _bias[index]};
-    }
-
-protected:
-    unsigned const _k; // number of weight set
-    std::vector<std::vector<double>> _weights;
-    std::vector<double> _bias;
 };
 
 
@@ -85,26 +32,15 @@ protected:
 class Dot : public Aggregation
 {
 public:
-    Dot(): Aggregation(1)
+    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias)
     {
-    }
-
-    Dot(std::vector<std::vector<double>> weights, std::vector<double> bias):
-    Aggregation(weights, bias)
-    {
-        if (_k > 1)
-        {
-            throw Exception("The burnet::Dot aggregation structure must handle exactly one weight set.");
-        }
-    }
-
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs)
-    {
-        return {dot(inputs, _weights[0]) + _bias[0], 0};
+        if(weights.size() > 1)
+            throw Exception("Dot aggregation only requires one wheight set.");
+        return {dot(inputs, weights[0]) + bias[0], 0};
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] unsigned index)
+    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights, [[maybe_unused]] unsigned index)
     {
         return inputs;
     }
@@ -132,26 +68,27 @@ class Distance : public Aggregation
 {
 public:
     Distance(unsigned order = 2):
-    Aggregation(1),
     _order(order)
     {
     }
 
 
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs)
+    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias)
     {
-        return {distance(inputs, _weights[0], _order) + _bias[0], 0};
+        if(weights.size() > 1)
+            throw Exception("Distance aggregation only requires one wheight set.");
+        return {distance(inputs, weights[0], _order) + bias[0], 0};
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] unsigned index)
+    std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights, [[maybe_unused]] unsigned index)
     {
-        double a = std::pow(aggregate(inputs).first, (1-_order));
-        std::vector<double> result(_weights.size(), 0);
+        double a = std::pow(aggregate(inputs, {weights}, {0}).first, (1-_order));
+        std::vector<double> result(weights.size(), 0);
 
-        for(unsigned i = 0; i < _weights.size(); i++)
+        for(unsigned i = 0; i < weights.size(); i++)
         {
-          result[i] += (-std::pow((inputs[i] - _weights[0][i]), _order-1) * a);
+          result[i] += (-std::pow((inputs[i] - weights[i]), _order-1) * a);
         }
         return result;
     }
@@ -181,25 +118,22 @@ protected:
 class Maxout : public Aggregation
 {
 public:
-    Maxout(unsigned k):
-    Aggregation(k)
+    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias)
     {
-    }
+        if(weights.size() < 2)
+            throw Exception("Maxout aggregation requires multiple weight sets.");
 
-
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs)
-    {
         //each index represents a weight set
-        std::vector<double> dots(_k, 0);
+        std::vector<double> dots(weights.size(), 0);
 
-        for(unsigned i = 0; i < _k; i++)
+        for(unsigned i = 0; i < weights.size(); i++)
         {
-            dots[i] = dot(inputs, _weights[i]) + _bias[i];
+            dots[i] = dot(inputs, weights[i]) + bias[i];
         }
 
         //max and index of the max
         std::pair<double, unsigned> max = {dots[0], 0};
-        for(unsigned i = 0; i < _k; i++)
+        for(unsigned i = 0; i < dots.size(); i++)
         {
             if(dots[i] > max.first)
             {
@@ -212,7 +146,7 @@ public:
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] unsigned index)
+    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights, [[maybe_unused]] unsigned index)
     {
         return inputs;
     }
