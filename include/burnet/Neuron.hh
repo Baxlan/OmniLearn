@@ -69,7 +69,7 @@ public:
 
 
     //each line of the input matrix is a feature of the batch. Returns one result per feature.
-    std::vector<double> process(Matrix const& inputs)
+    std::vector<double> process(Matrix const& inputs) const
     {
         std::vector<double> results(inputs.size(), 0);
 
@@ -87,7 +87,7 @@ public:
         _inputs = inputs;
 
         //dropConnect
-        if(drop > std::numeric_limits<double>::epsilon())
+        if(dropConnect > std::numeric_limits<double>::epsilon())
         {
             for(unsigned i=0; i<_inputs.size(); i++)
             {
@@ -96,7 +96,7 @@ public:
                     if(dropDist(dropGen))
                         _inputs[i][j] = 0;
                     else
-                        _inputs[i][j] /= (1 - drop);
+                        _inputs[i][j] /= (1 - dropConnect);
                 }
             }
         }
@@ -116,26 +116,26 @@ public:
     void computeGradient(std::vector<double> inputGradients)
     {
         _inputGradients = inputGradients;
-        std::vector<unsigned> setContrib(_weights.size(), 0); //store the amount of feature that passed through each weight set
+        std::vector<unsigned> setCount(_weights.size(), 0); //store the amount of feature that passed through each weight set
 
         for(unsigned feature = 0; feature < _actResults.size(); feature++)
         {
-            _actGradients[feature] = _activation.prime(_actResults[feature]);
+            _actGradients[feature] = _activation.prime(_actResults[feature]) * _inputGradients[feature];
             std::vector<double> grad(_aggregation.prime(_inputs[feature], _weights[_aggregResults[feature].second]));
 
             for(unsigned i = 0; i < grad.size(); i++)
             {
                 _gradients[_aggregResults[feature].second][i] += (_actGradients[feature]*grad[i]);
             }
-            setContrib[_aggregResults[feature].second]++;
+            setCount[_aggregResults[feature].second]++;
         }
 
-        //average gradients ofer features
+        //average gradients over features
         for(unsigned i = 0; i < _gradients.size(); i++)
         {
             for(unsigned j = 0; j < _gradients[0].size(); j++)
             {
-                _gradients[i][j] /= setContrib[i];
+                _gradients[i][j] /= setCount[i];
             }
         }
     }
@@ -158,31 +158,48 @@ public:
         averageActGrad /= _actGradients.size();
 
         _activation.learn(averageInputGrad, learningRate, momentum);
-        _aggregation.learn(averageActGrad*averageInputGrad, learningRate, momentum);
+        _aggregation.learn(averageActGrad, learningRate, momentum);
 
         for(unsigned i = 0; i < _weights.size(); i++)
         {
             for(unsigned j = 0; j < _weights[0].size(); j++)
             {
-                _weights[i][j] += (learningRate*(_gradients[i][j] * averageInputGrad + L2 * _weights[i][j] + L1) + tackOn);
+                _weights[i][j] += (learningRate*(_gradients[i][j] + (L2 * _weights[i][j]) + L1) + tackOn);
             }
         }
     }
 
 
-    static void initDropConnect(double dropConnect, unsigned seed)
+    //one gradient per input
+    std::vector<double> getGradients() const
     {
-        drop = dropConnect;
+        std::vector<double> grad(_weights[0].size(), 0);
+
+        for(unsigned i = 0; i < _weights.size(); i++)
+        {
+            for(unsigned j = 0; j < _weights[0].size(); j++)
+            {
+                grad[j] += _gradients[i][j] * _weights[i][j];
+            }
+        }
+        return grad;
+    }
+
+
+    static void initDropConnect(double dropCo, unsigned seed)
+    {
+        dropConnect = dropCo;
 
         if(seed == 0)
             seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
         dropGen = std::mt19937(seed);
 
-        dropDist = std::bernoulli_distribution(dropConnect);
+        dropDist = std::bernoulli_distribution(dropCo);
     }
 
+
 protected:
-    static double drop;
+    static double dropConnect;
     static std::mt19937 dropGen;
     static std::bernoulli_distribution dropDist;
 

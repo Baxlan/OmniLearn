@@ -13,8 +13,8 @@ class Activation
 {
 public:
     virtual ~Activation();
-    virtual double activate(double val) = 0;
-    virtual double prime(double val) = 0;
+    virtual double activate(double val) const = 0;
+    virtual double prime(double val) const = 0;
     virtual void learn(double gradient, double learningRate, double momentum) = 0;
 };
 
@@ -32,12 +32,12 @@ public:
 
 class Linear : public Activation
 {
-    double activate(double val)
+    double activate(double val) const
     {
         return val;
     }
 
-    double prime([[maybe_unused]] double val)
+    double prime([[maybe_unused]] double val) const
     {
         return 1;
     }
@@ -62,12 +62,12 @@ class Linear : public Activation
 
 class Sigmoid : public Activation
 {
-    double activate(double val)
+    double activate(double val) const
     {
         return 1 / (1 + std::exp(-val));
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return val * (1 - val);
     }
@@ -92,12 +92,12 @@ class Sigmoid : public Activation
 
 class  Tanh : public Activation
 {
-    double activate(double val)
+    double activate(double val) const
     {
         return std::tanh(val);
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return -1/std::pow(std::cosh(val),2);
     }
@@ -122,12 +122,12 @@ class  Tanh : public Activation
 
 class Softplus : public Activation
 {
-    double activate(double val)
+    double activate(double val) const
     {
         return std::log(std::exp(val) + 1);
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return 1 / (1 + std::exp(-val));
     }
@@ -156,12 +156,12 @@ class Relu : public Activation
     {
     }
 
-    double activate(double val)
+    double activate(double val) const
     {
         return (val < 0 ? _coef*val : val);
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return (val < 0 ? _coef : 1);
     }
@@ -193,12 +193,12 @@ class Prelu : public Activation
     {
     }
 
-    double activate(double val)
+    double activate(double val) const
     {
         return (val < 0 ? _coef*val : val);
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return (val < 0 ? _coef : 1);
     }
@@ -230,12 +230,12 @@ class Elu : public Activation
     {
     }
 
-    double activate(double val)
+    double activate(double val) const
     {
         return (val < 0 ? _coef*(std::exp(val)-1) : val);
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return (val < 0 ? _coef * std::exp(val) : 1);
     }
@@ -267,12 +267,12 @@ class Pelu : public Activation
     {
     }
 
-    double activate(double val)
+    double activate(double val) const
     {
         return (val < 0 ? _coef*(std::exp(val)-1) : val);
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return (val < 0 ? _coef * std::exp(val) : 1);
     }
@@ -324,12 +324,12 @@ protected:
 
 class Gauss : public Activation
 {
-    double activate(double val)
+    double activate(double val) const
     {
         return std::exp(-std::pow(val, 2));
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         return -2 * val * std::exp(-std::pow(val, 2));
     }
@@ -368,7 +368,7 @@ class Gauss : public Activation
 
 class Softexp : public Activation
 {
-    double activate(double val)
+    double activate(double val) const
     {
         if(_coef < 0)
             return -std::log(1-(_coef*(val + _coef))) / _coef;
@@ -378,7 +378,7 @@ class Softexp : public Activation
             return ((std::exp(_coef * val) - 1) / _coef) + _coef;
     }
 
-    double prime(double val)
+    double prime(double val) const
     {
         if(_coef < 0)
             return (_coef < 0 ? 1 / (1 - (_coef * (_coef + val))) : std::exp(_coef * val));

@@ -12,8 +12,8 @@ class Aggregation //abstract class
 {
 public:
     virtual ~Aggregation();
-    virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) = 0; //double is the result, unsigned is the index of the weight set used
-    virtual std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights) = 0; //return derivatives according to each weight (weights from the index "index")
+    virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const = 0; //double is the result, unsigned is the index of the weight set used
+    virtual std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual void learn(double gradient, double learningRate, double momentum) = 0;
 };
 
@@ -32,7 +32,7 @@ public:
 class Dot : public Aggregation
 {
 public:
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias)
+    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const
     {
         if(weights.size() > 1)
             throw Exception("Dot aggregation only requires one weight set.");
@@ -40,7 +40,7 @@ public:
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights)
+    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights) const
     {
         return inputs;
     }
@@ -73,7 +73,7 @@ public:
     }
 
 
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias)
+    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const
     {
         if(weights.size() > 1)
             throw Exception("Distance aggregation only requires one weight set.");
@@ -81,7 +81,7 @@ public:
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights)
+    std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights) const
     {
         double a = std::pow(aggregate(inputs, {weights}, {0}).first, (1-_order));
         std::vector<double> result(weights.size(), 0);
@@ -118,7 +118,7 @@ protected:
 class Maxout : public Aggregation
 {
 public:
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias)
+    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const
     {
         if(weights.size() < 2)
             throw Exception("Maxout aggregation requires multiple weight sets.");
@@ -146,7 +146,7 @@ public:
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights)
+    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights) const
     {
         return inputs;
     }
