@@ -3,7 +3,7 @@
 #ifndef BURNET_BURNET_HH_
 #define BURNET_BURNET_HH_
 
-#include "Layer.hh"
+#include "Network.hh"
 
 namespace burnet
 {

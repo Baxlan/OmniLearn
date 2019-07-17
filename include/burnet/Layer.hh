@@ -7,16 +7,32 @@ namespace burnet
 {
 
 
+class ILayer
+{
+    virtual ~ILayer();
+    virtual Matrix process(Matrix const& inputs) const = 0;
+    virtual Matrix processToLearn(Matrix const& inputs) = 0;
+    virtual std::vector<double> getGradients() = 0;
+};
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== LAYER ===================================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
 
 template<typename Act_t, typename Aggr_t,
 typename = typename std::enable_if<
 std::is_base_of<Activation, Act_t>::value &&
 std::is_base_of<Aggregation, Aggr_t>::value,
 void>::type>
-class Layer
+class Layer : public ILayer
 {
 public:
-    Matrix process(Matrix const& inputs)
+    Matrix process(Matrix const& inputs) const
     {
         Matrix output(inputs.size(), {inputs[0].size(), 0});
         for(unsigned i = 0; i < _neurons.size(); i++)
