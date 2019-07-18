@@ -13,6 +13,25 @@ class ILayer
     virtual Matrix process(Matrix const& inputs) const = 0;
     virtual Matrix processToLearn(Matrix const& inputs) = 0;
     virtual std::vector<double> getGradients() = 0;
+    virtual unsigned size() const = 0;
+
+
+    static void initDropout(double drop, unsigned seed)
+    {
+        dropout = drop;
+
+        if(seed == 0)
+            seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
+        dropGen = std::mt19937(seed);
+
+        dropDist = std::bernoulli_distribution(drop);
+    }
+
+
+protected:
+    static double dropout;
+    static std::mt19937 dropGen;
+    static std::bernoulli_distribution dropDist;
 };
 
 
@@ -24,6 +43,7 @@ class ILayer
 //=============================================================================
 //=============================================================================
 
+
 template<typename Act_t, typename Aggr_t,
 typename = typename std::enable_if<
 std::is_base_of<Activation, Act_t>::value &&
@@ -32,6 +52,14 @@ void>::type>
 class Layer : public ILayer
 {
 public:
+    Layer(unsigned inputSize, LayerParam const& param, std::vector<Neuron<Act_t, Aggr_t>> neurons = std::vector<Neuron<Act_t, Aggr_t>>()):
+    _inputSize(inputSize),
+    _maxNorm(param.maxNorm),
+    _neurons(neurons)
+    {
+    }
+
+
     Matrix process(Matrix const& inputs) const
     {
         Matrix output(inputs.size(), {inputs[0].size(), 0});
@@ -86,22 +114,13 @@ public:
     }
 
 
-    static void initDropout(double drop, unsigned seed)
+    unsigned size() const
     {
-        dropout = drop;
-
-        if(seed == 0)
-            seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        dropGen = std::mt19937(seed);
-
-        dropDist = std::bernoulli_distribution(drop);
+        return _neurons.size();
     }
 
 
 protected:
-    static double dropout;
-    static std::mt19937 dropGen;
-    static std::bernoulli_distribution dropDist;
 
     unsigned const _inputSize;
     double const _maxNorm;

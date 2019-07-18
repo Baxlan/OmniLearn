@@ -120,6 +120,48 @@ double quadraticSum(std::vector<double> const& vec)
 
 
 
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== HYPERPARAMETERS =========================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+struct LayerParam
+{
+    double maxNorm;
+};
+
+
+struct NetworkParam
+{
+    NetworkParam():
+    batchSize(1),
+    learningRate(0.0005),
+    maxEpoch(1500),
+    epochAfterOptimal(100),
+    dropout(0.2),
+    dropconnect(0),
+    validationRatio(0.2),
+    testRatio(0.2)
+    {
+    }
+
+    unsigned batchSize;
+    double learningRate;
+    unsigned maxEpoch;
+    unsigned epochAfterOptimal;
+    double dropout;
+    double dropconnect;
+    double validationRatio;
+    double testRatio;
+};
+
+
+
 } //namespace burnet
 
 #endif //BURNET_UTILITY_HH_

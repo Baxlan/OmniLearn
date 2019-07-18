@@ -175,6 +175,19 @@ public:
                 _weights[i][j] += (learningRate*(_gradients[i][j] + (L2 * _weights[i][j]) + L1) + tackOn);
             }
         }
+
+        //max norm constraint
+        for(unsigned i = 0; i < _weights.size(); i++)
+        {
+            double norm = std::sqrt(quadraticSum(_weights[i]));
+            if(maxNorm > 0 && norm > maxNorm)
+            {
+                for(unsigned j=0; j<_weights[i].size(); j++)
+                {
+                    _weights[i][j] *= (maxNorm/norm);
+                }
+            }
+        }
     }
 
 
