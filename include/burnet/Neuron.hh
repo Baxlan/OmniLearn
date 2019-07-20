@@ -60,19 +60,43 @@ public:
     }
 
 
-    void init(unsigned batchSize)
+    void init(Distrib distrib, double distVal1, double distVal2, unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, unsigned k)
     {
         _aggregResults = std::vector<std::pair<double, unsigned>>(batchSize, {0.0, 0});
         _actResults = std::vector<double>(batchSize, 0);
         _actGradients = std::vector<double>(batchSize, 0);
-    }
-
-
-    void initWeights()
-    {
-        if(_initialized)
-            return;
-        //init _weights, _inputGradients and _gradients (size)
+        _inputGradients = std::vector<double>(nbOutputs, 0);
+        if(!_initialized)
+        {
+            _weights = Matrix(k, {nbInputs, 0});
+            _bias = std::vector<double>(k, 0);
+        }
+        _gradients = _weights;
+        if(distrib == Distrib::Normal)
+        {
+            double deviation = std::sqrt(distVal2 / (nbInputs + nbOutputs));
+            std::normal_distribution<double> normalDist(distVal1, deviation);
+            for(unsigned i = 0; i < _weights.size(); i++)
+            {
+                for(unsigned j = 0; j < _weights[0].size(); j++)
+                {
+                    _weights[i][j] = normalDist(weightGen);
+                }
+            }
+        }
+        else if(distrib == Distrib::Uniform)
+        {
+            double boundary = std::sqrt(distVal2 / (nbInputs + nbOutputs));
+            std::uniform_real_distribution<double> uniformDist(-boundary, boundary);
+            for(unsigned i = 0; i < _weights.size(); i++)
+            {
+                for(unsigned j = 0; j < _weights[0].size(); j++)
+                {
+                    _weights[i][j] = uniformDist(weightGen);
+                }
+            }
+        }
+        _initialized = true;
     }
 
 
@@ -207,19 +231,28 @@ public:
     }
 
 
-    static void initDropConnect(double dropCo, unsigned seed)
+    static void initRandom(unsigned dropCoSeed, double dropCo, unsigned wSeed)
     {
         dropConnect = dropCo;
 
-        if(seed == 0)
-            seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        dropGen = std::mt19937(seed);
+        if(dropCoSeed == 0)
+            dropCoSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
+        dropGen = std::mt19937(dropCoSeed);
+        dropSeed = dropCoSeed;
 
         dropDist = std::bernoulli_distribution(dropCo);
+
+        if(wSeed == 0)
+            wSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
+        weightGen = std::mt19937(wSeed);
+        weightSeed = wSeed;
     }
 
 
 protected:
+    static unsigned weightSeed;
+    static std::mt19937 weightGen;
+    static unsigned dropSeed;
     static double dropConnect;
     static std::mt19937 dropGen;
     static std::bernoulli_distribution dropDist;

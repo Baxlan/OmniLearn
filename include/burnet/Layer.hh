@@ -9,26 +9,30 @@ namespace burnet
 
 class ILayer
 {
+public:
     virtual ~ILayer();
     virtual Matrix process(Matrix const& inputs) const = 0;
     virtual Matrix processToLearn(Matrix const& inputs) = 0;
     virtual std::vector<double> getGradients() = 0;
     virtual unsigned size() const = 0;
+    virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
 
 
-    static void initDropout(double drop, unsigned seed)
+    static void initDropout(unsigned seed, double drop)
     {
         dropout = drop;
 
         if(seed == 0)
             seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
         dropGen = std::mt19937(seed);
+        dropoutSeed = seed;
 
         dropDist = std::bernoulli_distribution(drop);
     }
 
 
 protected:
+    static double dropoutSeed;
     static double dropout;
     static std::mt19937 dropGen;
     static std::bernoulli_distribution dropDist;
@@ -52,10 +56,13 @@ void>::type>
 class Layer : public ILayer
 {
 public:
-    Layer(unsigned inputSize, LayerParam const& param, std::vector<Neuron<Act_t, Aggr_t>> neurons = std::vector<Neuron<Act_t, Aggr_t>>()):
-    _inputSize(inputSize),
+    Layer(LayerParam const& param, std::vector<Neuron<Act_t, Aggr_t>> neurons = std::vector<Neuron<Act_t, Aggr_t>>()):
+    _distrib(param.distrib),
+    _distVal1(param.distribVal1),
+    _distVal1(param.distribVal2),
     _maxNorm(param.maxNorm),
-    _neurons(neurons)
+    _k(param.k),
+    _neurons(neurons.size() == 0 ? std::vector<Neuron<Act_t, Aggr_t>>(param.size) : neurons)
     {
     }
 
@@ -120,10 +127,23 @@ public:
     }
 
 
+    void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize)
+    {
+        _inputSize = nbInputs;
+        for(unsigned i = 0; i < size(); i++)
+        {
+            _neurons[i].init(_distrib, _distVal1, _distVal2, nbInputs, nbOutputs, batchSize, _k);
+        }
+    }
+
 protected:
 
     unsigned const _inputSize;
+    Distrib _distrib;
+    double _distVal1; //mean (if uniform), boundary (if uniform)
+    double _distVal2; //deviation (if normal) or useless (if uniform)
     double const _maxNorm;
+    unsigned _k; //number of weight set for each neuron
     std::vector<Neuron<Act_t, Aggr_t>> _neurons;
 };
 

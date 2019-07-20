@@ -13,7 +13,7 @@ namespace burnet
 
 
 typedef std::vector<std::vector<double>> Matrix;
-
+enum class Distrib {Uniform, Normal};
 
 
 //=============================================================================
@@ -132,13 +132,29 @@ double quadraticSum(std::vector<double> const& vec)
 
 struct LayerParam
 {
+    LayerParam():
+    size(8),
+    maxNorm(0),
+    distrib(Distrib::Normal),
+    distribVal1(distrib == Distrib::Normal ? 0 : 6),
+    distribVal2(2),
+    k(1)
+    {
+    }
+
+    unsigned size; //number of neurons
     double maxNorm;
+    Distrib distrib;
+    double distribVal1; //mean (if uniform), boundary (if uniform)
+    double distribVal2; //deviation (if normal) or useless (if uniform)
+    unsigned k; //number of weight set for each neuron
 };
 
 
 struct NetworkParam
 {
     NetworkParam():
+    dataSeed(0),
     batchSize(1),
     learningRate(0.0005),
     maxEpoch(1500),
@@ -150,6 +166,7 @@ struct NetworkParam
     {
     }
 
+    unsigned dataSeed;
     unsigned batchSize;
     double learningRate;
     unsigned maxEpoch;
