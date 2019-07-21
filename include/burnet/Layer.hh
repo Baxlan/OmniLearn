@@ -10,7 +10,7 @@ namespace burnet
 class ILayer
 {
 public:
-    virtual ~ILayer();
+    virtual ~ILayer(){}
     virtual Matrix process(Matrix const& inputs) const = 0;
     virtual Matrix processToLearn(Matrix const& inputs) = 0;
     virtual std::vector<double> getGradients() = 0;
@@ -38,6 +38,11 @@ protected:
     static std::bernoulli_distribution dropDist;
 };
 
+inline double ILayer::dropoutSeed = 0;
+inline double ILayer::dropout = 0;
+inline std::mt19937 ILayer::dropGen = std::mt19937();
+inline std::bernoulli_distribution ILayer::dropDist = std::bernoulli_distribution();
+
 
 //=============================================================================
 //=============================================================================
@@ -48,7 +53,7 @@ protected:
 //=============================================================================
 
 
-template<typename Act_t, typename Aggr_t,
+template<typename Aggr_t = Dot, typename Act_t = Relu,
 typename = typename std::enable_if<
 std::is_base_of<Activation, Act_t>::value &&
 std::is_base_of<Aggregation, Aggr_t>::value,
@@ -56,23 +61,24 @@ void>::type>
 class Layer : public ILayer
 {
 public:
-    Layer(LayerParam const& param, std::vector<Neuron<Act_t, Aggr_t>> neurons = std::vector<Neuron<Act_t, Aggr_t>>()):
+    Layer(LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
+    _inputSize(0),
     _distrib(param.distrib),
     _distVal1(param.distribVal1),
-    _distVal1(param.distribVal2),
+    _distVal2(param.distribVal2),
     _maxNorm(param.maxNorm),
     _k(param.k),
-    _neurons(neurons.size() == 0 ? std::vector<Neuron<Act_t, Aggr_t>>(param.size) : neurons)
+    _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
     {
     }
 
 
     Matrix process(Matrix const& inputs) const
     {
-        Matrix output(inputs.size(), {inputs[0].size(), 0});
+        Matrix output(inputs.size(), std::vector<double>(inputs[0].size(), 0));
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            std::vector<double> result = _neurons.process(inputs);
+            std::vector<double> result = _neurons[i].process(inputs);
             for(unsigned j = 0; j < result.size(); j++)
             {
                 output[j][i] = result[j];
@@ -84,10 +90,10 @@ public:
 
     Matrix processToLearn(Matrix const& inputs)
     {
-        Matrix output(inputs.size(), {inputs[0].size(), 0});
+        Matrix output(inputs.size(), std::vector<double>(inputs[0].size(), 0));
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            std::vector<double> result = _neurons.processToLearn(inputs);
+            std::vector<double> result = _neurons[i].processToLearn(inputs);
             for(unsigned j = 0; j < result.size(); j++)
             {
                 output[j][i] = result[j];
@@ -138,13 +144,13 @@ public:
 
 protected:
 
-    unsigned const _inputSize;
+    unsigned _inputSize;
     Distrib _distrib;
     double _distVal1; //mean (if uniform), boundary (if uniform)
     double _distVal2; //deviation (if normal) or useless (if uniform)
     double const _maxNorm;
     unsigned _k; //number of weight set for each neuron
-    std::vector<Neuron<Act_t, Aggr_t>> _neurons;
+    std::vector<Neuron<Aggr_t, Act_t>> _neurons;
 };
 
 

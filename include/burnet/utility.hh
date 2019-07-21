@@ -14,6 +14,7 @@ namespace burnet
 
 typedef std::vector<std::vector<double>> Matrix;
 enum class Distrib {Uniform, Normal};
+typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 
 //=============================================================================

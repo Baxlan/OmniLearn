@@ -11,6 +11,43 @@ namespace burnet
 {
 
 
+class INeuron
+{
+public:
+    static void initRandom(unsigned dropCoSeed, double dropCo, unsigned wSeed)
+    {
+        dropConnect = dropCo;
+
+        if(dropCoSeed == 0)
+            dropCoSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
+        dropGen = std::mt19937(dropCoSeed);
+        dropSeed = dropCoSeed;
+
+        dropDist = std::bernoulli_distribution(dropCo);
+
+        if(wSeed == 0)
+            wSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
+        weightGen = std::mt19937(wSeed);
+        weightSeed = wSeed;
+    }
+
+protected:
+    static unsigned weightSeed;
+    static std::mt19937 weightGen;
+    static unsigned dropSeed;
+    static double dropConnect;
+    static std::mt19937 dropGen;
+    static std::bernoulli_distribution dropDist;
+};
+
+inline unsigned INeuron::weightSeed = 0;
+inline std::mt19937 INeuron::weightGen = std::mt19937();
+inline unsigned INeuron::dropSeed = 0;
+inline double INeuron::dropConnect = 0;
+inline std::mt19937 INeuron::dropGen = std::mt19937();
+inline std::bernoulli_distribution INeuron::dropDist = std::bernoulli_distribution();
+
+
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -20,20 +57,19 @@ namespace burnet
 //=============================================================================
 
 
-template<typename Act_t, typename Aggr_t,
+template<typename Aggr_t = Dot, typename Act_t = Relu,
 typename = typename std::enable_if<
 std::is_base_of<Activation, Act_t>::value &&
 std::is_base_of<Aggregation, Aggr_t>::value,
 void>::type>
-class Neuron
+class Neuron : public INeuron
 {
 public:
-    Neuron(Act_t const& activation, Aggr_t const& aggregation):
-    _activation(activation),
+    Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix weights = Matrix(), std::vector<double> const& bias = std::vector<double>()):
     _aggregation(aggregation),
-    _initialized(false),
-    _weights(),
-    _bias(0),
+    _activation(activation),
+    _weights(weights),
+    _bias(bias),
     _inputs(),
     _aggregResults(),
     _actResults(),
@@ -44,31 +80,15 @@ public:
     }
 
 
-    Neuron(Act_t const& activation, Aggr_t const& aggregation, Matrix weights, std::vector<double> const& bias):
-    _activation(activation),
-    _aggregation(aggregation),
-    _initialized(true),
-    _weights(weights),
-    _bias(bias),
-    _inputs(),
-    _aggregResults(),
-    _actResults(),
-    _inputGradients(),
-    _actGradients(),
-    _gradients(Matrix(weights.size(), std::vector<double>(weights[0].size(), 0)))
-    {
-    }
-
-
     void init(Distrib distrib, double distVal1, double distVal2, unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, unsigned k)
     {
         _aggregResults = std::vector<std::pair<double, unsigned>>(batchSize, {0.0, 0});
         _actResults = std::vector<double>(batchSize, 0);
         _actGradients = std::vector<double>(batchSize, 0);
         _inputGradients = std::vector<double>(nbOutputs, 0);
-        if(!_initialized)
+        if(_weights.size() == 0)
         {
-            _weights = Matrix(k, {nbInputs, 0});
+            _weights = Matrix(k, std::vector<double>(nbInputs, 0));
             _bias = std::vector<double>(k, 0);
         }
         _gradients = _weights;
@@ -96,7 +116,6 @@ public:
                 }
             }
         }
-        _initialized = true;
     }
 
 
@@ -231,36 +250,10 @@ public:
     }
 
 
-    static void initRandom(unsigned dropCoSeed, double dropCo, unsigned wSeed)
-    {
-        dropConnect = dropCo;
-
-        if(dropCoSeed == 0)
-            dropCoSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        dropGen = std::mt19937(dropCoSeed);
-        dropSeed = dropCoSeed;
-
-        dropDist = std::bernoulli_distribution(dropCo);
-
-        if(wSeed == 0)
-            wSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        weightGen = std::mt19937(wSeed);
-        weightSeed = wSeed;
-    }
-
-
 protected:
-    static unsigned weightSeed;
-    static std::mt19937 weightGen;
-    static unsigned dropSeed;
-    static double dropConnect;
-    static std::mt19937 dropGen;
-    static std::bernoulli_distribution dropDist;
-
-    Act_t _activation;
     Aggr_t _aggregation;
+    Act_t _activation;
 
-    bool _initialized;
     Matrix _weights;
     std::vector<double> _bias;
 

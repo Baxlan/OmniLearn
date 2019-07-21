@@ -12,7 +12,7 @@ namespace burnet
 class Activation
 {
 public:
-    virtual ~Activation();
+    virtual ~Activation(){}
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
     virtual void learn(double gradient, double learningRate, double momentum) = 0;
@@ -32,6 +32,7 @@ public:
 
 class Linear : public Activation
 {
+public:
     double activate(double val) const
     {
         return val;
@@ -62,6 +63,7 @@ class Linear : public Activation
 
 class Sigmoid : public Activation
 {
+public:
     double activate(double val) const
     {
         return 1 / (1 + std::exp(-val));
@@ -92,6 +94,7 @@ class Sigmoid : public Activation
 
 class  Tanh : public Activation
 {
+public:
     double activate(double val) const
     {
         return std::tanh(val);
@@ -122,6 +125,7 @@ class  Tanh : public Activation
 
 class Softplus : public Activation
 {
+public:
     double activate(double val) const
     {
         return std::log(std::exp(val) + 1);
@@ -152,6 +156,7 @@ class Softplus : public Activation
 
 class Relu : public Activation
 {
+public:
     Relu(double coef = 0) : _coef(coef)
     {
     }
@@ -189,6 +194,7 @@ protected:
 
 class Prelu : public Activation
 {
+public:
     Prelu(double coef = 0) : _coef(coef)
     {
     }
@@ -226,6 +232,7 @@ protected:
 
 class Elu : public Activation
 {
+public:
     Elu(double coef = 0) : _coef(coef)
     {
     }
@@ -263,6 +270,7 @@ protected:
 
 class Pelu : public Activation
 {
+public:
     Pelu(double coef = 0) : _coef(coef)
     {
     }
@@ -301,6 +309,7 @@ protected:
 // if there are two hinges, then this is S-shaped rectified linear unit (Srelu)
 class Srelu : public Activation
 {
+public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
     {
         //nothing to learn
@@ -324,6 +333,7 @@ protected:
 
 class Gauss : public Activation
 {
+public:
     double activate(double val) const
     {
         return std::exp(-std::pow(val, 2));
@@ -368,6 +378,7 @@ class Gauss : public Activation
 
 class Softexp : public Activation
 {
+public:
     double activate(double val) const
     {
         if(_coef < 0)

@@ -20,7 +20,7 @@ namespace burnet
 class Network
 {
 public:
-  Network(std::vector<std::pair<std::vector<double>, std::vector<double>>> data, NetworkParam const& param):
+  Network(std::vector<std::pair<std::vector<double>, std::vector<double>>> data = std::vector<std::pair<std::vector<double>, std::vector<double>>>(), NetworkParam const& param = NetworkParam()):
   _dataSeed(param.dataSeed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.dataSeed),
   _dataGen(std::mt19937(_dataSeed)),
   _layers(),
@@ -39,10 +39,10 @@ public:
   }
 
 
-  template <typename Act_t, typename Aggr_t>
-  void addLayer(LayerParam const& param)
+  template <typename Aggr_t = Dot, typename Act_t = Relu>
+  void addLayer(LayerParam const& param = LayerParam())
   {
-    _layers.push_back(std::make_shared<Layer<Act_t, Aggr_t>>(param));
+    _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(param));
   }
 
 
@@ -54,6 +54,12 @@ public:
                         (i == _layers.size()-1 ? _trainData[0].second.size() : _layers[i+1]->size()),
                         _batchSize);
     }
+  }
+
+
+  void setData(std::vector<std::pair<std::vector<double>, std::vector<double>>> data)
+  {
+    _trainData = data;
   }
 
 
