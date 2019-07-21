@@ -13,9 +13,11 @@ public:
     virtual ~ILayer(){}
     virtual Matrix process(Matrix const& inputs) const = 0;
     virtual Matrix processToLearn(Matrix const& inputs) = 0;
-    virtual std::vector<double> getGradients() = 0;
+    virtual void computeGradients(Matrix const& inputGradients) = 0;
+    virtual Matrix getGradients() = 0;
     virtual unsigned size() const = 0;
     virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
+    virtual void updateWeights(double learningRate, double L1, double L2, double tackOn, double momentum) = 0;
 
 
     static void initDropout(unsigned seed, double drop)
@@ -61,8 +63,9 @@ void>::type>
 class Layer : public ILayer
 {
 public:
-    Layer(LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
+    Layer(LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
     _inputSize(0),
+    _batchSize(0),
     _distrib(param.distrib),
     _distVal1(param.distribVal1),
     _distVal2(param.distribVal2),
@@ -111,19 +114,41 @@ public:
     }
 
 
-    //one gradient per input
-    std::vector<double> getGradients()
+    void computeGradients(Matrix const& inputGradients)
     {
-        std::vector<double> grad(_inputSize, 0);
+        for(unsigned i = 0; i < _neurons.size(); i++)
+        {
+            _neurons[i].computeGradients(inputGradients[i]);
+        }
+    }
+
+
+    //one gradient per input (line) and per feature (col)
+    Matrix getGradients()
+    {
+        //grad is the transposed of Neuron::getGradients : columns are features grad and lines are inputs
+        Matrix grad(_batchSize, std::vector<double>(_inputSize, 0));
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            std::vector<double> neuronGrad = _neurons[i].getGradients();
-            for(unsigned j = 0; j < _inputSize; j++)
-                grad[j] += neuronGrad[j];
+            Matrix neuronGrad = _neurons[i].getGradients();
+            for(unsigned j = 0; j < neuronGrad.size(); j++)
+            {
+                for(unsigned k = 0; k < neuronGrad[0].size(); k++)
+                grad[k][j] += neuronGrad[j][k];
+            }
         }
 
         return grad;
+    }
+
+
+    void updateWeights(double learningRate, double L1, double L2, double tackOn, double momentum)
+    {
+        for(unsigned i = 0; i < _neurons.size(); i++)
+        {
+            _neurons[i].updateWeights(learningRate, L1, L2, tackOn, _maxNorm, momentum);
+        }
     }
 
 
@@ -136,6 +161,7 @@ public:
     void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize)
     {
         _inputSize = nbInputs;
+        _batchSize = batchSize;
         for(unsigned i = 0; i < size(); i++)
         {
             _neurons[i].init(_distrib, _distVal1, _distVal2, nbInputs, nbOutputs, batchSize, _k);
@@ -145,6 +171,7 @@ public:
 protected:
 
     unsigned _inputSize;
+    unsigned _batchSize;
     Distrib _distrib;
     double _distVal1; //mean (if uniform), boundary (if uniform)
     double _distVal2; //deviation (if normal) or useless (if uniform)

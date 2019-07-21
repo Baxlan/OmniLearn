@@ -25,7 +25,11 @@ int main()
     }
 
     burnet::Network net(data);
+    net.shuffleData();
     net.addLayer<burnet::Dot, burnet::Relu>();
+    net.addLayer<burnet::Dot, burnet::Relu>();
+    net.initLayers();
+    net.learn();
 
     return 0;
 }

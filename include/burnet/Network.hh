@@ -4,6 +4,7 @@
 #include "Layer.hh"
 
 #include <algorithm>
+#include <iostream>
 
 namespace burnet
 {
@@ -26,15 +27,28 @@ public:
   _layers(),
   _batchSize(param.batchSize),
   _learningRate(param.learningRate),
+  _L1(param.L1),
+  _L2(param.L2),
+  _tackOn(param.tackOn),
   _maxEpoch(param.maxEpoch),
   _epochAfterOptimal(param.epochAfterOptimal),
+  _loss(param.loss),
   _validationRatio(param.validationRatio),
   _testRatio(param.testRatio),
   _trainData(data),
   _validationData(),
+  _validationRealResults(),
   _testData(),
+  _testRealResults(),
+  _nbBatch(0),
   _epoch(0),
   _optimalEpoch(0)
+  {
+  }
+
+
+  Network(NetworkParam const& param = NetworkParam(), std::vector<std::pair<std::vector<double>, std::vector<double>>> data = std::vector<std::pair<std::vector<double>, std::vector<double>>>()):
+  Network(data, param)
   {
   }
 
@@ -78,21 +92,104 @@ public:
     unsigned nbTrain = static_cast<unsigned>(nbBatch)*_batchSize;
     unsigned noTrain = _trainData.size() - nbTrain;
     validation = std::round(noTrain*_validationRatio);
+    test = std::round(noTrain*_testRatio);
 
     _validationData.reserve(static_cast<unsigned>(validation));
+    _validationRealResults.reserve(static_cast<unsigned>(validation));
     _testData.reserve(static_cast<unsigned>(test));
+    _testRealResults.reserve(static_cast<unsigned>(test));
 
-    test = std::round(noTrain*_testRatio);
     for(unsigned i = 0; i < static_cast<unsigned>(validation); i++)
     {
-      _validationData[i] = _trainData[_trainData.size()-1];
+      _validationData[i] = _trainData[_trainData.size()-1].first;
+      _validationRealResults[i] = _trainData[_trainData.size()-1].second;
       _trainData.pop_back();
     }
     for(unsigned i = 0; i < static_cast<unsigned>(test); i++)
     {
-      _testData[i] = _trainData[_trainData.size()-1];
+      _testData[i] = _trainData[_trainData.size()-1].first;
+      _testRealResults[i] = _trainData[_trainData.size()-1].second;
       _trainData.pop_back();
     }
+    _nbBatch = static_cast<unsigned>(nbBatch);
+  }
+
+
+  void learn()
+  {
+    for(;_epoch < _maxEpoch; _epoch++)
+    {
+      for(unsigned batch = 0; batch < _nbBatch; batch++)
+      {
+        Matrix input(_batchSize);
+        Matrix output(_batchSize);
+        for(unsigned i = 0; i < _batchSize; i++)
+        {
+          input[i] = _trainData[batch*_batchSize+i].first;
+          output[i] = _trainData[batch*_batchSize+i].second;
+        }
+
+        for(unsigned i = 0; i < _layers.size(); i++)
+        {
+          input = _layers[i]->processToLearn(input);
+        }
+
+        Matrix loss(computeLossMatrix(input, output));
+        Matrix gradients(loss);
+        for(unsigned i = 0; i < _layers.size(); i++)
+        {
+          _layers[_layers.size() - i - 1]->computeGradients(gradients);
+          gradients = _layers[_layers.size() - i - 1]->getGradients();
+        }
+        for(unsigned i = 0; i < _layers.size(); i++)
+        {
+          _layers[i]->updateWeights(_learningRate, _L1, _L2, _tackOn, 0);
+        }
+      }
+      double validationLoss = averageLoss(computeLossMatrix(_validationData, _validationRealResults));
+      std::cout << "Epoch: " << _epoch << "   Loss: " << validationLoss << "\n";
+    }
+  }
+
+
+  Matrix process(Matrix inputs)
+  {
+    for(unsigned i = 0; i < _layers.size(); i++)
+    {
+      inputs = _layers[i]->process(inputs);
+    }
+    return inputs;
+  }
+
+
+  Matrix computeLossMatrix(Matrix inputs, Matrix const& realResults)
+  {
+    inputs = process(inputs);
+
+    if(_loss == Loss::Cost)
+      return cost(inputs, realResults);
+    else if(_loss == Loss::SCost)
+      return scost(inputs, realResults);
+    else
+      return Matrix();
+  }
+
+
+  // the inputs are loss, the output is average loss
+  double averageLoss(Matrix const& loss)
+  {
+    std::vector<double> averageForEachFeature(loss.size());
+    for(unsigned i = 0; i < loss.size(); i++)
+    {
+      for(unsigned j = 0; j < loss[0].size(); j++)
+      {
+        averageForEachFeature[i] += (loss[i][j]/loss[0].size());
+      }
+    }
+    double average = 0;
+    for(double i : averageForEachFeature)
+      average += (i/averageForEachFeature.size());
+    return average;
   }
 
 
@@ -104,19 +201,28 @@ protected:
 
   unsigned const _batchSize;
   double _learningRate;
+  double _L1;
+  double _L2;
+  double _tackOn;
   unsigned const _maxEpoch;
   unsigned const _epochAfterOptimal;
+  Loss _loss;
 
   double _validationRatio;
   double _testRatio;
   std::vector<std::pair<std::vector<double>, std::vector<double>>> _trainData;
-  std::vector<std::pair<std::vector<double>, std::vector<double>>> _validationData;
-  std::vector<std::pair<std::vector<double>, std::vector<double>>> _testData;
+  Matrix _validationData;
+  Matrix _validationRealResults;
+  Matrix _testData;
+  Matrix _testRealResults;
+  unsigned _nbBatch;
 
   unsigned _epoch;
   unsigned _optimalEpoch;
 };
 
-}
+
+
+} // namespace burnet
 
 #endif //BURNET_NETWORK_HH_

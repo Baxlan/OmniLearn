@@ -65,7 +65,7 @@ void>::type>
 class Neuron : public INeuron
 {
 public:
-    Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix weights = Matrix(), std::vector<double> const& bias = std::vector<double>()):
+    Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix const& weights = Matrix(), std::vector<double> const& bias = std::vector<double>()):
     _aggregation(aggregation),
     _activation(activation),
     _weights(weights),
@@ -75,7 +75,8 @@ public:
     _actResults(),
     _inputGradients(),
     _actGradients(),
-    _gradients()
+    _gradients(),
+    _gradientsPerFeature()
     {
     }
 
@@ -91,6 +92,7 @@ public:
             _weights = Matrix(k, std::vector<double>(nbInputs, 0));
             _bias = std::vector<double>(k, 0);
         }
+        _gradientsPerFeature = Matrix(batchSize, std::vector<double>(_weights[0].size(), 0));
         _gradients = _weights;
         if(distrib == Distrib::Normal)
         {
@@ -164,7 +166,7 @@ public:
 
 
     //one input gradient per feature
-    void computeGradient(std::vector<double> inputGradients)
+    void computeGradients(std::vector<double> const& inputGradients)
     {
         _inputGradients = inputGradients;
         std::vector<unsigned> setCount(_weights.size(), 0); //store the amount of feature that passed through each weight set
@@ -177,6 +179,7 @@ public:
             for(unsigned i = 0; i < grad.size(); i++)
             {
                 _gradients[_aggregResults[feature].second][i] += (_actGradients[feature]*grad[i]);
+                _gradientsPerFeature[feature][i] += (_gradients[_aggregResults[feature].second][i] * _weights[_aggregResults[feature].second][i]);
             }
             setCount[_aggregResults[feature].second]++;
         }
@@ -234,19 +237,10 @@ public:
     }
 
 
-    //one gradient per input
-    std::vector<double> getGradients() const
+    //one gradient per feature (line) and per input (column)
+    Matrix getGradients() const
     {
-        std::vector<double> grad(_weights[0].size(), 0);
-
-        for(unsigned i = 0; i < _weights.size(); i++)
-        {
-            for(unsigned j = 0; j < _weights[0].size(); j++)
-            {
-                grad[j] += _gradients[i][j] * _weights[i][j];
-            }
-        }
-        return grad;
+        return _gradientsPerFeature;
     }
 
 
@@ -264,6 +258,7 @@ protected:
     std::vector<double> _inputGradients; //gradient from next layer for each feature af the batch
     std::vector<double> _actGradients; //gradient between aggregation and activation
     Matrix _gradients; //sum (over all features of the batch) of partial gradient for each weight
+    Matrix _gradientsPerFeature; // store gradients for each feature, summed over weight set
 
 };
 

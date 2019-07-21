@@ -13,8 +13,11 @@ namespace burnet
 
 
 typedef std::vector<std::vector<double>> Matrix;
-enum class Distrib {Uniform, Normal};
+typedef std::vector<std::vector<std::vector<double>>> Tensor;
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
+
+enum class Distrib {Uniform, Normal};
+enum class Loss {Cost, SCost, Entropy};
 
 
 //=============================================================================
@@ -157,28 +160,74 @@ struct NetworkParam
     NetworkParam():
     dataSeed(0),
     batchSize(1),
-    learningRate(0.0005),
+    learningRate(0.005),
+    L1(0),
+    L2(0.001),
+    tackOn(0),
     maxEpoch(1500),
     epochAfterOptimal(100),
     dropout(0.2),
     dropconnect(0),
     validationRatio(0.2),
-    testRatio(0.2)
+    testRatio(0.2),
+    loss(Loss::Cost)
     {
     }
 
     unsigned dataSeed;
     unsigned batchSize;
     double learningRate;
+    double L1;
+    double L2;
+    double tackOn;
     unsigned maxEpoch;
     unsigned epochAfterOptimal;
     double dropout;
     double dropconnect;
     double validationRatio;
     double testRatio;
+    Loss loss;
 };
 
 
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== COST FUNCTIONS ===========================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+// one line = one feature, one colums = one class
+Matrix cost(Matrix const& real, Matrix const& predicted)
+{
+    Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
+    for(unsigned i = 0; i < loss.size(); i++)
+    {
+        for(unsigned j = 0; j < loss[0].size(); j++)
+        {
+            loss[i][j] = real[i][j] - predicted[i][j];
+        }
+    }
+    return loss;
+}
+
+
+// one line = one feature, one colums = one class
+Matrix scost(Matrix const& real, Matrix const& predicted)
+{
+    Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
+    for(unsigned i = 0; i < loss.size(); i++)
+    {
+        for(unsigned j = 0; j < loss[0].size(); j++)
+        {
+            loss[i][j] = std::pow(real[i][j] - predicted[i][j], 2);
+        }
+    }
+    return loss;
+}
 
 } //namespace burnet
 
