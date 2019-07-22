@@ -2,6 +2,7 @@
 #define BURNET_LAYER_HH_
 
 #include "Neuron.hh"
+#include <iostream>
 
 namespace burnet
 {
@@ -78,9 +79,11 @@ public:
 
     Matrix process(Matrix const& inputs) const
     {
-        Matrix output(inputs.size(), std::vector<double>(inputs[0].size(), 0));
+        //lines are features, columns are neurons
+        Matrix output(inputs.size(), std::vector<double>(_neurons.size(), 0));
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
+            //one result per feature (for each neuron)
             std::vector<double> result = _neurons[i].process(inputs);
             for(unsigned j = 0; j < result.size(); j++)
             {
@@ -93,9 +96,11 @@ public:
 
     Matrix processToLearn(Matrix const& inputs)
     {
-        Matrix output(inputs.size(), std::vector<double>(inputs[0].size(), 0));
+        //lines are features, columns are neurons
+        Matrix output(_batchSize, std::vector<double>(_neurons.size(), 0));
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
+            //one result per feature (for each neuron)
             std::vector<double> result = _neurons[i].processToLearn(inputs);
             for(unsigned j = 0; j < result.size(); j++)
             {
@@ -123,11 +128,10 @@ public:
     }
 
 
-    //one gradient per input (line) and per feature (col)
+    //one gradient per input neuron (line) and per feature (col)
     Matrix getGradients()
     {
-        //grad is the transposed of Neuron::getGradients : columns are features grad and lines are inputs
-        Matrix grad(_batchSize, std::vector<double>(_inputSize, 0));
+        Matrix grad(_inputSize, std::vector<double>(_batchSize, 0));
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {

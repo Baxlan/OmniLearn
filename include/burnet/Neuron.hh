@@ -170,7 +170,6 @@ public:
     {
         _inputGradients = inputGradients;
         std::vector<unsigned> setCount(_weights.size(), 0); //store the amount of feature that passed through each weight set
-
         for(unsigned feature = 0; feature < _actResults.size(); feature++)
         {
             _actGradients[feature] = _activation.prime(_actResults[feature]) * _inputGradients[feature];
@@ -190,7 +189,7 @@ public:
             for(unsigned j = 0; j < _gradients[0].size(); j++)
             {
                 _gradients[i][j] /= setCount[i];
-            }
+            };
         }
     }
 
@@ -223,14 +222,17 @@ public:
         }
 
         //max norm constraint
-        for(unsigned i = 0; i < _weights.size(); i++)
+        if(maxNorm > 0)
         {
-            double norm = std::sqrt(quadraticSum(_weights[i]));
-            if(maxNorm > 0 && norm > maxNorm)
+            for(unsigned i = 0; i < _weights.size(); i++)
             {
-                for(unsigned j=0; j<_weights[i].size(); j++)
+                double norm = std::sqrt(quadraticSum(_weights[i]));
+                if(norm > maxNorm)
                 {
-                    _weights[i][j] *= (maxNorm/norm);
+                    for(unsigned j=0; j<_weights[i].size(); j++)
+                    {
+                        _weights[i][j] *= (maxNorm/norm);
+                    }
                 }
             }
         }

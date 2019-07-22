@@ -123,6 +123,20 @@ double quadraticSum(std::vector<double> const& vec)
 }
 
 
+Matrix transpose(Matrix const& a)
+{
+    Matrix b(a[0].size(), std::vector<double>(a.size(), 0));
+    for(unsigned i = 0; i < a.size(); i++)
+    {
+        for(unsigned j = 0; j < a.size(); j++)
+        {
+            b[j][i] = a[i][j];
+        }
+    }
+    return b;
+}
+
+
 
 //=============================================================================
 //=============================================================================
@@ -164,7 +178,7 @@ struct NetworkParam
     L1(0),
     L2(0.001),
     tackOn(0),
-    maxEpoch(1500),
+    maxEpoch(500),
     epochAfterOptimal(100),
     dropout(0.2),
     dropconnect(0),
