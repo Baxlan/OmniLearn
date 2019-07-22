@@ -178,7 +178,7 @@ public:
             for(unsigned i = 0; i < grad.size(); i++)
             {
                 _gradients[_aggregResults[feature].second][i] += (_actGradients[feature]*grad[i]);
-                _gradientsPerFeature[feature][i] += (_gradients[_aggregResults[feature].second][i] * _weights[_aggregResults[feature].second][i]);
+                _gradientsPerFeature[feature][i] += (_actGradients[feature]* grad[i] * _weights[_aggregResults[feature].second][i]);
             }
             setCount[_aggregResults[feature].second]++;
         }

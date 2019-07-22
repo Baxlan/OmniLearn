@@ -25,10 +25,12 @@ int main()
     }
 
     burnet::NetworkParam netp;
+    netp.maxEpoch = 20;
+    netp.batchSize = 1;
+
     burnet::Network net(data, netp);
 
     burnet::LayerParam lay;
-    lay.maxNorm = 1000;
     net.addLayer<burnet::Dot, burnet::Relu>(lay);
     lay.size = 3;
     net.addLayer<burnet::Dot, burnet::Sigmoid>(lay);

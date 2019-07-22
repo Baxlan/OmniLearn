@@ -128,7 +128,7 @@ Matrix transpose(Matrix const& a)
     Matrix b(a[0].size(), std::vector<double>(a.size(), 0));
     for(unsigned i = 0; i < a.size(); i++)
     {
-        for(unsigned j = 0; j < a.size(); j++)
+        for(unsigned j = 0; j < a[0].size(); j++)
         {
             b[j][i] = a[i][j];
         }
@@ -152,7 +152,7 @@ struct LayerParam
 {
     LayerParam():
     size(8),
-    maxNorm(0),
+    maxNorm(32767),
     distrib(Distrib::Normal),
     distribVal1(distrib == Distrib::Normal ? 0 : 6),
     distribVal2(2),
@@ -176,11 +176,11 @@ struct NetworkParam
     batchSize(1),
     learningRate(0.005),
     L1(0),
-    L2(0.001),
+    L2(0),
     tackOn(0),
     maxEpoch(500),
     epochAfterOptimal(100),
-    dropout(0.2),
+    dropout(0),
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
