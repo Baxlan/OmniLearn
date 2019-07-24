@@ -1,6 +1,7 @@
 #ifndef BURNET_UTILITY_HH_
 #define BURNET_UTILITY_HH_
 
+#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <random>
@@ -17,7 +18,7 @@ typedef std::vector<std::vector<std::vector<double>>> Tensor;
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 enum class Distrib {Uniform, Normal};
-enum class Loss {Cost, SCost, Entropy};
+enum class Loss {L1, L2, Hinge, Hinge2, Entropy};
 
 
 //=============================================================================
@@ -105,6 +106,15 @@ double average(std::vector<double> const& a)
 }
 
 
+double sum(std::vector<double> const& vec)
+{
+    double result = 0;
+    for(double a : vec)
+        result += std::abs(a);
+    return result;
+}
+
+
 double absoluteSum(std::vector<double> const& vec)
 {
     double result = 0;
@@ -136,6 +146,24 @@ Matrix transpose(Matrix const& a)
     return b;
 }
 
+
+Matrix softmax(Matrix inputs)
+{
+    for(unsigned i = 0; i < inputs.size(); i++)
+    {
+        double c = *std::max_element(inputs[i].begin(), inputs[i].end());
+        double sum = 0;
+        for(unsigned j = 0; j < inputs[0].size(); j++)
+        {
+            sum += std::exp(inputs[i][j] - c);
+        }
+        for(unsigned j = 0; j < inputs[0].size(); j++)
+        {
+            inputs[i][j] = std::exp(inputs[i][j] - c) / sum;
+        }
+    }
+    return inputs;
+}
 
 
 //=============================================================================
@@ -184,7 +212,7 @@ struct NetworkParam
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
-    loss(Loss::Cost)
+    loss(Loss::L2)
     {
     }
 
@@ -208,39 +236,69 @@ struct NetworkParam
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== COST FUNCTIONS ===========================================================
+//=== COST FUNCTIONS ==========================================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
 
 
 // one line = one feature, one colums = one class
-Matrix cost(Matrix const& real, Matrix const& predicted)
+// first are loss, second are gradients
+std::pair<Matrix, Matrix> L1Loss(Matrix const& real, Matrix const& predicted)
 {
     Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
+    Matrix gradients(real.size(), std::vector<double>(real[0].size(), 0));
     for(unsigned i = 0; i < loss.size(); i++)
     {
         for(unsigned j = 0; j < loss[0].size(); j++)
         {
-            loss[i][j] = real[i][j] - predicted[i][j];
+            loss[i][j] = std::abs(real[i][j] - predicted[i][j]);
+            if (real[i][j] < predicted[i][j])
+                gradients[i][j] = -1;
+            else if (real[i][j] > predicted[i][j])
+                gradients[i][j] = 1;
+            else
+                gradients[i][j] = 0;
         }
     }
-    return loss;
+    return {loss, gradients};
 }
 
 
 // one line = one feature, one colums = one class
-Matrix scost(Matrix const& real, Matrix const& predicted)
+// first are loss, second are gradients
+std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted)
 {
     Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
+    Matrix gradients(real.size(), std::vector<double>(real[0].size(), 0));
     for(unsigned i = 0; i < loss.size(); i++)
     {
         for(unsigned j = 0; j < loss[0].size(); j++)
         {
-            loss[i][j] = std::pow(real[i][j] - predicted[i][j], 2);
+            loss[i][j] = 0.5 * std::pow(real[i][j] - predicted[i][j], 2);
+            gradients[i][j] = -(real[i][j] - predicted[i][j]);
         }
     }
-    return loss;
+    return  {loss, gradients};
+}
+
+
+// one line = one feature, one colums = one class
+// first are loss, second are gradients
+std::pair<Matrix, Matrix> entropyLoss(Matrix const& real, Matrix const& predicted)
+{
+    Matrix softMax = softmax(predicted);
+    Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
+    Matrix gradients(real.size(), std::vector<double>(real[0].size(), 0));
+    for(unsigned i = 0; i < loss.size(); i++)
+    {
+        for(unsigned j = 0; j < loss[0].size(); j++)
+        {
+            loss[i][j] = real[i][j] * -std::log(softMax[i][j]);
+            gradients[i][j] = softMax[i][j] - real[i][j];
+        }
+    }
+    return  {loss, gradients};
 }
 
 } //namespace burnet

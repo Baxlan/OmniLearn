@@ -157,7 +157,7 @@ public:
 class Relu : public Activation
 {
 public:
-    Relu(double coef = 0) : _coef(coef)
+    Relu(double coef = 0.01) : _coef(coef)
     {
     }
 

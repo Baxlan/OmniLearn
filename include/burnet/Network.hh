@@ -3,7 +3,6 @@
 
 #include "Layer.hh"
 
-#include <algorithm>
 #include <iostream>
 
 namespace burnet
@@ -66,41 +65,33 @@ public:
   }
 
 
-  Matrix process(Matrix inputs) const
+  std::pair<Matrix, Matrix> computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
   {
-    for(unsigned i = 0; i < _layers.size(); i++)
-    {
-      inputs = _layers[i]->process(inputs);
-    }
-    return inputs;
-  }
-
-
-  Matrix computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
-  {
-    if(_loss == Loss::Cost)
-      return cost(realResults, predicted);
-    else if(_loss == Loss::SCost)
-      return scost(realResults, predicted);
+    if(_loss == Loss::L1)
+      return L1Loss(realResults, predicted);
+    else if(_loss == Loss::L2)
+      return L2Loss(realResults, predicted);
+    else if(_loss == Loss::Entropy)
+      return entropyLoss(realResults, predicted);
     else
-      return Matrix();
+      return {};
   }
 
 
   // the inputs are loss, the output is average loss
   double averageLoss(Matrix const& loss)
   {
-    std::vector<double> averageForEachFeature(loss.size());
+    std::vector<double> feature(loss.size());
     for(unsigned i = 0; i < loss.size(); i++)
     {
       for(unsigned j = 0; j < loss[0].size(); j++)
       {
-        averageForEachFeature[i] += (loss[i][j]/loss[0].size());
+       feature[i] += loss[i][j];
       }
     }
     double average = 0;
-    for(double i : averageForEachFeature)
-      average += (i/averageForEachFeature.size());
+    for(double i : feature)
+      average += (i/feature.size());
     return average;
   }
 
@@ -115,6 +106,7 @@ public:
       throw Exception("The last layer must have as much neurons as outputs.");
     }
 
+    computeLoss();
     for(;_epoch < _maxEpoch; _epoch++)
     {
       for(unsigned batch = 0; batch < _nbBatch; batch++)
@@ -132,8 +124,7 @@ public:
           input = _layers[i]->processToLearn(input);
         }
 
-        Matrix loss(computeLossMatrix(output, input));
-        Matrix gradients(transpose(loss));
+        Matrix gradients(transpose(computeLossMatrix(output, input).second));
         for(unsigned i = 0; i < _layers.size(); i++)
         {
           _layers[_layers.size() - i - 1]->computeGradients(gradients);
@@ -144,10 +135,41 @@ public:
           _layers[i]->updateWeights(_learningRate, _L1, _L2, _tackOn, 0);
         }
       }
-      Matrix validationResult = process(_validationData);
-      double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult));
-      std::cout << "Epoch: " << _epoch << "   Loss: " << validationLoss << "\n";
+      computeLoss();
     }
+  }
+
+
+  void computeLoss()
+  {
+    Matrix input(_trainData.size());
+    Matrix output(_trainData.size());
+    for(unsigned i = 0; i < _trainData.size(); i++)
+    {
+      input[i] = _trainData[i].first;
+      output[i] = _trainData[i].second;
+    }
+    input = process(input);
+    double trainLoss = averageLoss(computeLossMatrix(output, input).first);
+
+    Matrix validationResult = process(_validationData);
+    double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first);
+    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "\n";
+  }
+
+
+  Matrix process(Matrix inputs) const
+  {
+    for(unsigned i = 0; i < _layers.size(); i++)
+    {
+      inputs = _layers[i]->process(inputs);
+    }
+    // if cross-entropy loss is used, then score must be softmax
+    if(_loss == Loss::Entropy)
+    {
+      inputs = softmax(inputs);
+    }
+    return inputs;
   }
 
 

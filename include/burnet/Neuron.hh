@@ -218,6 +218,7 @@ public:
             for(unsigned j = 0; j < _weights[0].size(); j++)
             {
                 _weights[i][j] += (learningRate*(_gradients[i][j] + (L2 * _weights[i][j]) + L1) + tackOn);
+                _bias[i] += learningRate * averageActGrad;
             }
         }
 
