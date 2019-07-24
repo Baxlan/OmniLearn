@@ -166,6 +166,80 @@ Matrix softmax(Matrix inputs)
 }
 
 
+// the inputs are loss, the output is average loss
+double averageLoss(Matrix const& loss)
+{
+    std::vector<double> feature(loss.size());
+    for(unsigned i = 0; i < loss.size(); i++)
+    {
+        for(unsigned j = 0; j < loss[0].size(); j++)
+        {
+            feature[i] += loss[i][j];
+        }
+    }
+    double average = 0;
+    for(double i : feature)
+        average += (i/feature.size());
+    return average;
+}
+
+
+//margin size is the number of classes
+double accuracy(Matrix const& real, Matrix const& predicted, std::vector<double> const& margin)
+{
+    double unvalidated = 0;
+    for(unsigned i = 0; i < real.size(); i++)
+    {
+        for(unsigned j = 0; j < real[0].size(); j++)
+        {
+            if(std::abs(real[i][j] - predicted[i][j]) > margin[j])
+            {
+                unvalidated++;
+                break;
+            }
+        }
+    }
+    return 100* (real.size() - unvalidated)/real.size();
+}
+
+
+//margin size is the number of classes
+double accuracy(Matrix const& real, Matrix const& predicted, double const& margin)
+{
+    return accuracy(real, predicted, std::vector<double>(real[0].size(), margin));
+}
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== LEARNING RATE ANNEALING =================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+struct decayParam
+{
+    static double a;
+};
+
+inline double decayParam::a = 1;
+
+
+
+double inverseDecay(double initialLR, unsigned epoch)
+{
+    return initialLR / (1 + (decayParam::a * epoch));
+}
+
+
+double expDecay(double initialLR, unsigned epoch)
+{
+    return initialLR * std::exp(-decayParam::a * epoch);
+}
+
+
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -212,7 +286,8 @@ struct NetworkParam
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
-    loss(Loss::L2)
+    loss(Loss::L2),
+    decay(inverseDecay)
     {
     }
 
@@ -229,6 +304,7 @@ struct NetworkParam
     double validationRatio;
     double testRatio;
     Loss loss;
+    double (* decay)(double, unsigned);
 };
 
 
@@ -300,6 +376,8 @@ std::pair<Matrix, Matrix> entropyLoss(Matrix const& real, Matrix const& predicte
     }
     return  {loss, gradients};
 }
+
+
 
 } //namespace burnet
 

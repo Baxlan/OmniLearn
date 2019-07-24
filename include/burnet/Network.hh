@@ -24,6 +24,7 @@ public:
   _dataSeed(param.dataSeed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.dataSeed),
   _dataGen(std::mt19937(_dataSeed)),
   _layers(),
+  _decay(param.decay),
   _batchSize(param.batchSize),
   _learningRate(param.learningRate),
   _L1(param.L1),
@@ -78,25 +79,7 @@ public:
   }
 
 
-  // the inputs are loss, the output is average loss
-  double averageLoss(Matrix const& loss)
-  {
-    std::vector<double> feature(loss.size());
-    for(unsigned i = 0; i < loss.size(); i++)
-    {
-      for(unsigned j = 0; j < loss[0].size(); j++)
-      {
-       feature[i] += loss[i][j];
-      }
-    }
-    double average = 0;
-    for(double i : feature)
-      average += (i/feature.size());
-    return average;
-  }
-
-
- void learn()
+  void learn()
   {
     initLayers();
     shuffleData();
@@ -106,8 +89,9 @@ public:
       throw Exception("The last layer must have as much neurons as outputs.");
     }
 
-    computeLoss();
-    for(;_epoch < _maxEpoch; _epoch++)
+    double lowestLoss = computeLoss();
+    std::cout << "\n";
+    for(_epoch = 1; _epoch < _maxEpoch; _epoch++)
     {
       for(unsigned batch = 0; batch < _nbBatch; batch++)
       {
@@ -132,15 +116,46 @@ public:
         }
         for(unsigned i = 0; i < _layers.size(); i++)
         {
-          _layers[i]->updateWeights(_learningRate, _L1, _L2, _tackOn, 0);
+          _layers[i]->updateWeights(_decay(_learningRate, _epoch), _L1, _L2, _tackOn, 0);
         }
       }
-      computeLoss();
+      std::cout << "Epoch: " << _epoch;
+      double loss = computeLoss();
+      std::cout << "   LR: " << _decay(_learningRate, _epoch) << "\n";
+      if(loss < lowestLoss)
+      {
+        save();
+        _optimalEpoch = _epoch;
+      }
+      if(_epoch - _optimalEpoch > _epochAfterOptimal)
+        break;
     }
+    loadSaved();
+    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Accuracy: " << _testAccuracy[_optimalEpoch] << "%\n";
+
   }
 
 
-  void computeLoss()
+  void save()
+  {
+     for(unsigned i = 0; i < _layers.size(); i++)
+      {
+          _layers[i]->save();
+      }
+  }
+
+
+  void loadSaved()
+  {
+     for(unsigned i = 0; i < _layers.size(); i++)
+      {
+          _layers[i]->loadSaved();
+      }
+  }
+
+
+  //return loss
+  double computeLoss()
   {
     Matrix input(_trainData.size());
     Matrix output(_trainData.size());
@@ -154,7 +169,15 @@ public:
 
     Matrix validationResult = process(_validationData);
     double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first);
-    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "\n";
+
+    Matrix testResult = process(_testData);
+    double testAccuracy = accuracy(_testRealResults, testResult, 0.2);
+
+    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
+    _trainLosses.push_back(trainLoss);
+    _validLosses.push_back(validationLoss);
+    _testAccuracy.push_back(testAccuracy);
+    return validationLoss;
   }
 
 
@@ -225,6 +248,8 @@ protected:
 
   std::vector<std::shared_ptr<ILayer>> _layers;
 
+  double (* _decay)(double, unsigned);
+
   unsigned const _batchSize;
   double _learningRate;
   double _L1;
@@ -245,6 +270,9 @@ protected:
 
   unsigned _epoch;
   unsigned _optimalEpoch;
+  std::vector<double> _trainLosses;
+  std::vector<double> _validLosses;
+  std::vector<double> _testAccuracy;
 };
 
 

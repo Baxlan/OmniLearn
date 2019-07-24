@@ -76,7 +76,9 @@ public:
     _inputGradients(),
     _actGradients(),
     _gradients(),
-    _gradientsPerFeature()
+    _gradientsPerFeature(),
+    _savedWeights(),
+    _savedBias()
     {
     }
 
@@ -247,6 +249,19 @@ public:
     }
 
 
+    void save()
+    {
+        _savedWeights = _weights;
+        _savedBias = _bias;
+    }
+
+
+    void loadSaved()
+    {
+        _weights = _savedWeights;
+        _bias = _savedBias;
+    }
+
 protected:
     Aggr_t _aggregation;
     Act_t _activation;
@@ -263,6 +278,8 @@ protected:
     Matrix _gradients; //sum (over all features of the batch) of partial gradient for each weight
     Matrix _gradientsPerFeature; // store gradients for each feature, summed over weight set
 
+    Matrix _savedWeights;
+    std::vector<double> _savedBias;
 };
 
 

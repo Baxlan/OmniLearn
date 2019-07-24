@@ -19,7 +19,8 @@ public:
     virtual unsigned size() const = 0;
     virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
     virtual void updateWeights(double learningRate, double L1, double L2, double tackOn, double momentum) = 0;
-
+    virtual void save() = 0;
+    virtual void loadSaved() = 0;
 
     static void initDropout(unsigned seed, double drop)
     {
@@ -127,6 +128,23 @@ public:
         }
     }
 
+
+    void save()
+    {
+        for(unsigned i = 0; i < _neurons.size(); i++)
+        {
+            _neurons[i].save();
+        }
+    }
+
+
+    void loadSaved()
+    {
+        for(unsigned i = 0; i < _neurons.size(); i++)
+        {
+            _neurons[i].loadSaved();
+        }
+    }
 
     //one gradient per input neuron (line) and per feature (col)
     Matrix getGradients()
