@@ -38,12 +38,14 @@ int main()
     burnet::Network net(data, netp);
 
     burnet::LayerParam lay;
-    lay.size = 16;
+    lay.size = 8;
+    lay.maxNorm = 10;
     net.addLayer<burnet::Dot, burnet::Relu>(lay);
     net.addLayer<burnet::Dot, burnet::Relu>(lay);
     lay.size = 3;
-    net.addLayer<burnet::Dot, burnet::Relu>(lay);
+    net.addLayer<burnet::Dot, burnet::Linear>(lay);
     net.learn();
+
 
     return 0;
 }

@@ -42,7 +42,10 @@ public:
   _testRealResults(),
   _nbBatch(0),
   _epoch(0),
-  _optimalEpoch(0)
+  _optimalEpoch(0),
+  _trainLosses(std::vector<double>()),
+  _validLosses(std::vector<double>()),
+  _testAccuracy(std::vector<double>())
   {
   }
 
@@ -122,7 +125,7 @@ public:
       std::cout << "Epoch: " << _epoch;
       double loss = computeLoss();
       std::cout << "   LR: " << _decay(_learningRate, _epoch) << "\n";
-      if(loss < lowestLoss)
+      if(loss - lowestLoss < -std::numeric_limits<double>::max())
       {
         save();
         _optimalEpoch = _epoch;
