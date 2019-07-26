@@ -95,7 +95,7 @@ public:
             _bias = std::vector<double>(k, 0);
         }
         _gradientsPerFeature = Matrix(batchSize, std::vector<double>(_weights[0].size(), 0));
-        _gradients = _weights;
+        _gradients = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
         if(distrib == Distrib::Normal)
         {
             double deviation = std::sqrt(distVal2 / (nbInputs + nbOutputs));
@@ -171,6 +171,9 @@ public:
     void computeGradients(std::vector<double> const& inputGradients)
     {
         _inputGradients = inputGradients;
+        _gradientsPerFeature = Matrix(_inputGradients.size(), std::vector<double>(_weights[0].size(), 0));
+        _gradients = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
+
         std::vector<unsigned> setCount(_weights.size(), 0); //store the amount of feature that passed through each weight set
         for(unsigned feature = 0; feature < _actResults.size(); feature++)
         {

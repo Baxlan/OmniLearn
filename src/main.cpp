@@ -25,25 +25,27 @@ int main()
         data[i] = {{dataset[i]["sepal_length"], dataset[i]["sepal_width"], dataset[i]["petal_length"], dataset[i]["petal_width"]}, dataRes[dataset[i]["species"]]};
     }
 
-    burnet::decayParam::a = 0.1;
+    burnet::decayParam::a = 0.05;
 
     burnet::NetworkParam netp;
-    netp.batchSize = 1;
-    netp.learningRate = 0.1;
-    netp.dropout = 0;
+    netp.batchSize = 8;
+    netp.learningRate = 0.01;
+    netp.dropout = 0.9;
+    netp.dropconnect = 0;
     netp.loss = burnet::Loss::Entropy;
-    //netp.L2 = 0.01;
-    netp.maxEpoch = 2000;
+    netp.L2 = 0.01;
+    netp.maxEpoch = 100000;
+    netp.epochAfterOptimal = 700;
+    netp.decay = burnet::noDecay;
 
     burnet::Network net(data, netp);
 
     burnet::LayerParam lay;
-    lay.size = 8;
-    lay.maxNorm = 10;
-    net.addLayer<burnet::Dot, burnet::Relu>(lay);
+    lay.size = 16;
+    lay.maxNorm = 4;
     net.addLayer<burnet::Dot, burnet::Relu>(lay);
     lay.size = 3;
-    net.addLayer<burnet::Dot, burnet::Linear>(lay);
+    net.addLayer<burnet::Dot, burnet::Linear>(lay); //SOFTMAX MUST BE AN ACTIVATION
     net.learn();
 
 

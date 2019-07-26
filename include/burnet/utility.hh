@@ -227,6 +227,10 @@ struct decayParam
 inline double decayParam::a = 1;
 
 
+double noDecay(double initialLR, [[maybe_unused]] unsigned epoch)
+{
+    return initialLR;
+}
 
 double inverseDecay(double initialLR, unsigned epoch)
 {
@@ -370,8 +374,8 @@ std::pair<Matrix, Matrix> entropyLoss(Matrix const& real, Matrix const& predicte
     {
         for(unsigned j = 0; j < loss[0].size(); j++)
         {
-            loss[i][j] = real[i][j] * -std::log(softMax[i][j] < std::numeric_limits<double>::epsilon() ? std::numeric_limits<double>::epsilon() : softMax[i][j]);
-            gradients[i][j] = softMax[i][j] - real[i][j];
+            loss[i][j] = real[i][j] * -std::log(softMax[i][j]);
+            gradients[i][j] = real[i][j] - softMax[i][j];
         }
     }
     return  {loss, gradients};

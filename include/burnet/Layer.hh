@@ -146,6 +146,7 @@ public:
         }
     }
 
+
     //one gradient per input neuron (line) and per feature (col)
     Matrix getGradients()
     {

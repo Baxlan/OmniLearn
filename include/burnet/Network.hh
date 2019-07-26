@@ -125,9 +125,10 @@ public:
       std::cout << "Epoch: " << _epoch;
       double loss = computeLoss();
       std::cout << "   LR: " << _decay(_learningRate, _epoch) << "\n";
-      if(loss - lowestLoss < -std::numeric_limits<double>::max())
+      if(loss < lowestLoss)
       {
         save();
+        lowestLoss = loss;
         _optimalEpoch = _epoch;
       }
       if(_epoch - _optimalEpoch > _epochAfterOptimal)
@@ -174,7 +175,7 @@ public:
     double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first);
 
     Matrix testResult = process(_testData);
-    double testAccuracy = accuracy(_testRealResults, testResult, 0.2);
+    double testAccuracy = accuracy(_testRealResults, testResult, 0.1);
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
     _trainLosses.push_back(trainLoss);
