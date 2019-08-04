@@ -32,7 +32,7 @@ int main()
     netp.learningRate = 0.1;
     netp.dropout = 0;
     netp.dropconnect = 0.2;
-    netp.loss = burnet::Loss::Entropy;
+    netp.loss = burnet::Loss::CrossEntropy;
     netp.L2 = 0.0001;
     netp.maxEpoch = 100000;
     netp.epochAfterOptimal = 700;

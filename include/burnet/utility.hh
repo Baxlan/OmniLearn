@@ -18,7 +18,7 @@ typedef std::vector<std::vector<std::vector<double>>> Tensor;
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 enum class Distrib {Uniform, Normal};
-enum class Loss {L1, L2, Hinge, Hinge2, Entropy};
+enum class Loss {L1, L2, CrossEntropy};
 
 
 //=============================================================================
@@ -258,7 +258,7 @@ struct LayerParam
 {
     LayerParam():
     size(8),
-    maxNorm(32767),
+    maxNorm(32),
     distrib(Distrib::Normal),
     distribVal1(distrib == Distrib::Normal ? 0 : 6),
     distribVal2(2),
@@ -365,7 +365,7 @@ std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted)
 
 // one line = one feature, one colums = one class
 // first are loss, second are gradients
-std::pair<Matrix, Matrix> entropyLoss(Matrix const& real, Matrix const& predicted)
+std::pair<Matrix, Matrix> crossEntropyLoss(Matrix const& real, Matrix const& predicted)
 {
     Matrix softMax = softmax(predicted);
     Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));

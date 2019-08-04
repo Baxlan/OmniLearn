@@ -134,7 +134,7 @@ public:
       inputs = _layers[i]->process(inputs);
     }
     // if cross-entropy loss is used, then score must be softmax
-    if(_loss == Loss::Entropy)
+    if(_loss == Loss::CrossEntropy)
     {
       inputs = softmax(inputs);
     }
@@ -193,10 +193,8 @@ protected:
       return L1Loss(realResults, predicted);
     else if(_loss == Loss::L2)
       return L2Loss(realResults, predicted);
-    else if(_loss == Loss::Entropy)
-      return entropyLoss(realResults, predicted);
     else
-      return {};
+      return crossEntropyLoss(realResults, predicted);
   }
 
 
