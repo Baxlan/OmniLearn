@@ -21,6 +21,7 @@ public:
     virtual void updateWeights(double learningRate, double L1, double L2, double tackOn, double momentum) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
+    virtual std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const = 0;
 
     static void initDropout(unsigned seed, double drop)
     {
@@ -75,6 +76,17 @@ public:
     _k(param.k),
     _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
     {
+    }
+
+
+    void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize)
+    {
+        _inputSize = nbInputs;
+        _batchSize = batchSize;
+        for(unsigned i = 0; i < size(); i++)
+        {
+            _neurons[i].init(_distrib, _distVal1, _distVal2, nbInputs, nbOutputs, batchSize, _k);
+        }
     }
 
 
@@ -181,15 +193,18 @@ public:
     }
 
 
-    void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize)
+    std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const
     {
-        _inputSize = nbInputs;
-        _batchSize = batchSize;
+        std::vector<std::pair<Matrix, std::vector<double>>> weights(size());
+
         for(unsigned i = 0; i < size(); i++)
-        {
-            _neurons[i].init(_distrib, _distVal1, _distVal2, nbInputs, nbOutputs, batchSize, _k);
-        }
+         {
+             weights[i] = _neurons[i].getWeights();
+         }
+
+         return weights;
     }
+
 
 protected:
 

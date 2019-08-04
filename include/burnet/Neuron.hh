@@ -193,7 +193,8 @@ public:
         {
             for(unsigned j = 0; j < _gradients[0].size(); j++)
             {
-                _gradients[i][j] /= setCount[i];
+                if(setCount[i] != 0)
+                    _gradients[i][j] /= setCount[i];
             };
         }
     }
@@ -264,6 +265,14 @@ public:
         _weights = _savedWeights;
         _bias = _savedBias;
     }
+
+
+    //first is weights, second is bias
+    std::pair<Matrix, std::vector<double>> getWeights() const
+    {
+        return {_weights, _bias};
+    }
+
 
 protected:
     Aggr_t _aggregation;

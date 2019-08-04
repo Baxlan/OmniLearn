@@ -28,24 +28,25 @@ int main()
     burnet::decayParam::a = 0.05;
 
     burnet::NetworkParam netp;
-    netp.batchSize = 8;
-    netp.learningRate = 0.01;
-    netp.dropout = 0.9;
-    netp.dropconnect = 0;
+    netp.batchSize = 1;
+    netp.learningRate = 0.1;
+    netp.dropout = 0;
+    netp.dropconnect = 0.2;
     netp.loss = burnet::Loss::Entropy;
-    netp.L2 = 0.01;
+    netp.L2 = 0.0001;
     netp.maxEpoch = 100000;
     netp.epochAfterOptimal = 700;
-    netp.decay = burnet::noDecay;
+    //netp.decay = burnet::noDecay;
 
     burnet::Network net(data, netp);
 
     burnet::LayerParam lay;
-    lay.size = 16;
+    lay.size = 4;
     lay.maxNorm = 4;
+    lay.k = 1;
     net.addLayer<burnet::Dot, burnet::Relu>(lay);
     lay.size = 3;
-    net.addLayer<burnet::Dot, burnet::Linear>(lay); //SOFTMAX MUST BE AN ACTIVATION
+    net.addLayer<burnet::Dot, burnet::Linear>(lay);
     net.learn();
 
 

@@ -69,19 +69,6 @@ public:
   }
 
 
-  std::pair<Matrix, Matrix> computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
-  {
-    if(_loss == Loss::L1)
-      return L1Loss(realResults, predicted);
-    else if(_loss == Loss::L2)
-      return L2Loss(realResults, predicted);
-    else if(_loss == Loss::Entropy)
-      return entropyLoss(realResults, predicted);
-    else
-      return {};
-  }
-
-
   void learn()
   {
     initLayers();
@@ -140,51 +127,6 @@ public:
   }
 
 
-  void save()
-  {
-     for(unsigned i = 0; i < _layers.size(); i++)
-      {
-          _layers[i]->save();
-      }
-  }
-
-
-  void loadSaved()
-  {
-     for(unsigned i = 0; i < _layers.size(); i++)
-      {
-          _layers[i]->loadSaved();
-      }
-  }
-
-
-  //return loss
-  double computeLoss()
-  {
-    Matrix input(_trainData.size());
-    Matrix output(_trainData.size());
-    for(unsigned i = 0; i < _trainData.size(); i++)
-    {
-      input[i] = _trainData[i].first;
-      output[i] = _trainData[i].second;
-    }
-    input = process(input);
-    double trainLoss = averageLoss(computeLossMatrix(output, input).first);
-
-    Matrix validationResult = process(_validationData);
-    double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first);
-
-    Matrix testResult = process(_testData);
-    double testAccuracy = accuracy(_testRealResults, testResult, 0.1);
-
-    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
-    _trainLosses.push_back(trainLoss);
-    _validLosses.push_back(validationLoss);
-    _testAccuracy.push_back(testAccuracy);
-    return validationLoss;
-  }
-
-
   Matrix process(Matrix inputs) const
   {
     for(unsigned i = 0; i < _layers.size(); i++)
@@ -214,7 +156,6 @@ protected:
 
   void shuffleData()
   {
-    //testData(); //tests if all data have the same number of inputs and of output
     std::shuffle(_trainData.begin(), _trainData.end(), _dataGen);
 
     double validation = _validationRatio * _trainData.size();
@@ -243,6 +184,100 @@ protected:
       _trainData.pop_back();
     }
     _nbBatch = static_cast<unsigned>(nbBatch);
+  }
+
+
+  std::pair<Matrix, Matrix> computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
+  {
+    if(_loss == Loss::L1)
+      return L1Loss(realResults, predicted);
+    else if(_loss == Loss::L2)
+      return L2Loss(realResults, predicted);
+    else if(_loss == Loss::Entropy)
+      return entropyLoss(realResults, predicted);
+    else
+      return {};
+  }
+
+
+  //return loss
+  double computeLoss()
+  {
+    //for each layer, for each neuron, first is weights, second is bias
+    std::vector<std::vector<std::pair<Matrix, std::vector<double>>>> weights(_layers.size());
+    for(unsigned i = 0; i < _layers.size(); i++)
+    {
+      weights[i] = _layers[i]->getWeights();
+    }
+
+    //L1 and L2 regularization loss
+    double L1 = 0;
+    double L2 = 0;
+
+    for(unsigned i = 0; i < weights.size(); i++)
+    //for each layer
+    {
+      for(unsigned j = 0; j < weights[i].size(); j++)
+      //for each neuron
+      {
+        for(unsigned k = 0; k < weights[i][j].first.size(); k++)
+        //for each weight set
+        {
+          for(unsigned l = 0; l < weights[i][j].first[k].size(); l++)
+          //for each weight
+          {
+            L1 += std::abs(weights[i][j].first[k][l]);
+            L2 += std::pow(weights[i][j].first[k][l], 2);
+          }
+        }
+      }
+    }
+
+    L1 *= _L1;
+    L2 *= (_L2 * 0.5);
+
+    //training loss
+    Matrix input(_trainData.size());
+    Matrix output(_trainData.size());
+    for(unsigned i = 0; i < _trainData.size(); i++)
+    {
+      input[i] = _trainData[i].first;
+      output[i] = _trainData[i].second;
+    }
+    input = process(input);
+    double trainLoss = averageLoss(computeLossMatrix(output, input).first) + L1 + L2;
+
+    //validation loss
+    Matrix validationResult = process(_validationData);
+    double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first) + L1 + L2;
+
+    //testing accuracy
+    Matrix testResult = process(_testData);
+    double testAccuracy = accuracy(_testRealResults, testResult, 0.1);
+
+    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
+    _trainLosses.push_back(trainLoss);
+    _validLosses.push_back(validationLoss);
+    _testAccuracy.push_back(testAccuracy);
+    return validationLoss;
+  }
+
+
+  void save()
+  {
+     for(unsigned i = 0; i < _layers.size(); i++)
+      {
+          _layers[i]->save();
+      }
+  }
+
+
+  void loadSaved()
+  {
+     for(unsigned i = 0; i < _layers.size(); i++)
+      {
+          _layers[i]->loadSaved();
+      }
   }
 
 

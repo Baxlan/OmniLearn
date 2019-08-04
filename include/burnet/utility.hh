@@ -56,7 +56,7 @@ private:
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== UTILITY FUNCTIONS =======================================================
+//=== UTILITY FUNCTIONS ON VECTORS AND MATRIX =================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -79,7 +79,7 @@ double dot(std::vector<double> const& a, std::vector<double> const& b)
 }
 
 
-double distance(std::vector<double> const& a, std::vector<double> const& b, double order = 2)
+double distance(std::vector<double> const& a, std::vector<double> const& b, double order)
 {
     if(a.size() != b.size())
     {
@@ -356,7 +356,7 @@ std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted)
         for(unsigned j = 0; j < loss[0].size(); j++)
         {
             loss[i][j] = 0.5 * std::pow(real[i][j] - predicted[i][j], 2);
-            gradients[i][j] = -(real[i][j] - predicted[i][j]);
+            gradients[i][j] = (real[i][j] - predicted[i][j]);
         }
     }
     return  {loss, gradients};
