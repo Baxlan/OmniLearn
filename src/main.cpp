@@ -25,18 +25,18 @@ int main()
         data[i] = {{dataset[i]["sepal_length"], dataset[i]["sepal_width"], dataset[i]["petal_length"], dataset[i]["petal_width"]}, dataRes[dataset[i]["species"]]};
     }
 
-    burnet::decayParam::decayConstant = 0.01;
 
     burnet::NetworkParam netp;
     netp.batchSize = 10;
     netp.learningRate = 0.1;
-    netp.dropout = 0.;
+    netp.dropout = 0.0;
     netp.dropconnect = 0.;
     netp.loss = burnet::Loss::CrossEntropy;
-    netp.L2 = 0.0001;
+    netp.L2 = 0.001;
     netp.maxEpoch = 3000;
     netp.epochAfterOptimal = 300;
     netp.decay = burnet::inverseDecay;
+    burnet::decayParam::decayConstant = 0.01;
 
     burnet::Network net(data, netp);
 
@@ -46,9 +46,10 @@ int main()
     net.addLayer<burnet::Dot, burnet::Relu>(lay);
     lay.size = 3;
     net.addLayer<burnet::Dot, burnet::Linear>(lay);
+
+
     net.learn();
     net.writeInfo("output.txt");
-
 
     return 0;
 }

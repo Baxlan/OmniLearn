@@ -278,8 +278,7 @@ struct LayerParam
 struct NetworkParam
 {
     NetworkParam():
-    dataSeed(0),
-    dropSeed(0),
+    seed(0),
     batchSize(1),
     learningRate(0.001),
     L1(0),
@@ -295,8 +294,7 @@ struct NetworkParam
     {
     }
 
-    unsigned dataSeed;
-    unsigned dropSeed;
+    unsigned seed;
     unsigned batchSize;
     double learningRate;
     double L1;

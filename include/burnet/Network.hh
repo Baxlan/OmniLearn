@@ -21,10 +21,8 @@ class Network
 {
 public:
   Network(Dataset data = Dataset(), NetworkParam const& param = NetworkParam()):
-  _dataSeed(param.dataSeed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.dataSeed),
-  _dropSeed(param.dropSeed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()+1) : param.dropSeed),
-  _dataGen(std::mt19937(_dataSeed)),
-  _dropGen(std::mt19937(_dropSeed)),
+  _seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
+  _generator(std::mt19937(_seed)),
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
@@ -100,7 +98,7 @@ public:
 
         for(unsigned i = 0; i < _layers.size(); i++)
         {
-          input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _dropGen);
+          input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _generator);
         }
 
         Matrix gradients(transpose(computeLossMatrix(output, input).second));
@@ -185,7 +183,7 @@ protected:
 
   void shuffleData()
   {
-    std::shuffle(_trainData.begin(), _trainData.end(), _dataGen);
+    std::shuffle(_trainData.begin(), _trainData.end(), _generator);
 
     double validation = _validationRatio * _trainData.size();
     double test = _testRatio * _trainData.size();
@@ -280,7 +278,7 @@ protected:
 
     //testing accuracy
     Matrix testResult = process(_testData);
-    double testAccuracy = accuracy(_testRealResults, testResult, 0.1);
+    double testAccuracy = std::round(accuracy(_testRealResults, testResult, 0.1));
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
     _trainLosses.push_back(trainLoss);
@@ -309,11 +307,9 @@ protected:
 
 
 protected:
-  unsigned _dataSeed;
-  unsigned _dropSeed;
+  unsigned _seed;
 
-  std::mt19937 _dataGen;
-  std::mt19937 _dropGen;
+  std::mt19937 _generator;
   std::bernoulli_distribution _dropoutDist;
   std::bernoulli_distribution _dropconnectDist;
 
