@@ -221,10 +221,10 @@ double accuracy(Matrix const& real, Matrix const& predicted, double const& margi
 
 struct decayParam
 {
-    static double a;
+    static double decayConstant;
 };
 
-inline double decayParam::a = 1;
+inline double decayParam::decayConstant = 1;
 
 
 double noDecay(double initialLR, [[maybe_unused]] unsigned epoch)
@@ -234,13 +234,13 @@ double noDecay(double initialLR, [[maybe_unused]] unsigned epoch)
 
 double inverseDecay(double initialLR, unsigned epoch)
 {
-    return initialLR / (1 + (decayParam::a * epoch));
+    return initialLR / (1 + (decayParam::decayConstant * epoch));
 }
 
 
 double expDecay(double initialLR, unsigned epoch)
 {
-    return initialLR * std::exp(-decayParam::a * epoch);
+    return initialLR * std::exp(-decayParam::decayConstant * epoch);
 }
 
 
@@ -260,8 +260,8 @@ struct LayerParam
     size(8),
     maxNorm(32),
     distrib(Distrib::Normal),
-    distribVal1(distrib == Distrib::Normal ? 0 : 6),
-    distribVal2(2),
+    mean_boundary(distrib == Distrib::Normal ? 0 : 6),
+    deviation(2),
     k(1)
     {
     }
@@ -269,8 +269,8 @@ struct LayerParam
     unsigned size; //number of neurons
     double maxNorm;
     Distrib distrib;
-    double distribVal1; //mean (if uniform), boundary (if uniform)
-    double distribVal2; //deviation (if normal) or useless (if uniform)
+    double mean_boundary; //mean (if uniform), boundary (if uniform)
+    double deviation; //deviation (if normal) or useless (if uniform)
     unsigned k; //number of weight set for each neuron
 };
 
@@ -279,28 +279,28 @@ struct NetworkParam
 {
     NetworkParam():
     dataSeed(0),
+    dropSeed(0),
     batchSize(1),
-    learningRate(0.005),
+    learningRate(0.001),
     L1(0),
     L2(0),
-    tackOn(0),
     maxEpoch(500),
     epochAfterOptimal(100),
     dropout(0),
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
-    loss(Loss::L2),
-    decay(inverseDecay)
+    loss(Loss::CrossEntropy),
+    decay(noDecay)
     {
     }
 
     unsigned dataSeed;
+    unsigned dropSeed;
     unsigned batchSize;
     double learningRate;
     double L1;
     double L2;
-    double tackOn;
     unsigned maxEpoch;
     unsigned epochAfterOptimal;
     double dropout;

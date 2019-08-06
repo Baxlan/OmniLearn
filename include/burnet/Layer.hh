@@ -13,40 +13,16 @@ class ILayer
 public:
     virtual ~ILayer(){}
     virtual Matrix process(Matrix const& inputs) const = 0;
-    virtual Matrix processToLearn(Matrix const& inputs) = 0;
+    virtual Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen) = 0;
     virtual void computeGradients(Matrix const& inputGradients) = 0;
     virtual Matrix getGradients() = 0;
     virtual unsigned size() const = 0;
     virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
-    virtual void updateWeights(double learningRate, double L1, double L2, double tackOn, double momentum) = 0;
+    virtual void updateWeights(double learningRate, double L1, double L2, double momentum) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const = 0;
-
-    static void initDropout(unsigned seed, double drop)
-    {
-        dropout = drop;
-
-        if(seed == 0)
-            seed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        dropGen = std::mt19937(seed);
-        dropoutSeed = seed;
-
-        dropDist = std::bernoulli_distribution(drop);
-    }
-
-
-protected:
-    static double dropoutSeed;
-    static double dropout;
-    static std::mt19937 dropGen;
-    static std::bernoulli_distribution dropDist;
 };
-
-inline double ILayer::dropoutSeed = 0;
-inline double ILayer::dropout = 0;
-inline std::mt19937 ILayer::dropGen = std::mt19937();
-inline std::bernoulli_distribution ILayer::dropDist = std::bernoulli_distribution();
 
 
 //=============================================================================
@@ -70,8 +46,8 @@ public:
     _inputSize(0),
     _batchSize(0),
     _distrib(param.distrib),
-    _distVal1(param.distribVal1),
-    _distVal2(param.distribVal2),
+    _distVal1(param.mean_boundary),
+    _distVal2(param.deviation),
     _maxNorm(param.maxNorm),
     _k(param.k),
     _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
@@ -107,21 +83,21 @@ public:
     }
 
 
-    Matrix processToLearn(Matrix const& inputs)
+    Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
     {
         //lines are features, columns are neurons
         Matrix output(_batchSize, std::vector<double>(_neurons.size(), 0));
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
             //one result per feature (for each neuron)
-            std::vector<double> result = _neurons[i].processToLearn(inputs);
+            std::vector<double> result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
             for(unsigned j = 0; j < result.size(); j++)
             {
                 output[j][i] = result[j];
                 //dropOut
                 if(dropout > std::numeric_limits<double>::epsilon())
                 {
-                    if(dropDist(dropGen))
+                    if(dropoutDist(dropGen))
                         output[j][i] = 0;
                     else
                         output[j][i] /= (1-dropout);
@@ -178,11 +154,11 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, double tackOn, double momentum)
+    void updateWeights(double learningRate, double L1, double L2, double momentum)
     {
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            _neurons[i].updateWeights(learningRate, L1, L2, tackOn, _maxNorm, momentum);
+            _neurons[i].updateWeights(learningRate, L1, L2, _maxNorm, momentum);
         }
     }
 

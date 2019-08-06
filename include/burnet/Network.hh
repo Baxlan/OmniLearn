@@ -22,14 +22,19 @@ class Network
 public:
   Network(Dataset data = Dataset(), NetworkParam const& param = NetworkParam()):
   _dataSeed(param.dataSeed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.dataSeed),
+  _dropSeed(param.dropSeed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()+1) : param.dropSeed),
   _dataGen(std::mt19937(_dataSeed)),
+  _dropGen(std::mt19937(_dropSeed)),
+  _dropoutDist(std::bernoulli_distribution(param.dropout)),
+  _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
   _decay(param.decay),
   _batchSize(param.batchSize),
   _learningRate(param.learningRate),
   _L1(param.L1),
   _L2(param.L2),
-  _tackOn(param.tackOn),
+  _dropout(param.dropout),
+  _dropconnect(param.dropconnect),
   _maxEpoch(param.maxEpoch),
   _epochAfterOptimal(param.epochAfterOptimal),
   _loss(param.loss),
@@ -95,7 +100,7 @@ public:
 
         for(unsigned i = 0; i < _layers.size(); i++)
         {
-          input = _layers[i]->processToLearn(input);
+          input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _dropGen);
         }
 
         Matrix gradients(transpose(computeLossMatrix(output, input).second));
@@ -106,7 +111,7 @@ public:
         }
         for(unsigned i = 0; i < _layers.size(); i++)
         {
-          _layers[i]->updateWeights(_decay(_learningRate, _epoch), _L1, _L2, _tackOn, 0);
+          _layers[i]->updateWeights(_decay(_learningRate, _epoch), _L1, _L2, 0);
         }
       }
       std::cout << "Epoch: " << _epoch;
@@ -139,6 +144,30 @@ public:
       inputs = softmax(inputs);
     }
     return inputs;
+  }
+
+
+  void writeInfo(std::string const& path) const
+  {
+    std::ofstream output(path);
+    for(unsigned i=0; i<_trainLosses.size(); i++)
+    {
+        output << _trainLosses[i] << ",";
+    }
+    output << "\n";
+    for(unsigned i=0; i<_validLosses.size(); i++)
+    {
+        output << _validLosses[i] << ",";
+    }
+    output << "\n";
+    for(unsigned i=0; i<_testAccuracy.size(); i++)
+    {
+        output << _testAccuracy[i] << ",";
+    }
+    output << "\n";
+    output << _optimalEpoch;
+    output << "\n";
+    output << _testAccuracy[_optimalEpoch-1];
   }
 
 
@@ -281,7 +310,12 @@ protected:
 
 protected:
   unsigned _dataSeed;
+  unsigned _dropSeed;
+
   std::mt19937 _dataGen;
+  std::mt19937 _dropGen;
+  std::bernoulli_distribution _dropoutDist;
+  std::bernoulli_distribution _dropconnectDist;
 
   std::vector<std::shared_ptr<ILayer>> _layers;
 
@@ -291,7 +325,8 @@ protected:
   double _learningRate;
   double _L1;
   double _L2;
-  double _tackOn;
+  double _dropout;
+  double _dropconnect;
   unsigned const _maxEpoch;
   unsigned const _epochAfterOptimal;
   Loss _loss;

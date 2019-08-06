@@ -14,38 +14,15 @@ namespace burnet
 class INeuron
 {
 public:
-    static void initRandom(unsigned dropCoSeed, double dropCo, unsigned wSeed)
-    {
-        dropConnect = dropCo;
 
-        if(dropCoSeed == 0)
-            dropCoSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        dropGen = std::mt19937(dropCoSeed);
-        dropSeed = dropCoSeed;
-
-        dropDist = std::bernoulli_distribution(dropCo);
-
-        if(wSeed == 0)
-            wSeed = static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count());
-        weightGen = std::mt19937(wSeed);
-        weightSeed = wSeed;
-    }
 
 protected:
     static unsigned weightSeed;
     static std::mt19937 weightGen;
-    static unsigned dropSeed;
-    static double dropConnect;
-    static std::mt19937 dropGen;
-    static std::bernoulli_distribution dropDist;
 };
 
 inline unsigned INeuron::weightSeed = 0;
 inline std::mt19937 INeuron::weightGen = std::mt19937();
-inline unsigned INeuron::dropSeed = 0;
-inline double INeuron::dropConnect = 0;
-inline std::mt19937 INeuron::dropGen = std::mt19937();
-inline std::bernoulli_distribution INeuron::dropDist = std::bernoulli_distribution();
 
 
 //=============================================================================
@@ -137,21 +114,21 @@ public:
 
 
     //each line of the input matrix is a feature of the batch. Returns one result per feature.
-    std::vector<double> processToLearn(Matrix const& inputs)
+    std::vector<double> processToLearn(Matrix const& inputs, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
     {
         _inputs = inputs;
 
         //dropConnect
-        if(dropConnect > std::numeric_limits<double>::epsilon())
+        if(dropconnect > std::numeric_limits<double>::epsilon())
         {
             for(unsigned i=0; i<_inputs.size(); i++)
             {
-                for(unsigned j=0; j<_inputs[0].size(); i++)
+                for(unsigned j=0; j<_inputs[0].size(); j++)
                 {
-                    if(dropDist(dropGen))
+                    if(dropconnectDist(dropGen))
                         _inputs[i][j] = 0;
                     else
-                        _inputs[i][j] /= (1 - dropConnect);
+                        _inputs[i][j] /= (1 - dropconnect);
                 }
             }
         }
@@ -200,7 +177,7 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, double tackOn, double maxNorm, double momentum)
+    void updateWeights(double learningRate, double L1, double L2, double maxNorm, double momentum)
     {
         double averageInputGrad = 0;
         for(unsigned i = 0; i < _inputGradients.size(); i++)
@@ -223,7 +200,7 @@ public:
         {
             for(unsigned j = 0; j < _weights[0].size(); j++)
             {
-                _weights[i][j] += (learningRate*(_gradients[i][j] + (L2 * _weights[i][j]) + L1) + tackOn);
+                _weights[i][j] += (learningRate*(_gradients[i][j] + (L2 * _weights[i][j]) + L1));
                 _bias[i] += learningRate * averageActGrad;
             }
         }

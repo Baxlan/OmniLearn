@@ -2,27 +2,48 @@
 import matplotlib.pyplot as plt
 
 
-lossFile = open("output.txt").readlines()
+content = open("output.txt").readlines()
 
 
-loss = lossFile[0][:-2].split(',')
+fig, ax1 = plt.subplots()
+ax2 = ax1.twinx()
 
-for i in range(0, len(loss)):
-    loss[i] = float(loss[i])
 
-plt.plot(range(0, len(loss)), loss)
+trainLoss = content[0][:-2].split(',')
+for i in range(0, len(trainLoss)):
+    trainLoss[i] = float(trainLoss[i])
 
-"""
-loss1 = lossFile[1][:-1].split(',')
+lns1 = ax1.plot(range(0, len(trainLoss)), trainLoss, label = "training loss")
 
-for i in range(0, len(loss1)):
-    loss1[i] = float(loss1[i])
 
-plt.plot(range(0, len(loss1)), loss1)
-"""
+validLoss = content[1][:-2].split(',')
+for i in range(0, len(validLoss)):
+    validLoss[i] = float(validLoss[i])
 
+lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss")
+
+
+testAccuracy = content[2][:-2].split(',')
+for i in range(0, len(testAccuracy)):
+    testAccuracy[i] = float(testAccuracy[i])
+
+
+lns3 = ax2.plot(range(0, len(testAccuracy)), testAccuracy, label = "test accuracy", color = "g")
+
+
+optimal = int(content[3])
+plt.axvline(optimal, color = "black")
+
+
+plt.title("Optimal epoch : " + str(optimal) + " (" + str(round(testAccuracy[optimal-1])) + "% accurate)", fontsize=18)
 plt.grid()
-plt.xlabel("epoch")
-plt.ylabel("loss")
-plt.ylim(0, 120)
+ax1.set_xlabel("epoch", fontsize=16)
+ax1.set_ylabel("loss", fontsize=16)
+ax2.set_ylabel("accuracy (%)", fontsize=16)
+ax2.set_ylim(0, 100)
+
+lns = lns1 + lns2 + lns3
+labels = [l.get_label() for l in lns]
+plt.legend(lns, labels, fontsize=14)
+
 plt.show()
