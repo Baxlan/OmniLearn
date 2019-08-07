@@ -48,8 +48,10 @@ int main()
     net.addLayer<burnet::Dot, burnet::Linear>(lay);
 
 
-    net.learn();
-    net.writeInfo("output.txt");
+    if(net.learn())
+    {
+        net.writeInfo("output.txt");
+    }
 
     return 0;
 }

@@ -74,7 +74,7 @@ public:
   }
 
 
-  void learn()
+  bool learn()
   {
     initLayers();
     shuffleData();
@@ -88,39 +88,20 @@ public:
     std::cout << "\n";
     for(_epoch = 1; _epoch < _maxEpoch; _epoch++)
     {
-      for(unsigned batch = 0; batch < _nbBatch; batch++)
-      {
-        Matrix input(_batchSize);
-        Matrix output(_batchSize);
-        for(unsigned i = 0; i < _batchSize; i++)
-        {
-          input[i] = _trainData[batch*_batchSize+i].first;
-          output[i] = _trainData[batch*_batchSize+i].second;
-        }
+      performeOneEpoch();
 
-        for(unsigned i = 0; i < _layers.size(); i++)
-        {
-          input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _generator);
-        }
-
-        Matrix gradients(transpose(computeLossMatrix(output, input).second));
-        for(unsigned i = 0; i < _layers.size(); i++)
-        {
-          _layers[_layers.size() - i - 1]->computeGradients(gradients);
-          gradients = _layers[_layers.size() - i - 1]->getGradients();
-        }
-        for(unsigned i = 0; i < _layers.size(); i++)
-        {
-          _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, 0);
-        }
-      }
       std::cout << "Epoch: " << _epoch;
-      double loss = computeLoss();
+      double validLoss = computeLoss();
       std::cout << "   LR: " << _decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay) << "\n";
-      if(loss < lowestLoss)
+      if(std::isnan(_trainLosses[_epoch - 1]) || std::isnan(validLoss))
+      {
+        return false;
+      }
+      //EARLY STOPPING
+      if(validLoss < lowestLoss)
       {
         save();
-        lowestLoss = loss;
+        lowestLoss = validLoss;
         _optimalEpoch = _epoch;
       }
       if(_epoch - _optimalEpoch > _epochAfterOptimal)
@@ -128,7 +109,7 @@ public:
     }
     loadSaved();
     std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Accuracy: " << _testAccuracy[_optimalEpoch] << "%\n";
-
+    return true;
   }
 
 
@@ -213,6 +194,37 @@ protected:
       _trainData.pop_back();
     }
     _nbBatch = static_cast<unsigned>(nbBatch);
+  }
+
+
+  void performeOneEpoch()
+  {
+    for(unsigned batch = 0; batch < _nbBatch; batch++)
+    {
+      Matrix input(_batchSize);
+      Matrix output(_batchSize);
+      for(unsigned i = 0; i < _batchSize; i++)
+      {
+        input[i] = _trainData[batch*_batchSize+i].first;
+        output[i] = _trainData[batch*_batchSize+i].second;
+      }
+
+      for(unsigned i = 0; i < _layers.size(); i++)
+      {
+        input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _generator);
+      }
+
+      Matrix gradients(transpose(computeLossMatrix(output, input).second));
+      for(unsigned i = 0; i < _layers.size(); i++)
+      {
+        _layers[_layers.size() - i - 1]->computeGradients(gradients);
+        gradients = _layers[_layers.size() - i - 1]->getGradients();
+      }
+      for(unsigned i = 0; i < _layers.size(); i++)
+      {
+        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, 0);
+      }
+    }
   }
 
 
