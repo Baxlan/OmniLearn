@@ -35,8 +35,8 @@ int main()
     netp.L2 = 0.001;
     netp.maxEpoch = 3000;
     netp.epochAfterOptimal = 300;
-    netp.decay = burnet::inverseDecay;
-    burnet::decayParam::decayConstant = 0.01;
+    netp.decay = burnet::LRDecay::inverse;
+    netp.LRDecayConstant = 0.01;
 
     burnet::Network net(data, netp);
 

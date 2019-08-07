@@ -26,6 +26,8 @@ public:
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
+  _LRDecayConstant(param.LRDecayConstant),
+  _LRStepDecay(param.LRStepDecay),
   _decay(param.decay),
   _batchSize(param.batchSize),
   _learningRate(param.learningRate),
@@ -109,12 +111,12 @@ public:
         }
         for(unsigned i = 0; i < _layers.size(); i++)
         {
-          _layers[i]->updateWeights(_decay(_learningRate, _epoch), _L1, _L2, 0);
+          _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, 0);
         }
       }
       std::cout << "Epoch: " << _epoch;
       double loss = computeLoss();
-      std::cout << "   LR: " << _decay(_learningRate, _epoch) << "\n";
+      std::cout << "   LR: " << _decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay) << "\n";
       if(loss < lowestLoss)
       {
         save();
@@ -315,7 +317,9 @@ protected:
 
   std::vector<std::shared_ptr<ILayer>> _layers;
 
-  double (* _decay)(double, unsigned);
+  double _LRDecayConstant;
+  unsigned _LRStepDecay;
+  double (* _decay)(double, unsigned, double, unsigned);
 
   unsigned const _batchSize;
   double _learningRate;

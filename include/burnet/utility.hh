@@ -218,30 +218,35 @@ double accuracy(Matrix const& real, Matrix const& predicted, double const& margi
 //=============================================================================
 //=============================================================================
 
-
-struct decayParam
+namespace LRDecay
 {
-    static double decayConstant;
-};
-
-inline double decayParam::decayConstant = 1;
 
 
-double noDecay(double initialLR, [[maybe_unused]] unsigned epoch)
-{
-    return initialLR;
-}
-
-double inverseDecay(double initialLR, unsigned epoch)
-{
-    return initialLR / (1 + (decayParam::decayConstant * epoch));
-}
+    double none(double initialLR, [[maybe_unused]] unsigned epoch, [[maybe_unused]] double decayConstant, [[maybe_unused]] unsigned step)
+    {
+        return initialLR;
+    }
 
 
-double expDecay(double initialLR, unsigned epoch)
-{
-    return initialLR * std::exp(-decayParam::decayConstant * epoch);
-}
+    double inverse(double initialLR, unsigned epoch, double decayConstant, [[maybe_unused]] unsigned step)
+    {
+        return initialLR / (1 + (decayConstant * epoch));
+    }
+
+
+    double exp(double initialLR, unsigned epoch, double decayConstant, [[maybe_unused]] unsigned step)
+    {
+        return initialLR * std::exp(-decayConstant * epoch);
+    }
+
+
+    double step(double initialLR, unsigned epoch, double decayConstant, unsigned step)
+    {
+        return initialLR * std::pow(decayConstant, std::floor(epoch/step));
+    }
+
+
+} // namespace LRDecay
 
 
 //=============================================================================
@@ -290,7 +295,9 @@ struct NetworkParam
     validationRatio(0.2),
     testRatio(0.2),
     loss(Loss::CrossEntropy),
-    decay(noDecay)
+    LRDecayConstant(0.01),
+    LRStepDecay(10),
+    decay(LRDecay::none)
     {
     }
 
@@ -306,7 +313,9 @@ struct NetworkParam
     double validationRatio;
     double testRatio;
     Loss loss;
-    double (* decay)(double, unsigned);
+    double LRDecayConstant;
+    unsigned LRStepDecay;
+    double (* decay)(double, unsigned, double, unsigned);
 };
 
 
