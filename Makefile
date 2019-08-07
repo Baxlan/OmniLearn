@@ -2,8 +2,9 @@ CXX = g++
 
 RM = rm -rf
 
-CXXFLAGS = -g3 -std=c++17 -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wold-style-cast -Wconversion -Wsign-conversion -Wdouble-promotion -Wfloat-equal -Woverloaded-virtual -Weffc++ -Wswitch-default -Wl,--no-as-needed -I$(INCDIR)
+CXXFLAGS = -g3 -std=c++17 -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wold-style-cast -Wconversion -Wsign-conversion -Wdouble-promotion -Wfloat-equal -Woverloaded-virtual -Wswitch-default -Wl,--no-as-needed -I$(INCDIR)
 
+#-Weffc++
 #-Werror
 #-O2 -Os augmente la vitesse d'execution et la taille de l'exe
 #-Winline

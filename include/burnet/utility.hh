@@ -12,7 +12,6 @@ namespace burnet
 {
 
 
-
 typedef std::vector<std::vector<double>> Matrix;
 typedef std::vector<std::vector<std::vector<double>>> Tensor;
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
@@ -20,6 +19,7 @@ typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset
 enum class Distrib {Uniform, Normal};
 enum class Loss {L1, L2, CrossEntropy};
 
+static inline unsigned nthreads = 1;
 
 //=============================================================================
 //=============================================================================

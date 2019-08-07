@@ -98,7 +98,7 @@ public:
         return false;
       }
       //EARLY STOPPING
-      if(validLoss < lowestLoss)
+      if(validLoss < lowestLoss * 0.995) //if loss increases, or doesn't decrease more than 0.5% in _epochAfterOptimal epochs, stop learning
       {
         save();
         lowestLoss = validLoss;
