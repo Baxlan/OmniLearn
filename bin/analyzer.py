@@ -40,7 +40,7 @@ plt.grid()
 ax1.set_xlabel("epoch", fontsize=16)
 ax1.set_ylabel("loss", fontsize=16)
 ax2.set_ylabel("accuracy (%)", fontsize=16)
-ax2.set_ylim(0, 100)
+ax2.set_ylim(0, 105)
 
 lns = lns1 + lns2 + lns3
 labels = [l.get_label() for l in lns]

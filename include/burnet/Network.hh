@@ -2,6 +2,7 @@
 #define BURNET_NETWORK_HH_
 
 #include "Layer.hh"
+#include "pretreat.hh"
 
 #include <iostream>
 
@@ -20,7 +21,7 @@ namespace burnet
 class Network
 {
 public:
-  Network(Dataset data = Dataset(), NetworkParam const& param = NetworkParam()):
+  Network(NetworkParam const& param = NetworkParam()):
   _seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
   _generator(std::mt19937(_seed)),
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
@@ -40,7 +41,8 @@ public:
   _loss(param.loss),
   _validationRatio(param.validationRatio),
   _testRatio(param.testRatio),
-  _trainData(data),
+  _rawData(),
+  _trainData(),
   _validationData(),
   _validationRealResults(),
   _testData(),
@@ -50,13 +52,8 @@ public:
   _optimalEpoch(0),
   _trainLosses(std::vector<double>()),
   _validLosses(std::vector<double>()),
-  _testAccuracy(std::vector<double>())
-  {
-  }
-
-
-  Network(NetworkParam const& param = NetworkParam(), Dataset data = Dataset()):
-  Network(data, param)
+  _testAccuracy(std::vector<double>()),
+  _margin(param.margin)
   {
   }
 
@@ -68,9 +65,24 @@ public:
   }
 
 
-  void setData(std::vector<std::pair<std::vector<double>, std::vector<double>>> data)
+  void setData(Dataset const& data)
   {
-    _trainData = data;
+    _rawData = data;
+  }
+
+
+  //should take Dataset
+  void setValidData(Matrix const& inputs, Matrix const& outputs)
+  {
+    _validationData = inputs;
+    _validationRealResults = outputs;
+  }
+
+  //should take Dataset
+  void setTestData(Matrix const& inputs, Matrix const& outputs)
+  {
+    _testData = inputs;
+    _testRealResults = outputs;
   }
 
 
@@ -78,8 +90,17 @@ public:
   {
     initLayers();
     shuffleData();
+    check();
 
-    if(_layers[_layers.size()-1]->size() != _trainData[0].second.size())
+    auto a = standardize(_trainData);
+    standardize(_validationData, a);
+    standardize(_testData, a);
+
+    auto b = standardize(_trainRealResults);
+    standardize(_validationRealResults, b);
+    standardize(_testRealResults, b);
+
+    if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {
       throw Exception("The last layer must have as much neurons as outputs.");
     }
@@ -98,7 +119,7 @@ public:
         return false;
       }
       //EARLY STOPPING
-      if(validLoss < lowestLoss * 0.995) //if loss increases, or doesn't decrease more than 0.5% in _epochAfterOptimal epochs, stop learning
+      if(validLoss < lowestLoss * 0.999) //if loss increases, or doesn't decrease more than 0.5% in _epochAfterOptimal epochs, stop learning
       {
         save();
         lowestLoss = validLoss;
@@ -157,8 +178,8 @@ protected:
   {
     for(unsigned i = 0; i < _layers.size(); i++)
     {
-        _layers[i]->init((i == 0 ? _trainData[0].first.size() : _layers[i-1]->size()),
-                        (i == _layers.size()-1 ? _trainData[0].second.size() : _layers[i+1]->size()),
+        _layers[i]->init((i == 0 ? _rawData[0].first.size() : _layers[i-1]->size()),
+                        (i == _layers.size()-1 ? _rawData[0].second.size() : _layers[i+1]->size()),
                         _batchSize);
     }
   }
@@ -166,34 +187,47 @@ protected:
 
   void shuffleData()
   {
-    std::shuffle(_trainData.begin(), _trainData.end(), _generator);
+    std::shuffle(_rawData.begin(), _rawData.end(), _generator);
 
-    double validation = _validationRatio * _trainData.size();
-    double test = _testRatio * _trainData.size();
-    double nbBatch = std::trunc(_trainData.size() - validation - test) / _batchSize;
+    double validation = _validationRatio * _rawData.size();
+    double test = _testRatio * _rawData.size();
+    double nbBatch = std::trunc(_rawData.size() - validation - test) / _batchSize;
 
     //add a batch if an incomplete batch has more than 0.5*batchsize data
     if(nbBatch - static_cast<unsigned>(nbBatch) >= 0.5)
       nbBatch = std::trunc(nbBatch) + 1;
 
     unsigned nbTrain = static_cast<unsigned>(nbBatch)*_batchSize;
-    unsigned noTrain = _trainData.size() - nbTrain;
+    unsigned noTrain = _rawData.size() - nbTrain;
     validation = std::round(noTrain*_validationRatio/(_validationRatio + _testRatio));
     test = std::round(noTrain*_testRatio/(_validationRatio + _testRatio));
 
     for(unsigned i = 0; i < static_cast<unsigned>(validation); i++)
     {
-      _validationData.push_back(_trainData[_trainData.size()-1].first);
-      _validationRealResults.push_back(_trainData[_trainData.size()-1].second);
-      _trainData.pop_back();
+      _validationData.push_back(_rawData[_rawData.size()-1].first);
+      _validationRealResults.push_back(_rawData[_rawData.size()-1].second);
+      _rawData.pop_back();
     }
     for(unsigned i = 0; i < static_cast<unsigned>(test); i++)
     {
-      _testData.push_back(_trainData[_trainData.size()-1].first);
-      _testRealResults.push_back(_trainData[_trainData.size()-1].second);
-      _trainData.pop_back();
+      _testData.push_back(_rawData[_rawData.size()-1].first);
+      _testRealResults.push_back(_rawData[_rawData.size()-1].second);
+      _rawData.pop_back();
+    }
+    unsigned size = _rawData.size();
+    for(unsigned i = 0; i < size; i++)
+    {
+      _trainData.push_back(_rawData[_rawData.size()-1].first);
+      _trainRealResults.push_back(_rawData[_rawData.size()-1].second);
+      _rawData.pop_back();
     }
     _nbBatch = static_cast<unsigned>(nbBatch);
+  }
+
+
+  void check() const
+  {
+
   }
 
 
@@ -205,8 +239,8 @@ protected:
       Matrix output(_batchSize);
       for(unsigned i = 0; i < _batchSize; i++)
       {
-        input[i] = _trainData[batch*_batchSize+i].first;
-        output[i] = _trainData[batch*_batchSize+i].second;
+        input[i] = _trainData[batch*_batchSize+i];
+        output[i] = _trainRealResults[batch*_batchSize+i];
       }
 
       for(unsigned i = 0; i < _layers.size(); i++)
@@ -239,7 +273,7 @@ protected:
   }
 
 
-  //return loss
+  //return validation loss
   double computeLoss()
   {
     //for each layer, for each neuron, first is weights, second is bias
@@ -277,11 +311,11 @@ protected:
 
     //training loss
     Matrix input(_trainData.size());
-    Matrix output(_trainData.size());
+    Matrix output(_trainRealResults.size());
     for(unsigned i = 0; i < _trainData.size(); i++)
     {
-      input[i] = _trainData[i].first;
-      output[i] = _trainData[i].second;
+      input[i] = _trainData[i];
+      output[i] = _trainRealResults[i];
     }
     input = process(input);
     double trainLoss = averageLoss(computeLossMatrix(output, input).first) + L1 + L2;
@@ -292,7 +326,7 @@ protected:
 
     //testing accuracy
     Matrix testResult = process(_testData);
-    double testAccuracy = std::round(accuracy(_testRealResults, testResult, 0.1));
+    double testAccuracy = std::round(accuracy(_testRealResults, testResult, _margin));
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
     _trainLosses.push_back(trainLoss);
@@ -345,7 +379,9 @@ protected:
 
   double _validationRatio;
   double _testRatio;
-  Dataset _trainData;
+  Dataset _rawData;
+  Matrix _trainData;
+  Matrix _trainRealResults;
   Matrix _validationData;
   Matrix _validationRealResults;
   Matrix _testData;
@@ -357,6 +393,8 @@ protected:
   std::vector<double> _trainLosses;
   std::vector<double> _validLosses;
   std::vector<double> _testAccuracy;
+
+  double _margin; // relative margin (in %) in which a predict must be to be valid
 };
 
 

@@ -13,7 +13,6 @@ namespace burnet
 
 
 typedef std::vector<std::vector<double>> Matrix;
-typedef std::vector<std::vector<std::vector<double>>> Tensor;
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 enum class Distrib {Uniform, Normal};
@@ -184,29 +183,40 @@ double averageLoss(Matrix const& loss)
 }
 
 
-//margin size is the number of classes
-double accuracy(Matrix const& real, Matrix const& predicted, std::vector<double> const& margin)
+double accuracy(Matrix const& real, Matrix const& predicted, double margin)
 {
     double unvalidated = 0;
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            if(std::abs(real[i][j] - predicted[i][j]) > margin[j])
+            if(real[i][j] > std::numeric_limits<double>::epsilon())
             {
-                unvalidated++;
-                break;
+                if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
+                {
+                    unvalidated++;
+                    break;
+                }
+            }
+            else if(real[i][j] < -std::numeric_limits<double>::epsilon())
+            {
+                if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
+                {
+                    unvalidated++;
+                    break;
+                }
+            }
+            else //if real == 0
+            {
+                if(false)
+                {
+                    unvalidated++;
+                    break;
+                }
             }
         }
     }
     return 100* (real.size() - unvalidated)/real.size();
-}
-
-
-//margin size is the number of classes
-double accuracy(Matrix const& real, Matrix const& predicted, double const& margin)
-{
-    return accuracy(real, predicted, std::vector<double>(real[0].size(), margin));
 }
 
 
@@ -230,19 +240,19 @@ namespace LRDecay
 
     double inverse(double initialLR, unsigned epoch, double decayConstant, [[maybe_unused]] unsigned step)
     {
-        return initialLR / (1 + (decayConstant * epoch));
+        return initialLR / (1 + (decayConstant * (epoch-1)));
     }
 
 
     double exp(double initialLR, unsigned epoch, double decayConstant, [[maybe_unused]] unsigned step)
     {
-        return initialLR * std::exp(-decayConstant * epoch);
+        return initialLR * std::exp(-decayConstant * (epoch-1));
     }
 
 
     double step(double initialLR, unsigned epoch, double decayConstant, unsigned step)
     {
-        return initialLR * std::pow(decayConstant, std::floor(epoch/step));
+        return initialLR * std::pow(decayConstant, std::floor((epoch-1)/step));
     }
 
 
@@ -297,7 +307,8 @@ struct NetworkParam
     loss(Loss::CrossEntropy),
     LRDecayConstant(0.01),
     LRStepDecay(10),
-    decay(LRDecay::none)
+    decay(LRDecay::none),
+    margin(5) // %
     {
     }
 
@@ -316,6 +327,7 @@ struct NetworkParam
     double LRDecayConstant;
     unsigned LRStepDecay;
     double (* decay)(double, unsigned, double, unsigned);
+    double margin; // %
 };
 
 
