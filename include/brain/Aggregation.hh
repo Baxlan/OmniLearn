@@ -1,9 +1,9 @@
-#ifndef BURNET_AGGREGATION_HH_
-#define BURNET_AGGREGATION_HH_
+#ifndef BRAIN_AGGREGATION_HH_
+#define BRAIN_AGGREGATION_HH_
 
 #include "utility.hh"
 
-namespace burnet
+namespace brain
 {
 
 
@@ -160,8 +160,8 @@ public:
 
 
 
-} //namespace burnet
+} //namespace brain
 
 
 
-#endif //BURNET_AGGREGATION_HH_
+#endif //BRAIN_AGGREGATION_HH_

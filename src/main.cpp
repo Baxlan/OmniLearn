@@ -1,8 +1,8 @@
 
 #include <fstream>
 #include <map>
-#include "burnet/burnet.hh"
-#include "burnet/json.hh"
+#include "brain/brain.hh"
+#include "brain/json.hh"
 
 
 using json = nlohmann::json;
@@ -11,9 +11,9 @@ using json = nlohmann::json;
 enum class DataType {Iris, Vesta};
 
 
-burnet::Dataset extractData(DataType dataType)
+brain::Dataset extractData(DataType dataType)
 {
-    burnet::Dataset data;
+    brain::Dataset data;
 
     if(dataType == DataType::Iris)
     {
@@ -25,7 +25,7 @@ burnet::Dataset extractData(DataType dataType)
         dataRes["versicolor"] = {0, 1, 0};
         dataRes["virginica"] = {0, 0, 1};
 
-        data = burnet::Dataset(dataset.size());
+        data = brain::Dataset(dataset.size());
 
         for(unsigned i = 0; i < dataset.size(); i++)
         {
@@ -74,34 +74,34 @@ burnet::Dataset extractData(DataType dataType)
 
 int main()
 {
-    burnet::Dataset data(extractData(DataType::Vesta));
+    brain::Dataset data(extractData(DataType::Vesta));
 
-    burnet::nthreads = 4;
+    brain::nthreads = 4;
 
-    burnet::NetworkParam netp;
+    brain::NetworkParam netp;
     netp.batchSize = 1;
     netp.learningRate = 0.001;
     netp.dropout = 0.0;
     netp.dropconnect = 0.0;
-    netp.loss = burnet::Loss::L2;
+    netp.loss = brain::Loss::L2;
     netp.L2 = 0.;
     netp.maxEpoch = 200;
     netp.epochAfterOptimal = 20;
-    netp.decay = burnet::LRDecay::inverse;
+    netp.decay = brain::LRDecay::inverse;
     netp.LRDecayConstant = 1.0;
     netp.margin = 10;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.1;
 
-    burnet::Network net(netp);
+    brain::Network net(netp);
     net.setData(data);
 
-    burnet::LayerParam lay;
+    brain::LayerParam lay;
     lay.size = 32;
     lay.maxNorm = 5;
-    net.addLayer<burnet::Dot, burnet::Relu>(lay);
+    net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 23;
-    net.addLayer<burnet::Dot, burnet::Sigmoid>(lay);
+    net.addLayer<brain::Dot, brain::Sigmoid>(lay);
 
 
     if(net.learn())

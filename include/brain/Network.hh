@@ -1,12 +1,12 @@
-#ifndef BURNET_NETWORK_HH_
-#define BURNET_NETWORK_HH_
+#ifndef BRAIN_NETWORK_HH_
+#define BRAIN_NETWORK_HH_
 
 #include "Layer.hh"
 #include "pretreat.hh"
 
 #include <iostream>
 
-namespace burnet
+namespace brain
 {
 
 //=============================================================================
@@ -399,6 +399,6 @@ protected:
 
 
 
-} // namespace burnet
+} // namespace brain
 
-#endif //BURNET_NETWORK_HH_
+#endif //BRAIN_NETWORK_HH_

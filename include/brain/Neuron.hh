@@ -1,5 +1,5 @@
-#ifndef BURNET_NEURON_HH_
-#define BURNET_NEURON_HH_
+#ifndef BRAIN_NEURON_HH_
+#define BRAIN_NEURON_HH_
 
 #include "Activation.hh"
 #include "Aggregation.hh"
@@ -7,7 +7,7 @@
 #include <memory>
 #include <type_traits>
 
-namespace burnet
+namespace brain
 {
 
 
@@ -273,8 +273,8 @@ protected:
 
 
 
-} //namespace burnet
+} //namespace brain
 
 
 
-#endif //BURNET_NEURON_HH_
+#endif //BRAIN_NEURON_HH_

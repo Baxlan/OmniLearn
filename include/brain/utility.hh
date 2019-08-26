@@ -1,5 +1,5 @@
-#ifndef BURNET_UTILITY_HH_
-#define BURNET_UTILITY_HH_
+#ifndef BRAIN_UTILITY_HH_
+#define BRAIN_UTILITY_HH_
 
 #include <algorithm>
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace burnet
+namespace brain
 {
 
 
@@ -402,6 +402,6 @@ std::pair<Matrix, Matrix> crossEntropyLoss(Matrix const& real, Matrix const& pre
 
 
 
-} //namespace burnet
+} //namespace brain
 
-#endif //BURNET_UTILITY_HH_
+#endif //BRAIN_UTILITY_HH_

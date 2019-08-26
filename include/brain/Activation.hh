@@ -1,9 +1,9 @@
-#ifndef BURNET_ACTIVATION_HH_
-#define BURNET_ACTIVATION_HH_
+#ifndef BRAIN_ACTIVATION_HH_
+#define BRAIN_ACTIVATION_HH_
 
 #include <cmath>
 
-namespace burnet
+namespace brain
 {
 
 
@@ -407,8 +407,8 @@ protected:
 
 
 
-} //namespace burnet
+} //namespace brain
 
 
 
-#endif //BURNET_ACTIVATION_HH_
+#endif //BRAIN_ACTIVATION_HH_

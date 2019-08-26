@@ -1,10 +1,10 @@
 
-#ifndef BURNET_PRETREAT_HH_
-#define BURNET_PRETREAT_HH_
+#ifndef BRAIN_PRETREAT_HH_
+#define BRAIN_PRETREAT_HH_
 
 #include "utility.hh"
 
-namespace burnet
+namespace brain
 {
 
 
@@ -132,6 +132,6 @@ Matrix whiten(Matrix& data, Matrix eigen = {})
 }
 
 
-}
+} //namespace brain
 
-#endif // BURNET_PRETREAT_HH_
+#endif // BRAIN_PRETREAT_HH_

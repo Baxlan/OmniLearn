@@ -1,11 +1,11 @@
 //burnet.hh
 
-#ifndef BURNET_BURNET_HH_
-#define BURNET_BURNET_HH_
+#ifndef BRAIN_BRAIN_HH_
+#define BRAIN_BRAIN_HH_
 
 #include "Network.hh"
 
-namespace burnet
+namespace brain
 {
 
 
@@ -38,7 +38,7 @@ protected:
 
 */
 
-} // namespace burnet
+} // namespace brain
 
 
-#endif //BURNET_BURNET_HH_
+#endif //BRAIN_BRAIN_HH_

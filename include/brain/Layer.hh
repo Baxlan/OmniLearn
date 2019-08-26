@@ -1,12 +1,12 @@
-#ifndef BURNET_LAYER_HH_
-#define BURNET_LAYER_HH_
+#ifndef BRAIN_LAYER_HH_
+#define BRAIN_LAYER_HH_
 
 #include "Neuron.hh"
 #include <iostream>
 #include <thread>
 #include <functional>
 
-namespace burnet
+namespace brain
 {
 
 
@@ -285,8 +285,8 @@ protected:
 
 
 
-} //namespace burnet
+} //namespace brain
 
 
 
-#endif //BURNET_LAYER_HH_
+#endif //BRAIN_LAYER_HH_
