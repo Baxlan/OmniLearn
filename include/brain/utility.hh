@@ -195,7 +195,7 @@ double accuracy(Matrix const& real, Matrix const& predicted, double margin)
                 if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
                 {
                     unvalidated++;
-                    break;
+                    //break;
                 }
             }
             else if(real[i][j] < -std::numeric_limits<double>::epsilon())
@@ -203,7 +203,7 @@ double accuracy(Matrix const& real, Matrix const& predicted, double margin)
                 if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
                 {
                     unvalidated++;
-                    break;
+                    //break;
                 }
             }
             else //if real == 0
@@ -216,7 +216,7 @@ double accuracy(Matrix const& real, Matrix const& predicted, double margin)
             }
         }
     }
-    return 100* (real.size() - unvalidated)/real.size();
+    return 100* (real.size()*real[0].size() - unvalidated)/(real.size()*real[0].size());
 }
 
 

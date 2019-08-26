@@ -87,17 +87,17 @@ int main()
     netp.L2 = 0.;
     netp.maxEpoch = 200;
     netp.epochAfterOptimal = 20;
-    netp.decay = brain::LRDecay::inverse;
-    netp.LRDecayConstant = 1.0;
-    netp.margin = 10;
-    netp.validationRatio = 0.2;
-    netp.testRatio = 0.1;
+    netp.decay = brain::LRDecay::exp;
+    netp.LRDecayConstant = 0.05;
+    netp.margin = 20;
+    netp.validationRatio = 0.1;
+    netp.testRatio = 0.05;
 
     brain::Network net(netp);
     net.setData(data);
 
     brain::LayerParam lay;
-    lay.size = 32;
+    lay.size = 16;
     lay.maxNorm = 5;
     net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 23;

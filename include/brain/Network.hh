@@ -96,9 +96,9 @@ public:
     standardize(_validationData, a);
     standardize(_testData, a);
 
-    auto b = standardize(_trainRealResults);
-    standardize(_validationRealResults, b);
-    standardize(_testRealResults, b);
+    auto b = normalize(_trainRealResults);
+    normalize(_validationRealResults, b);
+    normalize(_testRealResults, b);
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {
