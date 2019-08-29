@@ -331,7 +331,7 @@ struct NetworkParam
     L1(0),
     L2(0),
     maxEpoch(500),
-    epochAfterOptimal(100),
+    patience(100),
     dropout(0),
     dropconnect(0),
     validationRatio(0.2),
@@ -340,7 +340,8 @@ struct NetworkParam
     LRDecayConstant(0.01),
     LRStepDecay(10),
     decay(LRDecay::none),
-    margin(5) // %
+    margin(5), // %
+    threads(1)
     {
     }
 
@@ -350,7 +351,7 @@ struct NetworkParam
     double L1;
     double L2;
     unsigned maxEpoch;
-    unsigned epochAfterOptimal;
+    unsigned patience;
     double dropout;
     double dropconnect;
     double validationRatio;
@@ -360,6 +361,7 @@ struct NetworkParam
     unsigned LRStepDecay;
     double (* decay)(double, unsigned, double, unsigned);
     double margin; // %
+    unsigned threads;
 };
 
 

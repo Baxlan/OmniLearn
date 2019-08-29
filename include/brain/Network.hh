@@ -27,6 +27,7 @@ public:
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
+  _pool(param.threads),
   _LRDecayConstant(param.LRDecayConstant),
   _LRStepDecay(param.LRStepDecay),
   _decay(param.decay),
@@ -37,7 +38,7 @@ public:
   _dropout(param.dropout),
   _dropconnect(param.dropconnect),
   _maxEpoch(param.maxEpoch),
-  _epochAfterOptimal(param.epochAfterOptimal),
+  _patience(param.patience),
   _loss(param.loss),
   _validationRatio(param.validationRatio),
   _testRatio(param.testRatio),
@@ -120,13 +121,13 @@ public:
         return false;
       }
       //EARLY STOPPING
-      if(validLoss < lowestLoss * 0.999) //if loss increases, or doesn't decrease more than 0.5% in _epochAfterOptimal epochs, stop learning
+      if(validLoss < lowestLoss * 0.999) //if loss increases, or doesn't decrease more than 0.5% in _patience epochs, stop learning
       {
         save();
         lowestLoss = validLoss;
         _optimalEpoch = _epoch;
       }
-      if(_epoch - _optimalEpoch > _epochAfterOptimal)
+      if(_epoch - _optimalEpoch > _patience)
         break;
     }
     loadSaved();
@@ -139,7 +140,7 @@ public:
   {
     for(unsigned i = 0; i < _layers.size(); i++)
     {
-      inputs = _layers[i]->process(inputs);
+      inputs = _layers[i]->process(inputs, _pool);
     }
     // if cross-entropy loss is used, then score must be softmax
     if(_loss == Loss::CrossEntropy)
@@ -253,18 +254,18 @@ protected:
 
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _generator);
+        input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
       }
 
       Matrix gradients(transpose(computeLossMatrix(output, input).second));
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        _layers[_layers.size() - i - 1]->computeGradients(gradients);
+        _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
         gradients = _layers[_layers.size() - i - 1]->getGradients();
       }
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, 0);
+        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, 0, _pool);
       }
     }
   }
@@ -372,6 +373,8 @@ protected:
 
   std::vector<std::shared_ptr<ILayer>> _layers;
 
+  mutable ThreadPool _pool;
+
   double _LRDecayConstant;
   unsigned _LRStepDecay;
   double (* _decay)(double, unsigned, double, unsigned);
@@ -383,7 +386,7 @@ protected:
   double _dropout;
   double _dropconnect;
   unsigned const _maxEpoch;
-  unsigned const _epochAfterOptimal;
+  unsigned const _patience;
   Loss _loss;
 
   double _validationRatio;

@@ -132,6 +132,7 @@ Matrix whiten(Matrix& data, Matrix eigen = {})
 }
 
 
+
 } //namespace brain
 
 #endif // BRAIN_PRETREAT_HH_

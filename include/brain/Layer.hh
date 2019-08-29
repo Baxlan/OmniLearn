@@ -14,13 +14,13 @@ class ILayer
 {
 public:
     virtual ~ILayer(){}
-    virtual Matrix process(Matrix const& inputs) = 0;
-    virtual Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen) = 0;
-    virtual void computeGradients(Matrix const& inputGradients) = 0;
+    virtual Matrix process(Matrix const& inputs, ThreadPool& t) = 0;
+    virtual Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t) = 0;
+    virtual void computeGradients(Matrix const& inputGradients, ThreadPool& t) = 0;
     virtual Matrix getGradients() = 0;
     virtual unsigned size() const = 0;
     virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
-    virtual void updateWeights(double learningRate, double L1, double L2, double momentum) = 0;
+    virtual void updateWeights(double learningRate, double L1, double L2, double momentum, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const = 0;
@@ -78,62 +78,62 @@ public:
     }
 
 
-    Matrix process(Matrix const& inputs)
+    Matrix process(Matrix const& inputs, ThreadPool& t)
     {
         //lines are features, columns are neurons
         Matrix output(inputs.size(), std::vector<double>(_neurons.size(), 0));
-        std::vector<std::thread> threads;
+        std::vector<std::future<void>> threads;
 
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(std::thread(performProcess, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputs), std::ref(output)));
+                threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputs), std::ref(output)));
             else
-                threads.push_back(std::thread(performProcess, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output)));
+                threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output)));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
-            threads[i].join();
+            threads[i].get();
         }
         return output;
     }
 
 
-    Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
+    Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
     {
         //lines are features, columns are neurons
         Matrix output(_batchSize, std::vector<double>(_neurons.size(), 0));
-        std::vector<std::thread> threads;
+        std::vector<std::future<void>> threads;
 
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(std::thread(performProcessToLearn, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
+                threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
             else
-                threads.push_back(std::thread(performProcessToLearn, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
+                threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
-            threads[i].join();
+            threads[i].get();
         }
         return output;
     }
 
 
-    void computeGradients(Matrix const& inputGradients)
+    void computeGradients(Matrix const& inputGradients, ThreadPool& t)
     {
-        std::vector<std::thread> threads;
+        std::vector<std::future<void>> threads;
 
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(std::thread(performComputeGradients, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputGradients)));
+                threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputGradients)));
             else
-                threads.push_back(std::thread(performComputeGradients, this, _neuronPerThread*i, size(), std::ref(inputGradients)));
+                threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, size(), std::ref(inputGradients)));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
-            threads[i].join();
+            threads[i].get();
         }
     }
 
@@ -176,21 +176,21 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, double momentum)
+    void updateWeights(double learningRate, double L1, double L2, double momentum, ThreadPool& t)
     {
         //check if there are more neurons than threads
-        std::vector<std::thread> threads;
+        std::vector<std::future<void>> threads;
 
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(std::thread(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1), learningRate, L1, L2, momentum));
+                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1), learningRate, L1, L2, momentum));
             else
-                threads.push_back(std::thread(performUpdateWeights, this, _neuronPerThread*i, size(), learningRate, L1, L2, momentum));
+                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, size(), learningRate, L1, L2, momentum));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
-            threads[i].join();
+            threads[i].get();
         }
     }
 
