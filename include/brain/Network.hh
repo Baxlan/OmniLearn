@@ -50,9 +50,10 @@ public:
   _nbBatch(0),
   _epoch(0),
   _optimalEpoch(0),
-  _trainLosses(std::vector<double>()),
-  _validLosses(std::vector<double>()),
-  _testAccuracy(std::vector<double>()),
+  _trainLosses(),
+  _validLosses(),
+  _testAccuracyPerFeature(),
+  _testAccuracyPerOutput(),
   _margin(param.margin)
   {
   }
@@ -96,9 +97,9 @@ public:
     standardize(_validationData, a);
     standardize(_testData, a);
 
-    auto b = normalize(_trainRealResults);
-    normalize(_validationRealResults, b);
-    normalize(_testRealResults, b);
+    //auto b = normalize(_trainRealResults);
+    //normalize(_validationRealResults, b);
+    //normalize(_testRealResults, b);
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {
@@ -129,7 +130,7 @@ public:
         break;
     }
     loadSaved();
-    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Accuracy: " << _testAccuracy[_optimalEpoch] << "%\n";
+    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Feature Accuracy: " << _testAccuracyPerFeature[_optimalEpoch] << "%   Output Accuracy: " << _testAccuracyPerOutput[_optimalEpoch] << "%\n";
     return true;
   }
 
@@ -162,14 +163,21 @@ public:
         output << _validLosses[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_testAccuracy.size(); i++)
+    for(unsigned i=0; i<_testAccuracyPerFeature.size(); i++)
     {
-        output << _testAccuracy[i] << ",";
+        output << _testAccuracyPerFeature[i] << ",";
+    }
+    output << "\n";
+    for(unsigned i=0; i<_testAccuracyPerOutput.size(); i++)
+    {
+        output << _testAccuracyPerOutput[i] << ",";
     }
     output << "\n";
     output << _optimalEpoch;
     output << "\n";
-    output << _testAccuracy[_optimalEpoch-1];
+    output << _testAccuracyPerFeature[_optimalEpoch-1];
+    output << "\n";
+    output << _testAccuracyPerOutput[_optimalEpoch-1];
   }
 
 
@@ -326,12 +334,13 @@ protected:
 
     //testing accuracy
     Matrix testResult = process(_testData);
-    double testAccuracy = std::round(accuracy(_testRealResults, testResult, _margin));
+    std::pair<double, double> testAccuracy = accuracy(_testRealResults, testResult, _margin);
 
-    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Accuracy: " << testAccuracy << "%";
+    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Feature Accuracy: " << std::round(testAccuracy.first) << "%   Output Accuracy: " << std::round(testAccuracy.second) << "%";
     _trainLosses.push_back(trainLoss);
     _validLosses.push_back(validationLoss);
-    _testAccuracy.push_back(testAccuracy);
+    _testAccuracyPerFeature.push_back(testAccuracy.first);
+    _testAccuracyPerOutput.push_back(testAccuracy.second);
     return validationLoss;
   }
 
@@ -392,7 +401,8 @@ protected:
   unsigned _optimalEpoch;
   std::vector<double> _trainLosses;
   std::vector<double> _validLosses;
-  std::vector<double> _testAccuracy;
+  std::vector<double> _testAccuracyPerFeature;
+  std::vector<double> _testAccuracyPerOutput;
 
   double _margin; // relative margin (in %) in which a predict must be to be valid
 };

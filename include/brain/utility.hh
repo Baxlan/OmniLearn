@@ -1,6 +1,8 @@
 #ifndef BRAIN_UTILITY_HH_
 #define BRAIN_UTILITY_HH_
 
+#include "ThreadPool.hh"
+
 #include <algorithm>
 #include <chrono>
 #include <exception>
@@ -183,40 +185,70 @@ double averageLoss(Matrix const& loss)
 }
 
 
-double accuracy(Matrix const& real, Matrix const& predicted, double margin)
+//first is "per feature", second is "per output"
+std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, double margin)
 {
-    double unvalidated = 0;
+    double perFeatureUnvalidated = 0;
+    double perOutputUnvalidated = 0;
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
+            //test "per output"
             if(real[i][j] > std::numeric_limits<double>::epsilon())
             {
                 if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
                 {
-                    unvalidated++;
-                    //break;
+                    perOutputUnvalidated++;
                 }
             }
             else if(real[i][j] < -std::numeric_limits<double>::epsilon())
             {
                 if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
                 {
-                    unvalidated++;
-                    //break;
+                    perOutputUnvalidated++;
                 }
             }
             else //if real == 0
             {
                 if(false)
                 {
-                    unvalidated++;
+                    perOutputUnvalidated++;
+                }
+            }
+        }
+        for(unsigned j = 0; j < real[0].size(); j++)
+        {
+            //test "per feature"
+            if(real[i][j] > std::numeric_limits<double>::epsilon())
+            {
+                if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
+                {
+                    perFeatureUnvalidated++;
+                    break;
+                }
+            }
+            else if(real[i][j] < -std::numeric_limits<double>::epsilon())
+            {
+                if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
+                {
+                    perFeatureUnvalidated++;
+                    break;
+                }
+            }
+            else //if real == 0
+            {
+                if(false)
+                {
+                    perFeatureUnvalidated++;
                     break;
                 }
             }
         }
     }
-    return 100* (real.size()*real[0].size() - unvalidated)/(real.size()*real[0].size());
+    perFeatureUnvalidated = 100* (real.size() - perFeatureUnvalidated)/(real.size());
+    perOutputUnvalidated = 100* (real.size()*real[0].size() - perOutputUnvalidated)/(real.size()*real[0].size());
+    return {perFeatureUnvalidated, perOutputUnvalidated};
 }
 
 
