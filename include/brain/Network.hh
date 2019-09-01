@@ -63,7 +63,7 @@ public:
   template <typename Aggr_t = Dot, typename Act_t = Relu>
   void addLayer(LayerParam const& param = LayerParam())
   {
-    _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(param));
+    _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(_pool, param));
   }
 
 
@@ -98,9 +98,9 @@ public:
     standardize(_validationData, a);
     standardize(_testData, a);
 
-    //auto b = normalize(_trainRealResults);
-    //normalize(_validationRealResults, b);
-    //normalize(_testRealResults, b);
+    auto b = normalize(_trainRealResults);
+    normalize(_validationRealResults, b);
+    normalize(_testRealResults, b);
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {

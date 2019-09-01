@@ -44,7 +44,7 @@ void>::type>
 class Layer : public ILayer
 {
 public:
-    Layer(LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
+    Layer(ThreadPool& t, LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
     _inputSize(0),
     _batchSize(0),
     _distrib(param.distrib),
@@ -54,7 +54,7 @@ public:
     _k(param.k),
     _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
     {
-        _localNThread = nthreads;
+        _localNThread = t.size();
         _neuronPerThread = static_cast<unsigned>(size() / _localNThread);
 
         for(; _localNThread > 0; _localNThread--)
@@ -87,7 +87,7 @@ public:
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputs), std::ref(output)));
+                threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, std::ref(inputs), std::ref(output)));
             else
                 threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output)));
         }
@@ -108,7 +108,7 @@ public:
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
+                threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
             else
                 threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
         }
@@ -127,7 +127,7 @@ public:
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, _neuronPerThread*(i+1), std::ref(inputGradients)));
+                threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, std::ref(inputGradients)));
             else
                 threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, size(), std::ref(inputGradients)));
         }
@@ -184,7 +184,7 @@ public:
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1), learningRate, L1, L2, momentum));
+                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, learningRate, L1, L2, momentum));
             else
                 threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, size(), learningRate, L1, L2, momentum));
         }

@@ -77,18 +77,18 @@ int main()
     brain::Dataset data(extractData(DataType::Vesta));
 
     brain::NetworkParam netp;
-    netp.threads = 4;
+    netp.threads = 1;
     netp.batchSize = 1;
-    netp.learningRate = 0.001;
+    netp.learningRate = 0.01;
     netp.dropout = 0.0;
     netp.dropconnect = 0.0;
     netp.loss = brain::Loss::L2;
     netp.L2 = 0.001;
-    netp.maxEpoch = 200;
-    netp.patience = 20;
+    netp.maxEpoch = 100;
+    netp.patience = 10;
     netp.decay = brain::LRDecay::exp;
-    netp.LRDecayConstant = 0.05;
-    netp.margin = 5;
+    netp.LRDecayConstant = 0.1;
+    netp.margin = 10;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.1;
 

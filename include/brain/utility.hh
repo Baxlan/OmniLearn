@@ -19,8 +19,7 @@ typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset
 
 enum class Distrib {Uniform, Normal};
 enum class Loss {L1, L2, CrossEntropy};
-
-static inline unsigned nthreads = 1;
+enum class Optimizer {None, Momentum, Nesterov, Adagrad, Adadelta, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
 
 //=============================================================================
 //=============================================================================
