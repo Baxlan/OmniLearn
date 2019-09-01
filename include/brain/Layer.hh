@@ -20,7 +20,7 @@ public:
     virtual Matrix getGradients() = 0;
     virtual unsigned size() const = 0;
     virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
-    virtual void updateWeights(double learningRate, double L1, double L2, double momentum, ThreadPool& t) = 0;
+    virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double alpha, double beta, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const = 0;
@@ -176,7 +176,7 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, double momentum, ThreadPool& t)
+    void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double alpha, double beta, ThreadPool& t)
     {
         //check if there are more neurons than threads
         std::vector<std::future<void>> threads;
@@ -184,9 +184,9 @@ public:
         for(unsigned i = 0; i < _localNThread; i++)
         {
             if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, learningRate, L1, L2, momentum));
+                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, learningRate, L1, L2, opti, alpha, beta));
             else
-                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, size(), learningRate, L1, L2, momentum));
+                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, size(), learningRate, L1, L2, opti, alpha, beta));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
@@ -261,11 +261,11 @@ protected:
     }
 
 
-    void performUpdateWeights(unsigned indexBeg, unsigned indexEnd, double learningRate, double L1, double L2, double momentum)
+    void performUpdateWeights(unsigned indexBeg, unsigned indexEnd, double learningRate, double L1, double L2, Optimizer opti, double alpha, double beta)
     {
         for(unsigned i = indexBeg; i < indexEnd; i++)
         {
-            _neurons[i].updateWeights(learningRate, L1, L2, _maxNorm, momentum);
+            _neurons[i].updateWeights(learningRate, L1, L2, _maxNorm, opti, alpha, beta);
         }
     }
 

@@ -14,7 +14,7 @@ public:
     virtual ~Aggregation(){}
     virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const = 0; //double is the result, unsigned is the index of the weight set used
     virtual std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
-    virtual void learn(double gradient, double learningRate, double momentum) = 0;
+    virtual void learn(double gradient, double learningRate) = 0;
 };
 
 
@@ -46,7 +46,7 @@ public:
     }
 
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -94,7 +94,7 @@ public:
     }
 
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -152,7 +152,7 @@ public:
     }
 
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }

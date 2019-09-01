@@ -329,7 +329,7 @@ struct NetworkParam
     learningRate(0.001),
     L1(0),
     L2(0),
-    maxEpoch(500),
+    epoch(500),
     patience(100),
     dropout(0),
     dropconnect(0),
@@ -340,7 +340,10 @@ struct NetworkParam
     LRStepDecay(10),
     decay(LRDecay::none),
     margin(5), // %
-    threads(1)
+    threads(1),
+    optimizer(Optimizer::None),
+    alpha(0.9),
+    beta(0.999)
     {
     }
 
@@ -349,7 +352,7 @@ struct NetworkParam
     double learningRate;
     double L1;
     double L2;
-    unsigned maxEpoch;
+    unsigned epoch;
     unsigned patience;
     double dropout;
     double dropconnect;
@@ -361,6 +364,9 @@ struct NetworkParam
     double (* decay)(double, unsigned, double, unsigned);
     double margin; // %
     unsigned threads;
+    Optimizer optimizer;
+    double alpha; //momentum
+    double beta; //window effect on grads
 };
 
 

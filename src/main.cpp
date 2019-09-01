@@ -84,7 +84,7 @@ int main()
     netp.dropconnect = 0.0;
     netp.loss = brain::Loss::L2;
     netp.L2 = 0.001;
-    netp.maxEpoch = 100;
+    netp.epoch = 100;
     netp.patience = 10;
     netp.decay = brain::LRDecay::exp;
     netp.LRDecayConstant = 0.1;

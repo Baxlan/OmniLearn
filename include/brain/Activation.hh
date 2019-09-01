@@ -15,7 +15,7 @@ public:
     virtual ~Activation(){}
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
-    virtual void learn(double gradient, double learningRate, double momentum) = 0;
+    virtual void learn(double gradient, double learningRate) = 0;
 };
 
 
@@ -43,7 +43,7 @@ public:
         return 1;
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -74,7 +74,7 @@ public:
         return val * (1 - val);
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -105,7 +105,7 @@ public:
         return -1/std::pow(std::cosh(val),2);
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -136,7 +136,7 @@ public:
         return 1 / (1 + std::exp(-val));
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -171,7 +171,7 @@ public:
         return (val < 0 ? _coef : 1);
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -209,7 +209,7 @@ public:
         return (val < 0 ? _coef : 1);
     }
 
-    void learn(double gradient, double learningRate, double momentum)
+    void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
     }
@@ -247,7 +247,7 @@ public:
         return (val < 0 ? _coef * std::exp(val) : 1);
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -285,7 +285,7 @@ public:
         return (val < 0 ? _coef * std::exp(val) : 1);
     }
 
-    void learn(double gradient, double learningRate, double momentum)
+    void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
     }
@@ -310,7 +310,7 @@ protected:
 class Srelu : public Activation
 {
 public:
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -344,7 +344,7 @@ public:
         return -2 * val * std::exp(-std::pow(val, 2));
     }
 
-    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum)
+    void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
@@ -381,12 +381,12 @@ class Softexp : public Activation
 public:
     double activate(double val) const
     {
-        if(_coef < 0)
+        if(_coef < -std::numeric_limits<double>::epsilon())
             return -std::log(1-(_coef*(val + _coef))) / _coef;
-        if(_coef == 0)
-            return val;
-        if(_coef > 0)
+        else if(_coef > std::numeric_limits<double>::epsilon())
             return ((std::exp(_coef * val) - 1) / _coef) + _coef;
+        else
+            return val;
     }
 
     double prime(double val) const
@@ -397,7 +397,7 @@ public:
             return std::exp(_coef * val);
     }
 
-    void learn(double gradient, double learningRate, double momentum)
+    void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
     }

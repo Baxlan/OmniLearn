@@ -37,7 +37,7 @@ public:
   _L2(param.L2),
   _dropout(param.dropout),
   _dropconnect(param.dropconnect),
-  _maxEpoch(param.maxEpoch),
+  _maxEpoch(param.epoch),
   _patience(param.patience),
   _loss(param.loss),
   _validationRatio(param.validationRatio),
@@ -55,7 +55,10 @@ public:
   _validLosses(),
   _testAccuracyPerFeature(),
   _testAccuracyPerOutput(),
-  _margin(param.margin)
+  _margin(param.margin),
+  _optimizer(param.optimizer),
+  _alpha(param.alpha),
+  _beta(param.beta)
   {
   }
 
@@ -265,7 +268,7 @@ protected:
       }
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, 0, _pool);
+        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, _optimizer, _alpha, _beta, _pool);
       }
     }
   }
@@ -408,6 +411,10 @@ protected:
   std::vector<double> _testAccuracyPerOutput;
 
   double _margin; // relative margin (in %) in which a predict must be to be valid
+
+  Optimizer _optimizer;
+  double _alpha; //momentum
+  double _beta; //window effect on grads
 };
 
 
