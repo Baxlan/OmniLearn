@@ -19,7 +19,7 @@ typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset
 
 enum class Distrib {Uniform, Normal};
 enum class Loss {L1, L2, CrossEntropy};
-enum class Optimizer {None, Momentum, Nesterov, Adagrad, Adadelta, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
+enum class Optimizer {None, Momentum, Nesterov, Adagrad, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
 
 //=============================================================================
 //=============================================================================
@@ -251,6 +251,47 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
 }
 
 
+//first is "per feature", second is "per output"
+std::vector<double> accuracyPerOutput(Matrix const& real, Matrix const& predicted, double margin)
+{
+    std::vector<double> unvalidated(real[0].size(), 0);
+    for(unsigned i = 0; i < real.size(); i++)
+    {
+        for(unsigned j = 0; j < real[0].size(); j++)
+        {
+            //test "per output"
+            if(real[i][j] > std::numeric_limits<double>::epsilon())
+            {
+                if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
+                {
+                    unvalidated[j]++;
+                }
+            }
+            else if(real[i][j] < -std::numeric_limits<double>::epsilon())
+            {
+                if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
+                {
+                    unvalidated[j]++;
+                }
+            }
+            else //if real == 0
+            {
+                if(false)
+                {
+                    unvalidated[j]++;
+                }
+            }
+        }
+    }
+    for(unsigned i = 0; i < unvalidated.size(); i++)
+    {
+        unvalidated[i] = 100* (real.size() - unvalidated[i])/(real.size());
+    }
+    return unvalidated;
+}
+
+
+
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -343,7 +384,7 @@ struct NetworkParam
     threads(1),
     optimizer(Optimizer::None),
     alpha(0.9),
-    beta(0.999)
+    beta(0.9)
     {
     }
 

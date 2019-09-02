@@ -78,26 +78,28 @@ int main()
 
     brain::NetworkParam netp;
     netp.threads = 1;
-    netp.batchSize = 1;
-    netp.learningRate = 0.01;
+    netp.batchSize = 100;
+    netp.learningRate = 0.0001;
     netp.dropout = 0.0;
     netp.dropconnect = 0.0;
     netp.loss = brain::Loss::L2;
-    netp.L2 = 0.001;
-    netp.epoch = 100;
-    netp.patience = 10;
+    netp.L2 = 0.00;
+    netp.epoch = 50;
+    netp.patience = 5;
     netp.decay = brain::LRDecay::exp;
     netp.LRDecayConstant = 0.1;
     netp.margin = 10;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.1;
+    netp.optimizer = brain::Optimizer::Rmsprop;
 
     brain::Network net(netp);
     net.setData(data);
 
     brain::LayerParam lay;
-    lay.size = 16;
+    lay.size = 32;
     lay.maxNorm = 5;
+    net.addLayer<brain::Dot, brain::Relu>(lay);
     net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 23;
     net.addLayer<brain::Dot, brain::Linear>(lay);

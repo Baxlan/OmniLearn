@@ -39,7 +39,7 @@ for i in range(0, len(testAccuracyPerOutput)):
 lns4 = ax2.plot(range(0, len(testAccuracyPerOutput)), testAccuracyPerOutput, label = "test accuracy (per output)", color = "red")
 
 
-optimal = int(content[4])
+optimal = int(content[5])
 plt.axvline(optimal, color = "black")
 
 
@@ -50,9 +50,21 @@ ax1.set_xlabel("epoch", fontsize=16)
 ax1.set_ylabel("loss", fontsize=16)
 ax2.set_ylabel("Accuracy (%)", fontsize=16)
 ax2.set_ylim(0, 105)
+ax1.set_yscale("log")
 
 lns = lns1 + lns2 + lns3 + lns4
 labels = [l.get_label() for l in lns]
 plt.legend(lns, labels, fontsize=14)
 
+plt.show()
+
+
+acc = content[4][:-2].split(',')
+for i in range(0, len(acc)):
+    acc[i] = float(acc[i])
+
+plt.bar(range(len(acc)), acc)
+plt.xticks(range(len(acc)), content[6][:-2].split(","), rotation=45)
+plt.ylim(0, 105)
+plt.axes().yaxis.grid()
 plt.show()

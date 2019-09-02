@@ -21,7 +21,7 @@ namespace brain
 class Network
 {
 public:
-  Network(NetworkParam const& param = NetworkParam()):
+  Network(std::vector<std::string> const& labels, NetworkParam const& param = NetworkParam()):
   _seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
   _generator(std::mt19937(_seed)),
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
@@ -58,7 +58,8 @@ public:
   _margin(param.margin),
   _optimizer(param.optimizer),
   _alpha(param.alpha),
-  _beta(param.beta)
+  _beta(param.beta),
+  _labels(labels)
   {
   }
 
@@ -156,7 +157,13 @@ public:
 
   void writeInfo(std::string const& path) const
   {
+    std::vector<double> acc = accuracyPerOutput(_testRealResults, process(_testData), _margin);
     std::ofstream output(path);
+    for(unsigned i=0; i<_labels.size(); i++)
+    {
+        output << _labels[i] << ",";
+    }
+    output << "\n";
     for(unsigned i=0; i<_trainLosses.size(); i++)
     {
         output << _trainLosses[i] << ",";
@@ -177,11 +184,12 @@ public:
         output << _testAccuracyPerOutput[i] << ",";
     }
     output << "\n";
+    for(unsigned i=0; i<acc.size(); i++)
+    {
+        output << acc[i] << ",";
+    }
+    output << "\n";
     output << _optimalEpoch;
-    output << "\n";
-    output << _testAccuracyPerFeature[_optimalEpoch-1];
-    output << "\n";
-    output << _testAccuracyPerOutput[_optimalEpoch-1];
   }
 
 
@@ -415,6 +423,8 @@ protected:
   Optimizer _optimizer;
   double _alpha; //momentum
   double _beta; //window effect on grads
+
+  std::vector<std::string> _labels;
 };
 
 

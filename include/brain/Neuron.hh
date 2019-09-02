@@ -53,6 +53,7 @@ public:
     _inputGradients(),
     _actGradients(),
     _gradients(),
+    _biasGradients(),
     _gradientsPerFeature(),
     _previousWeightUpdate(),
     _previousBiasUpdate(),
@@ -75,9 +76,10 @@ public:
             _bias = std::vector<double>(k, 0);
         }
         _gradientsPerFeature = Matrix(batchSize, std::vector<double>(_weights[0].size(), 0));
+        _biasGradients = std::vector<double>(_bias.size(), 0);
         _gradients = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
         _previousBiasUpdate = std::vector<double>(_bias.size(), 0);
-        _previousWeightUpdate = Matrix(_weights.size(), {_weights[0].size(), 0});
+        _previousWeightUpdate = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
         if(distrib == Distrib::Normal)
         {
             double deviation = std::sqrt(distVal2 / (nbInputs + nbOutputs));
@@ -155,6 +157,7 @@ public:
         _inputGradients = inputGradients;
         _gradientsPerFeature = Matrix(_inputGradients.size(), std::vector<double>(_weights[0].size(), 0));
         _gradients = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
+        _biasGradients = std::vector<double>(_bias.size(), 0);
 
         std::vector<unsigned> setCount(_weights.size(), 0); //store the amount of feature that passed through each weight set
         for(unsigned feature = 0; feature < _actResults.size(); feature++)
@@ -165,6 +168,7 @@ public:
             for(unsigned i = 0; i < grad.size(); i++)
             {
                 _gradients[_aggregResults[feature].second][i] += (_actGradients[feature]*grad[i]);
+                _biasGradients[_aggregResults[feature].second] += _actGradients[feature];
                 _gradientsPerFeature[feature][i] += (_actGradients[feature]* grad[i] * _weights[_aggregResults[feature].second][i]);
             }
             setCount[_aggregResults[feature].second]++;
@@ -173,11 +177,14 @@ public:
         //average gradients over features
         for(unsigned i = 0; i < _gradients.size(); i++)
         {
-            for(unsigned j = 0; j < _gradients[0].size(); j++)
+            if(setCount[i] != 0)
             {
-                if(setCount[i] != 0)
+                for(unsigned j = 0; j < _gradients[0].size(); j++)
+                {
                     _gradients[i][j] /= setCount[i];
-            };
+                }
+                _biasGradients[i] /= setCount[i];
+            }
         }
     }
 
@@ -208,23 +215,31 @@ public:
                 if(opti == Optimizer::None)
                 {
                     _weights[i][j] += (learningRate*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
-                    _bias[i] += learningRate * averageActGrad;
+                    _bias[i] += learningRate * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Momentum || opti == Optimizer::Nesterov)
                 {
+                    _previousWeightUpdate[i][j] = learningRate*(_gradients[i][j]) - alpha * _previousWeightUpdate[i][j];
+                    _previousBiasUpdate[i] = learningRate * _biasGradients[i] - alpha * _previousBiasUpdate[i];
 
+                    _weights[i][j] += _previousWeightUpdate[i][j] + learningRate*(-(L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1));
+                    _bias[i] += _previousBiasUpdate[i];
                 }
                 else if(opti == Optimizer::Adagrad)
                 {
+                    _previousWeightUpdate[i][j] += std::pow(_gradients[i][j], 2);
+                    _previousBiasUpdate[i] += std::pow(_biasGradients[i], 2);
 
-                }
-                else if(opti == Optimizer::Adadelta)
-                {
-
+                    _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] + 1e-8))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
+                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i]) + 1e-8) * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Rmsprop)
                 {
+                    _previousWeightUpdate[i][j] = beta * _previousWeightUpdate[i][j] + (1 - beta) * std::pow(_gradients[i][j], 2);
+                    _previousBiasUpdate[i] = beta * _previousBiasUpdate[i] + (1 - beta) * std::pow(_biasGradients[i], 2);
 
+                    _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] + 1e-8))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
+                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i]) + 1e-8) * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Adam)
                 {
@@ -250,13 +265,14 @@ public:
         {
             for(unsigned i = 0; i < _weights.size(); i++)
             {
-                double norm = std::sqrt(quadraticSum(_weights[i]));
+                double norm = std::sqrt(quadraticSum(_weights[i]) + std::pow(_bias[i], 2));
                 if(norm > maxNorm)
                 {
                     for(unsigned j=0; j<_weights[i].size(); j++)
                     {
                         _weights[i][j] *= (maxNorm/norm);
                     }
+                    _bias[i] *= (maxNorm/norm);
                 }
             }
         }
@@ -302,9 +318,10 @@ protected:
     std::vector<std::pair<double, unsigned>> _aggregResults;
     std::vector<double> _actResults;
 
-    std::vector<double> _inputGradients; //gradient from next layer for each feature af the batch
+    std::vector<double> _inputGradients; //gradient from next layer for each feature of the batch
     std::vector<double> _actGradients; //gradient between aggregation and activation
     Matrix _gradients; //sum (over all features of the batch) of partial gradient for each weight
+    std::vector<double> _biasGradients;
     Matrix _gradientsPerFeature; // store gradients for each feature, summed over weight set
     Matrix _previousWeightUpdate;
     std::vector<double> _previousBiasUpdate;
