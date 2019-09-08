@@ -16,16 +16,9 @@ std::vector<double> center(Matrix& data, std::vector<double> mean = {})
   {
     mean = std::vector<double>(data[0].size(), 0);
     //calculate mean
-    for(unsigned i = 0; i < data.size(); i++)
+    for(unsigned i = 0; i < data[0].size(); i++)
     {
-      for(unsigned j = 0; j < data[0].size(); j++)
-      {
-        mean[j] += data[i][j];
-      }
-    }
-    for(unsigned i = 0; i < mean.size(); i++)
-    {
-      mean[i] /= data.size();
+      mean[i] = average(column(data, i)).first;
     }
   }
 
@@ -43,25 +36,15 @@ std::vector<double> center(Matrix& data, std::vector<double> mean = {})
 
 //set the elements of each columns between a range [0, 1]
 //returns vector of min and max respectively
-std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::pair<double, double>> minMax = {})
+std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::pair<double, double>> mM = {})
 {
-  if(minMax.size() == 0)
+  if(mM.size() == 0)
   {
-    minMax = std::vector<std::pair<double, double>>(data[0].size(), {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()});
+    mM = std::vector<std::pair<double, double>>(data[0].size(), {0, 0});
     //search min and max
-    for(unsigned i = 0; i < data.size(); i++)
+    for(unsigned i = 0; i < data[0].size(); i++)
     {
-      for(unsigned j = 0; j < data[0].size(); j++)
-      {
-        if(data[i][j] < minMax[j].first)
-        {
-          minMax[j].first = data[i][j];
-        }
-        else if(data[i][j] > minMax[j].second)
-        {
-          minMax[j].second = data[i][j];
-        }
-      }
+      mM[i] = minMax(column(data, i));
     }
   }
   //normalize
@@ -69,10 +52,10 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
   {
     for(unsigned j = 0; j < data[0].size(); j++)
     {
-      data[i][j] = (data[i][j] - minMax[j].first) / (minMax[j].second - minMax[j].first);
+      data[i][j] = (data[i][j] - mM[j].first) / (mM[j].second - mM[j].first);
     }
   }
-  return minMax;
+  return mM;
 }
 
 
@@ -83,33 +66,12 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
   if(meanDev.size() == 0)
   {
     meanDev = std::vector<std::pair<double, double>>(data[0].size(), {0, 0});
-    //calculate mean
-    for(unsigned i = 0; i < data.size(); i++)
+    //calculate mean and deviation
+    for(unsigned i = 0; i < data[0].size(); i++)
     {
-      for(unsigned j = 0; j < data[0].size(); j++)
-      {
-        meanDev[j].first += data[i][j];
-      }
-    }
-    for(unsigned i = 0; i < meanDev.size(); i++)
-    {
-      meanDev[i].first /= data.size();
-    }
-    //calculate deviation
-    for(unsigned i = 0; i < data.size(); i++)
-    {
-      for(unsigned j = 0; j < data[0].size(); j++)
-      {
-        meanDev[j].second += std::pow(meanDev[j].first - data[i][j], 2);
-      }
-    }
-    for(unsigned i = 0; i < meanDev.size(); i++)
-    {
-      meanDev[i].second /= data.size();
-      meanDev[i].second = std::sqrt(meanDev[i].second);
+      meanDev[i] = average(column(data, i));
     }
   }
-
   //standardize
   for(unsigned i = 0; i < data.size(); i++)
   {

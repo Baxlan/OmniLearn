@@ -26,9 +26,7 @@ typedef std::vector<std::vector<double>> Matrix;
 double dot(std::vector<double> const& a, std::vector<double> const& b)
 {
     if(a.size() != b.size())
-    {
         throw Exception("In a dot product, both vectors must have the same number of element.");
-    }
 
     double result = 0;
     for(unsigned i = 0; i < a.size(); i++)
@@ -39,12 +37,10 @@ double dot(std::vector<double> const& a, std::vector<double> const& b)
 }
 
 
-double distance(std::vector<double> const& a, std::vector<double> const& b, double order)
+double distance(std::vector<double> const& a, std::vector<double> const& b, double order = 2)
 {
     if(a.size() != b.size())
-    {
         throw Exception("To calculate the dispance between two vectors, they must have the same number of element.");
-    }
 
     double result = 0;
     for(unsigned i=0; i<a.size(); i++)
@@ -55,14 +51,25 @@ double distance(std::vector<double> const& a, std::vector<double> const& b, doub
 }
 
 
-double average(std::vector<double> const& a)
+//first is average, second is deviation
+std::pair<double, double> average(std::vector<double> const& vec)
 {
-    double sum = 0;
-    for(double const& val : a)
+    double mean = 0;
+    double dev = 0;
+    for(double const& val : vec)
     {
-        sum += val;
+        mean += val;
     }
-    return sum / a.size();
+    mean /= vec.size();
+
+    for(double const& val : vec)
+    {
+        dev += std::pow(mean - val, 2);
+    }
+    dev /= vec.size();
+    dev = std::sqrt(dev);
+
+    return {mean, dev};
 }
 
 
@@ -93,6 +100,11 @@ double quadraticSum(std::vector<double> const& vec)
 }
 
 
+std::pair<double, double> minMax(std::vector<double> const& vec)
+{
+    return {*std::min_element(vec.begin(), vec.end()), *std::max_element(vec.begin(), vec.end())};
+}
+
 
 //=============================================================================
 //=============================================================================
@@ -113,6 +125,17 @@ Matrix transpose(Matrix const& a)
         {
             b[j][i] = a[i][j];
         }
+    }
+    return b;
+}
+
+
+std::vector<double> column(Matrix const& a, unsigned index)
+{
+    std::vector<double> b(a[0].size(), 0);
+    for(unsigned i = 0; i < b.size(); i++)
+    {
+        b[i] = a[i][index];
     }
     return b;
 }

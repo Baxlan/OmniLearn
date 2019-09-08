@@ -13,15 +13,9 @@ double averageLoss(Matrix const& loss)
     std::vector<double> feature(loss.size());
     for(unsigned i = 0; i < loss.size(); i++)
     {
-        for(unsigned j = 0; j < loss[0].size(); j++)
-        {
-            feature[i] += loss[i][j];
-        }
+        feature[i] = sum(loss[i]);
     }
-    double average = 0;
-    for(double i : feature)
-        average += (i/feature.size());
-    return average;
+    return average(feature).first;
 }
 
 
