@@ -1,7 +1,8 @@
 #ifndef BRAIN_AGGREGATION_HH_
 #define BRAIN_AGGREGATION_HH_
 
-#include "utility.hh"
+#include "vectorial.hh"
+#include "Exception.hh"
 
 namespace brain
 {

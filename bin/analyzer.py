@@ -9,21 +9,21 @@ fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
 
 
-trainLoss = content[0][:-2].split(',')
+trainLoss = content[1][:-2].split(',')
 for i in range(0, len(trainLoss)):
     trainLoss[i] = float(trainLoss[i])
 
 lns1 = ax1.plot(range(0, len(trainLoss)), trainLoss, label = "training loss", color="blue")
 
 
-validLoss = content[1][:-2].split(',')
+validLoss = content[2][:-2].split(',')
 for i in range(0, len(validLoss)):
     validLoss[i] = float(validLoss[i])
 
 lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", color="orange")
 
 
-testAccuracyPerFeature = content[2][:-2].split(',')
+testAccuracyPerFeature = content[3][:-2].split(',')
 for i in range(0, len(testAccuracyPerFeature)):
     testAccuracyPerFeature[i] = float(testAccuracyPerFeature[i])
 
@@ -31,7 +31,7 @@ for i in range(0, len(testAccuracyPerFeature)):
 lns3 = ax2.plot(range(0, len(testAccuracyPerFeature)), testAccuracyPerFeature, label = "test accuracy (per feature)", color = "green")
 
 
-testAccuracyPerOutput = content[3][:-2].split(',')
+testAccuracyPerOutput = content[4][:-2].split(',')
 for i in range(0, len(testAccuracyPerOutput)):
     testAccuracyPerOutput[i] = float(testAccuracyPerOutput[i])
 
@@ -39,7 +39,7 @@ for i in range(0, len(testAccuracyPerOutput)):
 lns4 = ax2.plot(range(0, len(testAccuracyPerOutput)), testAccuracyPerOutput, label = "test accuracy (per output)", color = "red")
 
 
-optimal = int(content[5])
+optimal = int(content[6])
 plt.axvline(optimal, color = "black")
 
 
@@ -59,12 +59,15 @@ plt.legend(lns, labels, fontsize=14)
 plt.show()
 
 
-acc = content[4][:-2].split(',')
+acc = content[5][:-2].split(',')
 for i in range(0, len(acc)):
     acc[i] = float(acc[i])
 
 plt.bar(range(len(acc)), acc)
-plt.xticks(range(len(acc)), content[6][:-2].split(","), rotation=45)
+plt.xticks(range(len(acc)), content[0][:-2].split(","), rotation=45)
 plt.ylim(0, 105)
 plt.axes().yaxis.grid()
+plt.ylabel("accuracy (%)", fontsize=16)
+plt.xlabel("label", fontsize=16)
+plt.title("Detailed accuracy at optimal epoch", fontsize=18)
 plt.show()

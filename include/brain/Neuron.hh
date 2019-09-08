@@ -6,10 +6,13 @@
 
 #include <memory>
 #include <type_traits>
+#include <random>
 
 namespace brain
 {
 
+enum class Optimizer {None, Momentum, Nesterov, Adagrad, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
+enum class Distrib {Uniform, Normal};
 
 class INeuron
 {

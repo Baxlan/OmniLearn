@@ -2,6 +2,9 @@
 #define BRAIN_ACTIVATION_HH_
 
 #include <cmath>
+#include <algorithm>
+
+#include "vectorial.hh"
 
 namespace brain
 {
@@ -406,6 +409,33 @@ protected:
 };
 
 
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== SOFTMAX FUNCTION ========================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+Matrix softmax(Matrix inputs)
+{
+    for(unsigned i = 0; i < inputs.size(); i++)
+    {
+        double c = *std::max_element(inputs[i].begin(), inputs[i].end());
+        double sum = 0;
+        //subtraction for stability
+        for(unsigned j = 0; j < inputs[0].size(); j++)
+        {
+            sum += std::exp(inputs[i][j] - c);
+        }
+        for(unsigned j = 0; j < inputs[0].size(); j++)
+        {
+            inputs[i][j] = std::exp(inputs[i][j] - c) / sum;
+        }
+    }
+    return inputs;
+}
 
 } //namespace brain
 

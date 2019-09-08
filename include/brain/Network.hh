@@ -2,12 +2,77 @@
 #define BRAIN_NETWORK_HH_
 
 #include "Layer.hh"
-#include "pretreat.hh"
+#include "preprocess.hh"
+#include "cost.hh"
+#include "annealing.hh"
+#include "test.hh"
 
 #include <iostream>
 
 namespace brain
 {
+
+enum class Loss {L1, L2, CrossEntropy};
+typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== NETWORK PARAMETERS ======================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+struct NetworkParam
+{
+    NetworkParam():
+    seed(0),
+    batchSize(1),
+    learningRate(0.001),
+    L1(0),
+    L2(0),
+    epoch(500),
+    patience(100),
+    dropout(0),
+    dropconnect(0),
+    validationRatio(0.2),
+    testRatio(0.2),
+    loss(Loss::CrossEntropy),
+    LRDecayConstant(0.01),
+    LRStepDecay(10),
+    decay(LRDecay::none),
+    margin(5), // %
+    threads(1),
+    optimizer(Optimizer::None),
+    alpha(0.9),
+    beta(0.9)
+    {
+    }
+
+    unsigned seed;
+    unsigned batchSize;
+    double learningRate;
+    double L1;
+    double L2;
+    unsigned epoch;
+    unsigned patience;
+    double dropout;
+    double dropconnect;
+    double validationRatio;
+    double testRatio;
+    Loss loss;
+    double LRDecayConstant;
+    unsigned LRStepDecay;
+    double (* decay)(double, unsigned, double, unsigned);
+    double margin; // %
+    unsigned threads;
+    Optimizer optimizer;
+    double alpha; //momentum
+    double beta; //window effect on grads
+};
+
+
 
 //=============================================================================
 //=============================================================================

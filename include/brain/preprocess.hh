@@ -1,8 +1,8 @@
 
-#ifndef BRAIN_PRETREAT_HH_
-#define BRAIN_PRETREAT_HH_
+#ifndef BRAIN_PREPROCESS_HH_
+#define BRAIN_PREPROCESS_HH_
 
-#include "utility.hh"
+#include "vectorial.hh"
 
 namespace brain
 {
@@ -135,4 +135,4 @@ Matrix whiten(Matrix& data, Matrix eigen = {})
 
 } //namespace brain
 
-#endif // BRAIN_PRETREAT_HH_
+#endif // BRAIN_PREPROCESS_HH_

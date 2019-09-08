@@ -60,7 +60,7 @@ brain::Dataset extractData(DataType dataType)
                 outputs.push_back(std::stod(line.substr(0, line.find(";"))));
                 line.erase(0, line.find(";") + 1);
             }
-            for(unsigned i = 0; i < 17; i++)
+            for(unsigned i = 0; i < 14; i++)
             {
                 inputs.push_back(std::stod(line.substr(0, line.find(";"))));
                 line.erase(0, line.find(";") + 1);
@@ -74,34 +74,38 @@ brain::Dataset extractData(DataType dataType)
 
 int main()
 {
-    brain::Dataset data(extractData(DataType::Vesta));
+    brain::Dataset data(extractData(DataType::Iris));
+
+    //std::vector<std::string> labels = {"Mo95","Tc99","Ru101","Rh103","Ag109","Cs133","Nd143","Sm147","Sm149","Sm150","Sm151","Sm152","Gd155","Eu153","U235","U238","Pu238","Pu239","Pu240","Pu241","Pu242","Am241","Am242"};
+    std::vector<std::string> labels = {"setosa", "versicolor", "virginica"};
 
     brain::NetworkParam netp;
     netp.threads = 1;
-    netp.batchSize = 100;
-    netp.learningRate = 0.0001;
+    netp.batchSize = 10;
+    netp.learningRate = 0.1;
     netp.dropout = 0.0;
     netp.dropconnect = 0.0;
-    netp.loss = brain::Loss::L2;
+    netp.loss = brain::Loss::CrossEntropy;
     netp.L2 = 0.00;
-    netp.epoch = 50;
-    netp.patience = 5;
+    netp.epoch = 2000;
+    netp.patience = 200;
     netp.decay = brain::LRDecay::exp;
-    netp.LRDecayConstant = 0.1;
-    netp.margin = 10;
+    netp.LRDecayConstant = 0.05;
+    netp.margin = 5;
     netp.validationRatio = 0.2;
-    netp.testRatio = 0.1;
+    netp.testRatio = 0.2;
     netp.optimizer = brain::Optimizer::Rmsprop;
 
-    brain::Network net(netp);
+    brain::Network net(labels, netp);
     net.setData(data);
 
     brain::LayerParam lay;
-    lay.size = 32;
+    lay.size = 16;
     lay.maxNorm = 5;
     net.addLayer<brain::Dot, brain::Relu>(lay);
     net.addLayer<brain::Dot, brain::Relu>(lay);
-    lay.size = 23;
+    net.addLayer<brain::Dot, brain::Relu>(lay);
+    lay.size = 3;
     net.addLayer<brain::Dot, brain::Linear>(lay);
 
 
