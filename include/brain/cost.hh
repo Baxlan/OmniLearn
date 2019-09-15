@@ -13,6 +13,7 @@ namespace brain
 
 // one line = one feature, one colums = one class
 // first are loss, second are gradients
+// use linear activation at the last layer
 std::pair<Matrix, Matrix> L1Loss(Matrix const& real, Matrix const& predicted)
 {
     Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
@@ -36,6 +37,7 @@ std::pair<Matrix, Matrix> L1Loss(Matrix const& real, Matrix const& predicted)
 
 // one line = one feature, one colums = one class
 // first are loss, second are gradients
+// use linear activation at the last layer
 std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted)
 {
     Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
@@ -54,6 +56,7 @@ std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted)
 
 // one line = one feature, one colums = one class
 // first are loss, second are gradients
+// use linear activation at the last layer
 std::pair<Matrix, Matrix> crossEntropyLoss(Matrix const& real, Matrix const& predicted)
 {
     Matrix softMax = softmax(predicted);
@@ -70,6 +73,24 @@ std::pair<Matrix, Matrix> crossEntropyLoss(Matrix const& real, Matrix const& pre
     return  {loss, gradients};
 }
 
+
+// one line = one feature, one colums = one class
+// first are loss, second are gradients
+// use sigmoid activation at last layer (all outputs must be [0, 1])
+std::pair<Matrix, Matrix> binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted)
+{
+    Matrix loss(real.size(), std::vector<double>(real[0].size(), 0));
+    Matrix gradients(real.size(), std::vector<double>(real[0].size(), 0));
+    for(unsigned i = 0; i < loss.size(); i++)
+    {
+        for(unsigned j = 0; j < loss[0].size(); j++)
+        {
+            loss[i][j] = -(real[i][j] * std::log(predicted[i][j]) + (1 - real[i][j]) * std::log(1 - predicted[i][j]));
+            gradients[i][j] = real[i][j] - predicted[i][j];
+        }
+    }
+    return  {loss, gradients};
+}
 
 
 } // namespace brain

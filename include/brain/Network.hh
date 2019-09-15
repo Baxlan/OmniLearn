@@ -32,21 +32,22 @@ struct NetworkParam
     learningRate(0.001),
     L1(0),
     L2(0),
-    epoch(500),
-    patience(100),
+    epoch(50),
+    patience(5),
     dropout(0),
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
-    loss(Loss::CrossEntropy),
+    loss(Loss::L2),
     LRDecayConstant(0.01),
     LRStepDecay(10),
     decay(LRDecay::none),
-    margin(5), // %
+    classValidity(0.9),
     threads(1),
     optimizer(Optimizer::None),
-    alpha(0.9),
-    beta(0.9)
+    momentum(0.9),
+    window(0.9),
+    regMetric(Loss::L1)
     {
     }
 
@@ -65,11 +66,12 @@ struct NetworkParam
     double LRDecayConstant;
     unsigned LRStepDecay;
     double (* decay)(double, unsigned, double, unsigned);
-    double margin; // %
+    double classValidity; // %
     unsigned threads;
     Optimizer optimizer;
-    double alpha; //momentum
-    double beta; //window effect on grads
+    double momentum; //momentum
+    double window; //window effect on grads
+    Loss regMetric;
 };
 
 
@@ -118,12 +120,12 @@ public:
   _optimalEpoch(0),
   _trainLosses(),
   _validLosses(),
-  _testAccuracyPerFeature(),
-  _testAccuracyPerOutput(),
-  _margin(param.margin),
+  _testAccuracy(),
+  _testFalsePositive(),
+  _classValidity(param.classValidity),
   _optimizer(param.optimizer),
-  _alpha(param.alpha),
-  _beta(param.beta),
+  _momentum(param.momentum),
+  _window(param.window),
   _labels(labels)
   {
   }
@@ -200,7 +202,7 @@ public:
         break;
     }
     loadSaved();
-    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Feature Accuracy: " << _testAccuracyPerFeature[_optimalEpoch] << "%   Output Accuracy: " << _testAccuracyPerOutput[_optimalEpoch] << "%\n";
+    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Feature Accuracy: " << _testAccuracy[_optimalEpoch] << "%   Output Accuracy: " << _testFalsePositive[_optimalEpoch] << "%\n";
     return true;
   }
 
@@ -222,7 +224,7 @@ public:
 
   void writeInfo(std::string const& path) const
   {
-    std::vector<double> acc = accuracyPerOutput(_testRealResults, process(_testData), _margin);
+    std::pair<std::vector<double>, std::vector<double>> acc = accuracyPerOutput(_testRealResults, process(_testData), _classValidity);
     std::ofstream output(path);
     for(unsigned i=0; i<_labels.size(); i++)
     {
@@ -239,19 +241,24 @@ public:
         output << _validLosses[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_testAccuracyPerFeature.size(); i++)
+    for(unsigned i=0; i<_testAccuracy.size(); i++)
     {
-        output << _testAccuracyPerFeature[i] << ",";
+        output << _testAccuracy[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_testAccuracyPerOutput.size(); i++)
+    for(unsigned i=0; i<_testFalsePositive.size(); i++)
     {
-        output << _testAccuracyPerOutput[i] << ",";
+        output << _testFalsePositive[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<acc.size(); i++)
+    for(unsigned i=0; i<acc.first.size(); i++)
     {
-        output << acc[i] << ",";
+        output << acc.first[i] << ",";
+    }
+        output << "\n";
+    for(unsigned i=0; i<acc.second.size(); i++)
+    {
+        output << acc.second[i] << ",";
     }
     output << "\n";
     output << _optimalEpoch;
@@ -341,7 +348,7 @@ protected:
       }
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, _optimizer, _alpha, _beta, _pool);
+        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, _optimizer, _momentum, _window, _pool);
       }
     }
   }
@@ -411,13 +418,13 @@ protected:
 
     //testing accuracy
     Matrix testResult = process(_testData);
-    std::pair<double, double> testAccuracy = accuracy(_testRealResults, testResult, _margin);
+    std::pair<double, double> testAccuracy = accuracy(_testRealResults, testResult, _classValidity);
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Feature Accuracy: " << std::round(testAccuracy.first) << "%   Output Accuracy: " << std::round(testAccuracy.second) << "%";
     _trainLosses.push_back(trainLoss);
     _validLosses.push_back(validationLoss);
-    _testAccuracyPerFeature.push_back(testAccuracy.first);
-    _testAccuracyPerOutput.push_back(testAccuracy.second);
+    _testAccuracy.push_back(testAccuracy.first);
+    _testFalsePositive.push_back(testAccuracy.second);
     return validationLoss;
   }
 
@@ -480,14 +487,14 @@ protected:
   unsigned _optimalEpoch;
   std::vector<double> _trainLosses;
   std::vector<double> _validLosses;
-  std::vector<double> _testAccuracyPerFeature;
-  std::vector<double> _testAccuracyPerOutput;
+  std::vector<double> _testAccuracy;
+  std::vector<double> _testFalsePositive;
 
-  double _margin; // relative margin (in %) in which a predict must be to be valid
+  double _classValidity;
 
   Optimizer _optimizer;
-  double _alpha; //momentum
-  double _beta; //window effect on grads
+  double _momentum; //momentum
+  double _window; //window effect on grads
 
   std::vector<std::string> _labels;
 };

@@ -19,110 +19,72 @@ double averageLoss(Matrix const& loss)
 }
 
 
-//first is "per feature", second is "per output"
-std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, double margin)
+//first is "accuracy", second is "false positive"
+std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, double classValidity)
 {
-    double perFeatureUnvalidated = 0;
-    double perOutputUnvalidated = 0;
+    double validated = 0;
+    double fp = 0; //false positive
+
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            //test "per output"
-            if(real[i][j] > std::numeric_limits<double>::epsilon())
+            if(std::abs(real[i][j] - 1) <= std::numeric_limits<double>::epsilon())
             {
-                if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
+                if(predicted[i][j] >= classValidity)
                 {
-                    perOutputUnvalidated++;
+                    validated++;
                 }
             }
-            else if(real[i][j] < -std::numeric_limits<double>::epsilon())
+            else
             {
-                if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
+                if(predicted[i][j] >= classValidity)
                 {
-                    perOutputUnvalidated++;
-                }
-            }
-            else //if real == 0
-            {
-                if(false)
-                {
-                    perOutputUnvalidated++;
-                }
-            }
-        }
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            //test "per feature"
-            if(real[i][j] > std::numeric_limits<double>::epsilon())
-            {
-                if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
-                {
-                    perFeatureUnvalidated++;
-                    break;
-                }
-            }
-            else if(real[i][j] < -std::numeric_limits<double>::epsilon())
-            {
-                if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
-                {
-                    perFeatureUnvalidated++;
-                    break;
-                }
-            }
-            else //if real == 0
-            {
-                if(false)
-                {
-                    perFeatureUnvalidated++;
-                    break;
+                    fp++;
                 }
             }
         }
     }
-    perFeatureUnvalidated = 100* (real.size() - perFeatureUnvalidated)/(real.size());
-    perOutputUnvalidated = 100* (real.size()*real[0].size() - perOutputUnvalidated)/(real.size()*real[0].size());
-    return {perFeatureUnvalidated, perOutputUnvalidated};
+    validated = 100*validated/(real.size());
+    fp = 100*fp/(real.size());
+    return {validated, fp};
 }
 
 
-//first is "per feature", second is "per output"
-std::vector<double> accuracyPerOutput(Matrix const& real, Matrix const& predicted, double margin)
+//first is "accuracy", second is "false positive"
+std::pair<std::vector<double>, std::vector<double>> accuracyPerOutput(Matrix const& real, Matrix const& predicted, double classValidity)
 {
-    std::vector<double> unvalidated(real[0].size(), 0);
+    std::vector<double> validated(real[0].size(), 0);
+    std::vector<double> fp(real[0].size(), 0); //false positive
+    std::vector<unsigned> count(real[0].size(), 0);
+
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            //test "per output"
-            if(real[i][j] > std::numeric_limits<double>::epsilon())
+            if(std::abs(real[i][j] - 1) <= std::numeric_limits<double>::epsilon())
             {
-                if((real[i][j] * (1+margin/100)) < predicted[i][j] || predicted[i][j] < (real[i][j] * (1-margin/100)))
+                count[j]++;
+                if(predicted[i][j] >= classValidity)
                 {
-                    unvalidated[j]++;
+                    validated[j]++;
                 }
             }
-            else if(real[i][j] < -std::numeric_limits<double>::epsilon())
+            else
             {
-                if((real[i][j] * (1+margin/100)) > predicted[i][j] || predicted[i][j] > (real[i][j] * (1-margin/100)))
+                if(predicted[i][j] >= classValidity)
                 {
-                    unvalidated[j]++;
-                }
-            }
-            else //if real == 0
-            {
-                if(false)
-                {
-                    unvalidated[j]++;
+                    fp[j]++;
                 }
             }
         }
     }
-    for(unsigned i = 0; i < unvalidated.size(); i++)
+    for(unsigned i = 0; i < real[0].size(); i++)
     {
-        unvalidated[i] = 100* (real.size() - unvalidated[i])/(real.size());
+        validated[i] = 100*validated[i]/count[i];
+        fp[i] = 100*fp[i]/(count[i]+fp[i]);
     }
-    return unvalidated;
+    return {validated, fp};
 }
 
 

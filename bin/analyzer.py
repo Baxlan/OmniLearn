@@ -1,5 +1,6 @@
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 content = open("output.txt").readlines()
@@ -16,6 +17,7 @@ for i in range(0, len(trainLoss)):
 lns1 = ax1.plot(range(0, len(trainLoss)), trainLoss, label = "training loss", color="blue")
 
 
+
 validLoss = content[2][:-2].split(',')
 for i in range(0, len(validLoss)):
     validLoss[i] = float(validLoss[i])
@@ -23,23 +25,24 @@ for i in range(0, len(validLoss)):
 lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", color="orange")
 
 
+
 testAccuracyPerFeature = content[3][:-2].split(',')
 for i in range(0, len(testAccuracyPerFeature)):
     testAccuracyPerFeature[i] = float(testAccuracyPerFeature[i])
 
+lns3 = ax2.plot(range(0, len(testAccuracyPerFeature)), testAccuracyPerFeature, label = "test accuracy", color = "green")
 
-lns3 = ax2.plot(range(0, len(testAccuracyPerFeature)), testAccuracyPerFeature, label = "test accuracy (per feature)", color = "green")
 
 
 testAccuracyPerOutput = content[4][:-2].split(',')
 for i in range(0, len(testAccuracyPerOutput)):
     testAccuracyPerOutput[i] = float(testAccuracyPerOutput[i])
 
+lns4 = ax2.plot(range(0, len(testAccuracyPerOutput)), testAccuracyPerOutput, label = "test false positive", color = "red")
 
-lns4 = ax2.plot(range(0, len(testAccuracyPerOutput)), testAccuracyPerOutput, label = "test accuracy (per output)", color = "red")
 
 
-optimal = int(content[6])
+optimal = int(content[7])
 plt.axvline(optimal, color = "black")
 
 
@@ -59,15 +62,36 @@ plt.legend(lns, labels, fontsize=14)
 plt.show()
 
 
+
+
+
+
+
 acc = content[5][:-2].split(',')
 for i in range(0, len(acc)):
     acc[i] = float(acc[i])
 
-plt.bar(range(len(acc)), acc)
-plt.xticks(range(len(acc)), content[0][:-2].split(","), rotation=45)
+
+
+fp = content[6][:-2].split(',')
+for i in range(0, len(fp)):
+    fp[i] = float(fp[i])
+
+
+
+width = 0.2
+ind = np.arange(len(acc))
+
+ax = plt.figure().add_subplot(111)
+
+rec1 = ax.bar(ind, acc, width, color = "green")
+rec2 = ax.bar(ind + width, fp, width, color = "red")
+
+ax.legend((rec1, rec2), ('accuracy', 'false positive'), fontsize=14)
+plt.xticks(ind + width/2, content[0][:-2].split(","), rotation=45)
 plt.ylim(0, 105)
 plt.axes().yaxis.grid()
-plt.ylabel("accuracy (%)", fontsize=16)
+plt.ylabel("rate (%)", fontsize=16)
 plt.xlabel("label", fontsize=16)
 plt.title("Detailed accuracy at optimal epoch", fontsize=18)
 plt.show()

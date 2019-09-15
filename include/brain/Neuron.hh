@@ -192,7 +192,7 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double alpha, double beta)
+    void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window)
     {
         double averageInputGrad = 0;
         for(unsigned i = 0; i < _inputGradients.size(); i++)
@@ -222,8 +222,8 @@ public:
                 }
                 else if(opti == Optimizer::Momentum || opti == Optimizer::Nesterov)
                 {
-                    _previousWeightUpdate[i][j] = learningRate*(_gradients[i][j]) - alpha * _previousWeightUpdate[i][j];
-                    _previousBiasUpdate[i] = learningRate * _biasGradients[i] - alpha * _previousBiasUpdate[i];
+                    _previousWeightUpdate[i][j] = learningRate*(_gradients[i][j]) - momentum * _previousWeightUpdate[i][j];
+                    _previousBiasUpdate[i] = learningRate * _biasGradients[i] - momentum * _previousBiasUpdate[i];
 
                     _weights[i][j] += _previousWeightUpdate[i][j] + learningRate*(-(L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1));
                     _bias[i] += _previousBiasUpdate[i];
@@ -238,8 +238,8 @@ public:
                 }
                 else if(opti == Optimizer::Rmsprop)
                 {
-                    _previousWeightUpdate[i][j] = beta * _previousWeightUpdate[i][j] + (1 - beta) * std::pow(_gradients[i][j], 2);
-                    _previousBiasUpdate[i] = beta * _previousBiasUpdate[i] + (1 - beta) * std::pow(_biasGradients[i], 2);
+                    _previousWeightUpdate[i][j] = window * _previousWeightUpdate[i][j] + (1 - window) * std::pow(_gradients[i][j], 2);
+                    _previousBiasUpdate[i] = window * _previousBiasUpdate[i] + (1 - window) * std::pow(_biasGradients[i], 2);
 
                     _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] + 1e-8))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
                     _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i]) + 1e-8) * _biasGradients[i];

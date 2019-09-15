@@ -89,9 +89,9 @@ int main()
     netp.L2 = 0.00;
     netp.epoch = 2000;
     netp.patience = 200;
-    netp.decay = brain::LRDecay::exp;
+    netp.decay = brain::LRDecay::inverse;
     netp.LRDecayConstant = 0.05;
-    netp.margin = 5;
+    netp.classValidity = 0.90;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.2;
     netp.optimizer = brain::Optimizer::Rmsprop;
@@ -100,10 +100,8 @@ int main()
     net.setData(data);
 
     brain::LayerParam lay;
-    lay.size = 16;
+    lay.size = 6;
     lay.maxNorm = 5;
-    net.addLayer<brain::Dot, brain::Relu>(lay);
-    net.addLayer<brain::Dot, brain::Relu>(lay);
     net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 3;
     net.addLayer<brain::Dot, brain::Linear>(lay);

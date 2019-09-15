@@ -140,6 +140,8 @@ std::vector<double> column(Matrix const& a, unsigned index)
     return b;
 }
 
+
+
 } // namespace brain
 
 
