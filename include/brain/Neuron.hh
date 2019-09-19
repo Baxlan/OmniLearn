@@ -233,16 +233,16 @@ public:
                     _previousWeightUpdate[i][j] += std::pow(_gradients[i][j], 2);
                     _previousBiasUpdate[i] += std::pow(_biasGradients[i], 2);
 
-                    _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] + 1e-8))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
-                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i]) + 1e-8) * _biasGradients[i];
+                    _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] < std::numeric_limits<double>::epsilon() ? 1 : _previousWeightUpdate[i][j]))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
+                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i] < std::numeric_limits<double>::epsilon() ? 1 : _previousBiasUpdate[i])) * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Rmsprop)
                 {
                     _previousWeightUpdate[i][j] = window * _previousWeightUpdate[i][j] + (1 - window) * std::pow(_gradients[i][j], 2);
                     _previousBiasUpdate[i] = window * _previousBiasUpdate[i] + (1 - window) * std::pow(_biasGradients[i], 2);
 
-                    _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] + 1e-8))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
-                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i]) + 1e-8) * _biasGradients[i];
+                    _weights[i][j] += ((learningRate/std::sqrt(_previousWeightUpdate[i][j] < std::numeric_limits<double>::epsilon() ? 1 : _previousWeightUpdate[i][j]))*(_gradients[i][j] - (L2 * _weights[i][j]) - (_weights[i][j] > 0 ? L1 : -L1)));
+                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i] < std::numeric_limits<double>::epsilon() ? 1 : _previousBiasUpdate[i])) * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Adam)
                 {

@@ -12,7 +12,8 @@
 namespace brain
 {
 
-enum class Loss {L1, L2, CrossEntropy};
+enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
+enum class Cost {L1, L2, Accuracy};
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 //=============================================================================
@@ -47,7 +48,8 @@ struct NetworkParam
     optimizer(Optimizer::None),
     momentum(0.9),
     window(0.9),
-    regMetric(Loss::L1)
+    metric(Cost::L1),
+    plateau(0.999)
     {
     }
 
@@ -71,7 +73,8 @@ struct NetworkParam
     Optimizer optimizer;
     double momentum; //momentum
     double window; //window effect on grads
-    Loss regMetric;
+    Cost metric;
+    double plateau;
 };
 
 
@@ -120,13 +123,15 @@ public:
   _optimalEpoch(0),
   _trainLosses(),
   _validLosses(),
-  _testAccuracy(),
-  _testFalsePositive(),
+  _testMetric(),
+  _testFalsePrediction(),
   _classValidity(param.classValidity),
   _optimizer(param.optimizer),
   _momentum(param.momentum),
   _window(param.window),
-  _labels(labels)
+  _metric(param.metric),
+  _labels(labels),
+  _plateau(param.plateau) //if loss * plateau >= optimalLoss after "patience" epochs, end learning
   {
   }
 
@@ -150,6 +155,7 @@ public:
     _validationData = inputs;
     _validationRealResults = outputs;
   }
+
 
   //should take Dataset
   void setTestData(Matrix const& inputs, Matrix const& outputs)
@@ -192,7 +198,7 @@ public:
         return false;
       }
       //EARLY STOPPING
-      if(validLoss < lowestLoss * 0.999) //if loss increases, or doesn't decrease more than 0.5% in _patience epochs, stop learning
+      if(validLoss < lowestLoss * _plateau) //if loss increases, or doesn't decrease more than 0.5% in _patience epochs, stop learning
       {
         save();
         lowestLoss = validLoss;
@@ -202,7 +208,7 @@ public:
         break;
     }
     loadSaved();
-    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Feature Accuracy: " << _testAccuracy[_optimalEpoch] << "%   Output Accuracy: " << _testFalsePositive[_optimalEpoch] << "%\n";
+    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Feature Accuracy: " << _testMetric[_optimalEpoch] << "%   Output Accuracy: " << _testFalsePrediction[_optimalEpoch] << "%\n";
     return true;
   }
 
@@ -224,7 +230,23 @@ public:
 
   void writeInfo(std::string const& path) const
   {
-    std::pair<std::vector<double>, std::vector<double>> acc = accuracyPerOutput(_testRealResults, process(_testData), _classValidity);
+    std::pair<std::vector<double>, std::vector<double>> acc;
+    std::string metric;
+    if(_metric == Cost::Accuracy)
+    {
+      acc = accuracyPerOutput(_testRealResults, process(_testData), _classValidity);
+      metric = "accuracy";
+    }
+    else if(_metric == Cost::L1)
+    {
+      acc = L1CostPerOutput(_testRealResults, process(_testData));
+      metric = "mae";
+    }
+    if(_metric == Cost::L2)
+    {
+      acc = L2CostPerOutput(_testRealResults, process(_testData));
+      metric = "mse";
+    }
     std::ofstream output(path);
     for(unsigned i=0; i<_labels.size(); i++)
     {
@@ -240,15 +262,15 @@ public:
     {
         output << _validLosses[i] << ",";
     }
-    output << "\n";
-    for(unsigned i=0; i<_testAccuracy.size(); i++)
+    output << "\n" << metric << "\n";
+    for(unsigned i=0; i<_testMetric.size(); i++)
     {
-        output << _testAccuracy[i] << ",";
+        output << _testMetric[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_testFalsePositive.size(); i++)
+    for(unsigned i=0; i<_testFalsePrediction.size(); i++)
     {
-        output << _testFalsePositive[i] << ",";
+        output << _testFalsePrediction[i] << ",";
     }
     output << "\n";
     for(unsigned i=0; i<acc.first.size(); i++)
@@ -360,7 +382,9 @@ protected:
       return L1Loss(realResults, predicted);
     else if(_loss == Loss::L2)
       return L2Loss(realResults, predicted);
-    else
+    else if(_loss == Loss::BinaryCrossEntropy)
+      return binaryCrossEntropyLoss(realResults, predicted);
+    else //if loss == crossEntropy
       return crossEntropyLoss(realResults, predicted);
   }
 
@@ -417,14 +441,25 @@ protected:
     double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first) + L1 + L2;
 
     //testing accuracy
-    Matrix testResult = process(_testData);
-    std::pair<double, double> testAccuracy = accuracy(_testRealResults, testResult, _classValidity);
+    std::pair<double, double> testMetric;
+    if(_metric == Cost::Accuracy)
+    {
+      testMetric = accuracy(_testRealResults, process(_testData), _classValidity);
+    }
+    else if(_metric == Cost::L1)
+    {
+      testMetric = L1Cost(_testRealResults, process(_testData));
+    }
+    if(_metric == Cost::L2)
+    {
+      testMetric = L2Cost(_testRealResults, process(_testData));
+    }
 
-    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Feature Accuracy: " << std::round(testAccuracy.first) << "%   Output Accuracy: " << std::round(testAccuracy.second) << "%";
+    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Feature Accuracy: " << (testMetric.first) << "   Output Accuracy: " << (testMetric.second);
     _trainLosses.push_back(trainLoss);
     _validLosses.push_back(validationLoss);
-    _testAccuracy.push_back(testAccuracy.first);
-    _testFalsePositive.push_back(testAccuracy.second);
+    _testMetric.push_back(testMetric.first);
+    _testFalsePrediction.push_back(testMetric.second);
     return validationLoss;
   }
 
@@ -487,16 +522,18 @@ protected:
   unsigned _optimalEpoch;
   std::vector<double> _trainLosses;
   std::vector<double> _validLosses;
-  std::vector<double> _testAccuracy;
-  std::vector<double> _testFalsePositive;
+  std::vector<double> _testMetric;
+  std::vector<double> _testFalsePrediction;
 
   double _classValidity;
 
   Optimizer _optimizer;
   double _momentum; //momentum
   double _window; //window effect on grads
+  Cost _metric;
 
   std::vector<std::string> _labels;
+  double _plateau;
 };
 
 

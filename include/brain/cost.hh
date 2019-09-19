@@ -86,7 +86,7 @@ std::pair<Matrix, Matrix> binaryCrossEntropyLoss(Matrix const& real, Matrix cons
         for(unsigned j = 0; j < loss[0].size(); j++)
         {
             loss[i][j] = -(real[i][j] * std::log(predicted[i][j]) + (1 - real[i][j]) * std::log(1 - predicted[i][j]));
-            gradients[i][j] = real[i][j] - predicted[i][j];
+            gradients[i][j] = (real[i][j] - predicted[i][j]) / ( predicted[i][j] * (1 -  predicted[i][j]));
         }
     }
     return  {loss, gradients};

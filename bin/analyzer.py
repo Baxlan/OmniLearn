@@ -87,7 +87,7 @@ ax = plt.figure().add_subplot(111)
 rec1 = ax.bar(ind, acc, width, color = "green")
 rec2 = ax.bar(ind + width, fp, width, color = "red")
 
-ax.legend((rec1, rec2), ('accuracy', 'false positive'), fontsize=14)
+ax.legend((rec1, rec2), ('accuracy', 'false prediction'), fontsize=14)
 plt.xticks(ind + width/2, content[0][:-2].split(","), rotation=45)
 plt.ylim(0, 105)
 plt.axes().yaxis.grid()
