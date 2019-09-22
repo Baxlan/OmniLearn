@@ -49,7 +49,8 @@ struct NetworkParam
     momentum(0.9),
     window(0.9),
     metric(Cost::L1),
-    plateau(0.999)
+    plateau(0.999),
+    normalizeOutputs(false)
     {
     }
 
@@ -75,6 +76,7 @@ struct NetworkParam
     double window; //window effect on grads
     Cost metric;
     double plateau;
+    bool normalizeOutputs;
 };
 
 
@@ -124,14 +126,16 @@ public:
   _trainLosses(),
   _validLosses(),
   _testMetric(),
-  _testFalsePrediction(),
+  _testSecondMetric(),
   _classValidity(param.classValidity),
   _optimizer(param.optimizer),
   _momentum(param.momentum),
   _window(param.window),
   _metric(param.metric),
   _labels(labels),
-  _plateau(param.plateau) //if loss * plateau >= optimalLoss after "patience" epochs, end learning
+  _plateau(param.plateau), //if loss * plateau >= optimalLoss after "patience" epochs, end learning
+  _normalizeOutputs(param.normalizeOutputs),
+  _outputMeans()
   {
   }
 
@@ -175,9 +179,12 @@ public:
     standardize(_validationData, a);
     standardize(_testData, a);
 
-    auto b = normalize(_trainRealResults);
-    normalize(_validationRealResults, b);
-    normalize(_testRealResults, b);
+    if(_normalizeOutputs)
+    {
+      auto b = normalize(_trainRealResults);
+      normalize(_validationRealResults, b);
+      normalize(_testRealResults, b);
+    }
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {
@@ -193,7 +200,7 @@ public:
       std::cout << "Epoch: " << _epoch;
       double validLoss = computeLoss();
       std::cout << "   LR: " << _decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay) << "\n";
-      if(std::isnan(_trainLosses[_epoch - 1]) || std::isnan(validLoss))
+      if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss))
       {
         return false;
       }
@@ -208,7 +215,7 @@ public:
         break;
     }
     loadSaved();
-    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   Feature Accuracy: " << _testMetric[_optimalEpoch] << "%   Output Accuracy: " << _testFalsePrediction[_optimalEpoch] << "%\n";
+    std::cout << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
     return true;
   }
 
@@ -268,9 +275,9 @@ public:
         output << _testMetric[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_testFalsePrediction.size(); i++)
+    for(unsigned i=0; i<_testSecondMetric.size(); i++)
     {
-        output << _testFalsePrediction[i] << ",";
+        output << _testSecondMetric[i] << ",";
     }
     output << "\n";
     for(unsigned i=0; i<acc.first.size(); i++)
@@ -392,7 +399,7 @@ protected:
   //return validation loss
   double computeLoss()
   {
-    //for each layer, for each neuron, first is weights, second is bias
+    //for each layer, for each neuron, first are weights, second are bias
     std::vector<std::vector<std::pair<Matrix, std::vector<double>>>> weights(_layers.size());
     for(unsigned i = 0; i < _layers.size(); i++)
     {
@@ -450,16 +457,17 @@ protected:
     {
       testMetric = L1Cost(_testRealResults, process(_testData));
     }
-    if(_metric == Cost::L2)
+    else if(_metric == Cost::L2)
     {
       testMetric = L2Cost(_testRealResults, process(_testData));
     }
 
-    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   Feature Accuracy: " << (testMetric.first) << "   Output Accuracy: " << (testMetric.second);
+
+    std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
     _trainLosses.push_back(trainLoss);
     _validLosses.push_back(validationLoss);
     _testMetric.push_back(testMetric.first);
-    _testFalsePrediction.push_back(testMetric.second);
+    _testSecondMetric.push_back(testMetric.second);
     return validationLoss;
   }
 
@@ -523,7 +531,7 @@ protected:
   std::vector<double> _trainLosses;
   std::vector<double> _validLosses;
   std::vector<double> _testMetric;
-  std::vector<double> _testFalsePrediction;
+  std::vector<double> _testSecondMetric;
 
   double _classValidity;
 
@@ -534,6 +542,8 @@ protected:
 
   std::vector<std::string> _labels;
   double _plateau;
+  bool _normalizeOutputs;
+  std::vector<double> _outputMeans;
 };
 
 

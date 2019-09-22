@@ -93,32 +93,18 @@ std::pair<std::vector<double>, std::vector<double>> accuracyPerOutput(Matrix con
 //first is "mean", second is "std deviation at 68%"
 std::pair<double, double> L1Cost(Matrix const& real, Matrix const& predicted)
 {
-    std::vector<double> sums(real[0].size(), 0);
+    std::vector<double> sums(real.size(), 0);
 
     //mean absolute error
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            sums[j] += std::abs(real[i][j] - predicted[i][j]);
+            sums[i] += std::abs(real[i][j] - predicted[i][j]);
         }
     }
 
-    double mean = average(sums).first;
-    double dev = 0;
-
-    for(unsigned i = 0; i < real.size(); i++)
-    {
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            dev += std::pow(mean - std::abs(real[i][j] - predicted[i][j]), 2);
-        }
-    }
-
-    dev /= (real.size() * real[0].size());
-    dev = std::sqrt(dev);
-
-    return {mean, dev};
+    return average(sums);
 }
 
 
@@ -141,6 +127,7 @@ std::pair<std::vector<double>, std::vector<double>> L1CostPerOutput(Matrix const
         means[i] /= real.size();
     }
 
+    //dev
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
@@ -161,32 +148,18 @@ std::pair<std::vector<double>, std::vector<double>> L1CostPerOutput(Matrix const
 //first is "mean", second is "std deviation at 68%"
 std::pair<double, double> L2Cost(Matrix const& real, Matrix const& predicted)
 {
-    double mean = 0;
+    std::vector<double> sums(real.size(), 0);
 
     //mean absolute error
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            mean += 0.5 * std::pow(real[i][j] - predicted[i][j], 2);
+            sums[i] += 0.5 * std::pow(real[i][j] - predicted[i][j], 2);
         }
     }
 
-    mean /= real.size();
-    double dev = 0;
-
-    for(unsigned i = 0; i < real.size(); i++)
-    {
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            dev += std::pow(mean - 0.5 * std::pow(real[i][j] - predicted[i][j], 2), 2);
-        }
-    }
-
-    dev /= (real.size() * real[0].size());
-    dev = std::sqrt(dev);
-
-    return {mean, dev};
+    return average(sums);
 }
 
 
@@ -196,12 +169,12 @@ std::pair<std::vector<double>, std::vector<double>> L2CostPerOutput(Matrix const
     std::vector<double> means(real[0].size(), 0);
     std::vector<double> dev(real[0].size(), 0);
 
-    //mean absolute error
+    //mean squared error
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            means[j] += std::abs(real[i][j] - predicted[i][j]);
+            means[j] += std::pow(real[i][j] - predicted[i][j], 2);
         }
     }
     for(unsigned i = 0; i < real[0].size(); i++)
@@ -209,11 +182,12 @@ std::pair<std::vector<double>, std::vector<double>> L2CostPerOutput(Matrix const
         means[i] /= real.size();
     }
 
+    //dev
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            dev[j] += std::pow(means[j] - std::abs(real[i][j] - predicted[i][j]), 2);
+            dev[j] += std::pow(means[j] - std::pow(real[i][j] - predicted[i][j], 2), 2);
         }
     }
     for(unsigned i = 0; i < real[0].size(); i++)

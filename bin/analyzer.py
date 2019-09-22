@@ -1,59 +1,60 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 content = open("output.txt").readlines()
-
 
 fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
 
+# get metric type
+metric_t = content[3][:-1]
+metric_t = "test " + metric_t
+metric2_t = "test standard deviation"
+if metric_t == "test accuracy":
+  metric2_t == "false prediction"
 
+# get train loss
 trainLoss = content[1][:-2].split(',')
 for i in range(0, len(trainLoss)):
     trainLoss[i] = float(trainLoss[i])
-
 lns1 = ax1.plot(range(0, len(trainLoss)), trainLoss, label = "training loss", color="blue")
 
-
-
+# get validation loss
 validLoss = content[2][:-2].split(',')
 for i in range(0, len(validLoss)):
     validLoss[i] = float(validLoss[i])
-
 lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", color="orange")
 
 
-
-testAccuracyPerFeature = content[3][:-2].split(',')
+# get train metric
+testAccuracyPerFeature = content[4][:-2].split(',')
 for i in range(0, len(testAccuracyPerFeature)):
     testAccuracyPerFeature[i] = float(testAccuracyPerFeature[i])
-
-lns3 = ax2.plot(range(0, len(testAccuracyPerFeature)), testAccuracyPerFeature, label = "test accuracy", color = "green")
-
+lns3 = ax2.plot(range(0, len(testAccuracyPerFeature)), testAccuracyPerFeature, label = metric_t, color = "green")
 
 
-testAccuracyPerOutput = content[4][:-2].split(',')
+# get train second metric
+testAccuracyPerOutput = content[5][:-2].split(',')
 for i in range(0, len(testAccuracyPerOutput)):
     testAccuracyPerOutput[i] = float(testAccuracyPerOutput[i])
-
-lns4 = ax2.plot(range(0, len(testAccuracyPerOutput)), testAccuracyPerOutput, label = "test false positive", color = "red")
-
+lns4 = ax2.plot(range(0, len(testAccuracyPerOutput)), testAccuracyPerOutput, label = metric2_t, color = "red")
 
 
-optimal = int(content[7])
+# get optimal epoch
+optimal = int(content[8])
 plt.axvline(optimal, color = "black")
 
 
-
-plt.title("Optimal epoch : " + str(optimal) + "\n(Feature acc: " + str(round(testAccuracyPerFeature[optimal-1])) + "%, Output acc: " + str(round(testAccuracyPerOutput[optimal-1])) + "%)", fontsize=18)
+# plot evolution regarding epochs
+plt.title("Loss regarding epochs", fontsize=18)
 plt.grid()
 ax1.set_xlabel("epoch", fontsize=16)
 ax1.set_ylabel("loss", fontsize=16)
-ax2.set_ylabel("Accuracy (%)", fontsize=16)
-ax2.set_ylim(0, 105)
 ax1.set_yscale("log")
+ax2.set_ylabel(metric_t, fontsize=16)
+if metric_t != "test accuracy":
+  ax2.set_yscale("log")
+
 
 lns = lns1 + lns2 + lns3 + lns4
 labels = [l.get_label() for l in lns]
@@ -63,35 +64,33 @@ plt.show()
 
 
 
+# get metric per output
+metric = content[6][:-2].split(',')
+for i in range(0, len(metric)):
+    metric[i] = float(metric[i])
 
 
+# get second epoch per output
+metric2 = content[7][:-2].split(',')
+for i in range(0, len(metric2)):
+    metric2[i] = float(metric2[i])
 
 
-acc = content[5][:-2].split(',')
-for i in range(0, len(acc)):
-    acc[i] = float(acc[i])
-
-
-
-fp = content[6][:-2].split(',')
-for i in range(0, len(fp)):
-    fp[i] = float(fp[i])
-
-
-
-width = 0.2
-ind = np.arange(len(acc))
+# plot detailed metrics per output at optimal epoch
+width = 0.3
+ind = np.arange(len(metric))
 
 ax = plt.figure().add_subplot(111)
 
-rec1 = ax.bar(ind, acc, width, color = "green")
-rec2 = ax.bar(ind + width, fp, width, color = "red")
+rec1 = ax.bar(ind, metric, width, color = "green")
+rec2 = ax.bar(ind + width, metric2, width, color = "red")
 
-ax.legend((rec1, rec2), ('accuracy', 'false prediction'), fontsize=14)
+ax.legend((rec1, rec2), (metric_t, metric2_t), fontsize=14)
 plt.xticks(ind + width/2, content[0][:-2].split(","), rotation=45)
-plt.ylim(0, 105)
 plt.axes().yaxis.grid()
-plt.ylabel("rate (%)", fontsize=16)
+plt.ylabel(metric_t, fontsize=16)
 plt.xlabel("label", fontsize=16)
-plt.title("Detailed accuracy at optimal epoch", fontsize=18)
+plt.title("Detailed metrics at optimal epoch (=" + str(optimal) + ")", fontsize=18)
+if metric_t != "test accuracy":
+  plt.yscale("log")
 plt.show()

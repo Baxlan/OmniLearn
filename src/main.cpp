@@ -83,16 +83,16 @@ int main()
     netp.threads = 1;
     netp.batchSize = 100;
     netp.learningRate = 0.001;
-    netp.loss = brain::Loss::L2;
-    netp.epoch = 100;
-    netp.patience = 10;
-    netp.decay = brain::LRDecay::inverse;
-    netp.LRDecayConstant = 0.3;
+    netp.loss = brain::Loss::L1;
+    netp.epoch = 200;
+    netp.patience = 5;
+    netp.decay = brain::LRDecay::exp;
+    netp.LRDecayConstant = 0.06;
     netp.classValidity = 0.90;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.2;
     netp.optimizer = brain::Optimizer::Rmsprop;
-    netp.metric = brain::Cost::L2;
+    netp.metric = brain::Cost::L1;
 
     brain::Network net(labels, netp);
     net.setData(data);
