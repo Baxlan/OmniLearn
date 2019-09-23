@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-content = open("output.txt").readlines()
+
+content = open("output.out").readlines()
+
+content = [content[i][:-1] for i in range(len(content))]
 
 fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
@@ -74,6 +77,9 @@ for i in range(0, len(metric)):
 metric2 = content[7][:-2].split(',')
 for i in range(0, len(metric2)):
     metric2[i] = float(metric2[i])
+
+
+
 
 
 # plot detailed metrics per output at optimal epoch

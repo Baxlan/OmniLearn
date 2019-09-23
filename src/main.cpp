@@ -108,7 +108,7 @@ int main()
 
     if(net.learn())
     {
-        net.writeInfo("output.txt");
+        net.writeInfo("output.out");
     }
 
     return 0;

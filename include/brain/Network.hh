@@ -50,7 +50,7 @@ struct NetworkParam
     window(0.9),
     metric(Cost::L1),
     plateau(0.999),
-    normalizeOutputs(false)
+    normalizeOutputs(true)
     {
     }
 
@@ -181,9 +181,13 @@ public:
 
     if(_normalizeOutputs)
     {
-      auto b = normalize(_trainRealResults);
-      normalize(_validationRealResults, b);
-      normalize(_testRealResults, b);
+      _outputMeans = normalize(_trainRealResults);
+      normalize(_validationRealResults, _outputMeans);
+      normalize(_testRealResults, _outputMeans);
+    }
+    else
+    {
+      _outputMeans = std::vector<std::pair<double, double>>(_trainRealResults[0].size(), {0, 0});
     }
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
@@ -238,28 +242,40 @@ public:
   void writeInfo(std::string const& path) const
   {
     std::pair<std::vector<double>, std::vector<double>> acc;
+    std::string loss;
     std::string metric;
     if(_metric == Cost::Accuracy)
     {
       acc = accuracyPerOutput(_testRealResults, process(_testData), _classValidity);
-      metric = "accuracy";
+      metric = "metric on test (accuracy)";
     }
     else if(_metric == Cost::L1)
     {
       acc = L1CostPerOutput(_testRealResults, process(_testData));
-      metric = "mae";
+      metric = "metric on test (mae)";
     }
     if(_metric == Cost::L2)
     {
       acc = L2CostPerOutput(_testRealResults, process(_testData));
-      metric = "mse";
+      metric = "metric on test (mse)";
     }
+
+    if(_loss == Loss::BinaryCrossEntropy)
+      loss = "binary cross entropy loss";
+    else if(_loss == Loss::CrossEntropy)
+      loss = "cross entropy loss";
+    else if(_loss == Loss::L1)
+      loss = "mae loss";
+    else if(_loss == Loss::CrossEntropy)
+      loss = "mse loss";
+
     std::ofstream output(path);
+    output << "labels\n";
     for(unsigned i=0; i<_labels.size(); i++)
     {
         output << _labels[i] << ",";
     }
-    output << "\n";
+    output << "\n" << loss << "\n";
     for(unsigned i=0; i<_trainLosses.size(); i++)
     {
         output << _trainLosses[i] << ",";
@@ -289,8 +305,18 @@ public:
     {
         output << acc.second[i] << ",";
     }
-    output << "\n";
+    output << "\noptimal epoch:\n";
     output << _optimalEpoch;
+    output << "\noutput normalization\n";
+    for(unsigned i=0; i<_outputMeans.size(); i++)
+    {
+        output << _outputMeans[i].first << ",";
+    }
+    output << "\n";
+    for(unsigned i=0; i<_outputMeans.size(); i++)
+    {
+        output << _outputMeans[i].second << ",";
+    }
   }
 
 
@@ -543,7 +569,7 @@ protected:
   std::vector<std::string> _labels;
   double _plateau;
   bool _normalizeOutputs;
-  std::vector<double> _outputMeans;
+  std::vector<std::pair<double, double>> _outputMeans;
 };
 
 
