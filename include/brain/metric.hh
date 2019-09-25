@@ -25,6 +25,8 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
 {
     double validated = 0;
     double fp = 0; //false prediction
+    double count = 0; // equals real.size() in case of "one label per data"
+                      // but is different is case of multi labaled data
 
     for(unsigned i = 0; i < real.size(); i++)
     {
@@ -32,6 +34,7 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
         {
             if(std::abs(real[i][j] - 1) <= std::numeric_limits<double>::epsilon())
             {
+                count++;
                 if(predicted[i][j] >= classValidity)
                 {
                     validated++;
@@ -46,8 +49,8 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
             }
         }
     }
-    validated = 100*validated/(real.size());
-    fp = 100*fp/(real.size());
+    validated = 100*validated/count;
+    fp = 100*fp/(validated + fp);
     return {validated, fp};
 }
 
@@ -83,17 +86,18 @@ std::pair<std::vector<double>, std::vector<double>> accuracyPerOutput(Matrix con
     for(unsigned i = 0; i < real[0].size(); i++)
     {
         validated[i] = 100*validated[i]/count[i];
-        fp[i] = 100*fp[i]/(count[i]+fp[i]);
+        fp[i] = 100*fp[i]/(validated[i]+fp[i]);
     }
     return {validated, fp};
 }
 
 
 
-//first is "mean", second is "std deviation at 68%"
-std::pair<double, double> L1Cost(Matrix const& real, Matrix const& predicted)
+//first is mae with normalized outputs, second is with unormalized ones
+std::pair<double, double> L1Metric(Matrix const& real, Matrix const& predicted, std::vector<std::pair<double, double>> const& mM)
 {
     std::vector<double> sums(real.size(), 0);
+    std::vector<double> unormalizedSums(real.size(), 0);
 
     //mean absolute error
     for(unsigned i = 0; i < real.size(); i++)
@@ -101,15 +105,16 @@ std::pair<double, double> L1Cost(Matrix const& real, Matrix const& predicted)
         for(unsigned j = 0; j < real[0].size(); j++)
         {
             sums[i] += std::abs(real[i][j] - predicted[i][j]);
+            unormalizedSums[i] += std::abs(real[i][j] - predicted[i][j]) * std::abs(mM[j].second - mM[j].first);
         }
     }
 
-    return average(sums);
+    return {average(sums).first, average(unormalizedSums).first};
 }
 
 
-//first is "mean", second is "std deviation at 68%"
-std::pair<std::vector<double>, std::vector<double>> L1CostPerOutput(Matrix const& real, Matrix const& predicted)
+//first is mae (of normalized outputs), second is std deviation at 68%
+std::pair<std::vector<double>, std::vector<double>> L1MetricPerOutput(Matrix const& real, Matrix const& predicted)
 {
     std::vector<double> means(real[0].size(), 0);
     std::vector<double> dev(real[0].size(), 0);
@@ -137,7 +142,7 @@ std::pair<std::vector<double>, std::vector<double>> L1CostPerOutput(Matrix const
     }
     for(unsigned i = 0; i < real[0].size(); i++)
     {
-        dev[i] /= real.size();
+        dev[i] /= (real.size() - 1);
         dev[i] = std::sqrt(dev[i]);
     }
 
@@ -145,31 +150,33 @@ std::pair<std::vector<double>, std::vector<double>> L1CostPerOutput(Matrix const
 }
 
 
-//first is "mean", second is "std deviation at 68%"
-std::pair<double, double> L2Cost(Matrix const& real, Matrix const& predicted)
+//first is mse with normalized outputs, second is with unormalized ones
+std::pair<double, double> L2Metric(Matrix const& real, Matrix const& predicted, std::vector<std::pair<double, double>> const& mM)
 {
     std::vector<double> sums(real.size(), 0);
+    std::vector<double> unormalizedSums(real.size(), 0);
 
-    //mean absolute error
+    //mean square error
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
         {
-            sums[i] += 0.5 * std::pow(real[i][j] - predicted[i][j], 2);
+            sums[i] += std::pow(real[i][j] - predicted[i][j], 2);
+            unormalizedSums[i] += std::pow(real[i][j] - predicted[i][j], 2) * std::pow(mM[j].second - mM[j].first, 2);
         }
     }
 
-    return average(sums);
+    return {average(sums).first, average(unormalizedSums).first};
 }
 
 
-//first is "mean", second is "std deviation at 68%"
-std::pair<std::vector<double>, std::vector<double>> L2CostPerOutput(Matrix const& real, Matrix const& predicted)
+//first is mse (of normalized outputs), second is std deviation at 68%
+std::pair<std::vector<double>, std::vector<double>> L2MetricPerOutput(Matrix const& real, Matrix const& predicted)
 {
     std::vector<double> means(real[0].size(), 0);
     std::vector<double> dev(real[0].size(), 0);
 
-    //mean squared error
+    //mean square error
     for(unsigned i = 0; i < real.size(); i++)
     {
         for(unsigned j = 0; j < real[0].size(); j++)
@@ -192,7 +199,7 @@ std::pair<std::vector<double>, std::vector<double>> L2CostPerOutput(Matrix const
     }
     for(unsigned i = 0; i < real[0].size(); i++)
     {
-        dev[i] /= real.size();
+        dev[i] /= (real.size() - 1);
         dev[i] = std::sqrt(dev[i]);
     }
 

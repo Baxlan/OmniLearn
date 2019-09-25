@@ -66,7 +66,7 @@ std::pair<double, double> average(std::vector<double> const& vec)
     {
         dev += std::pow(mean - val, 2);
     }
-    dev /= vec.size();
+    dev /= (vec.size() - 1);
     dev = std::sqrt(dev);
 
     return {mean, dev};

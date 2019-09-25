@@ -5,7 +5,7 @@
 #include "preprocess.hh"
 #include "cost.hh"
 #include "annealing.hh"
-#include "test.hh"
+#include "metric.hh"
 
 #include <iostream>
 
@@ -13,7 +13,7 @@ namespace brain
 {
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
-enum class Cost {L1, L2, Accuracy};
+enum class Metric {L1, L2, Accuracy};
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 //=============================================================================
@@ -48,7 +48,7 @@ struct NetworkParam
     optimizer(Optimizer::None),
     momentum(0.9),
     window(0.9),
-    metric(Cost::L1),
+    metric(Metric::L1),
     plateau(0.999),
     normalizeOutputs(true)
     {
@@ -74,7 +74,7 @@ struct NetworkParam
     Optimizer optimizer;
     double momentum; //momentum
     double window; //window effect on grads
-    Cost metric;
+    Metric metric;
     double plateau;
     bool normalizeOutputs;
 };
@@ -135,7 +135,7 @@ public:
   _labels(labels),
   _plateau(param.plateau), //if loss * plateau >= optimalLoss after "patience" epochs, end learning
   _normalizeOutputs(param.normalizeOutputs),
-  _outputMeans()
+  _outputMinMax()
   {
   }
 
@@ -181,13 +181,13 @@ public:
 
     if(_normalizeOutputs)
     {
-      _outputMeans = normalize(_trainRealResults);
-      normalize(_validationRealResults, _outputMeans);
-      normalize(_testRealResults, _outputMeans);
+      _outputMinMax = normalize(_trainRealResults);
+      normalize(_validationRealResults, _outputMinMax);
+      normalize(_testRealResults, _outputMinMax);
     }
     else
     {
-      _outputMeans = std::vector<std::pair<double, double>>(_trainRealResults[0].size(), {0, 0});
+      _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults[0].size(), {0, 1});
     }
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
@@ -244,38 +244,38 @@ public:
     std::pair<std::vector<double>, std::vector<double>> acc;
     std::string loss;
     std::string metric;
-    if(_metric == Cost::Accuracy)
+    if(_metric == Metric::Accuracy)
     {
       acc = accuracyPerOutput(_testRealResults, process(_testData), _classValidity);
-      metric = "metric on test (accuracy)";
+      metric = "accuracy";
     }
-    else if(_metric == Cost::L1)
+    else if(_metric == Metric::L1)
     {
-      acc = L1CostPerOutput(_testRealResults, process(_testData));
-      metric = "metric on test (mae)";
+      acc = L1MetricPerOutput(_testRealResults, process(_testData));
+      metric = "mae";
     }
-    if(_metric == Cost::L2)
+    else if(_metric == Metric::L2)
     {
-      acc = L2CostPerOutput(_testRealResults, process(_testData));
-      metric = "metric on test (mse)";
+      acc = L2MetricPerOutput(_testRealResults, process(_testData));
+      metric = "mse";
     }
 
     if(_loss == Loss::BinaryCrossEntropy)
-      loss = "binary cross entropy loss";
+      loss = "binary cross entropy";
     else if(_loss == Loss::CrossEntropy)
-      loss = "cross entropy loss";
+      loss = "cross entropy";
     else if(_loss == Loss::L1)
-      loss = "mae loss";
-    else if(_loss == Loss::CrossEntropy)
-      loss = "mse loss";
+      loss = "mae";
+    else if(_loss == Loss::L2)
+      loss = "mse";
 
     std::ofstream output(path);
-    output << "labels\n";
+    output << "labels:\n";
     for(unsigned i=0; i<_labels.size(); i++)
     {
         output << _labels[i] << ",";
     }
-    output << "\n" << loss << "\n";
+    output << "\n" << "loss:" << "\n" << loss << "\n";
     for(unsigned i=0; i<_trainLosses.size(); i++)
     {
         output << _trainLosses[i] << ",";
@@ -285,7 +285,7 @@ public:
     {
         output << _validLosses[i] << ",";
     }
-    output << "\n" << metric << "\n";
+    output << "\n" << "metric:" << "\n" << metric << "\n";
     for(unsigned i=0; i<_testMetric.size(); i++)
     {
         output << _testMetric[i] << ",";
@@ -307,15 +307,15 @@ public:
     }
     output << "\noptimal epoch:\n";
     output << _optimalEpoch;
-    output << "\noutput normalization\n";
-    for(unsigned i=0; i<_outputMeans.size(); i++)
+    output << "\noutput normalization:\n";
+    for(unsigned i=0; i<_outputMinMax.size(); i++)
     {
-        output << _outputMeans[i].first << ",";
+        output << _outputMinMax[i].first << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_outputMeans.size(); i++)
+    for(unsigned i=0; i<_outputMinMax.size(); i++)
     {
-        output << _outputMeans[i].second << ",";
+        output << _outputMinMax[i].second << ",";
     }
   }
 
@@ -473,19 +473,19 @@ protected:
     Matrix validationResult = process(_validationData);
     double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first) + L1 + L2;
 
-    //testing accuracy
+    //test metric
     std::pair<double, double> testMetric;
-    if(_metric == Cost::Accuracy)
+    if(_metric == Metric::Accuracy)
     {
       testMetric = accuracy(_testRealResults, process(_testData), _classValidity);
     }
-    else if(_metric == Cost::L1)
+    else if(_metric == Metric::L1)
     {
-      testMetric = L1Cost(_testRealResults, process(_testData));
+      testMetric = L1Metric(_testRealResults, process(_testData), _outputMinMax);
     }
-    else if(_metric == Cost::L2)
+    else if(_metric == Metric::L2)
     {
-      testMetric = L2Cost(_testRealResults, process(_testData));
+      testMetric = L2Metric(_testRealResults, process(_testData), _outputMinMax);
     }
 
 
@@ -564,12 +564,12 @@ protected:
   Optimizer _optimizer;
   double _momentum; //momentum
   double _window; //window effect on grads
-  Cost _metric;
+  Metric _metric;
 
   std::vector<std::string> _labels;
   double _plateau;
   bool _normalizeOutputs;
-  std::vector<std::pair<double, double>> _outputMeans;
+  std::vector<std::pair<double, double>> _outputMinMax;
 };
 
 
