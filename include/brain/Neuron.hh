@@ -14,19 +14,6 @@ namespace brain
 enum class Optimizer {None, Momentum, Nesterov, Adagrad, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
 enum class Distrib {Uniform, Normal};
 
-class INeuron
-{
-public:
-
-
-protected:
-    static unsigned weightSeed;
-    static std::mt19937 weightGen;
-};
-
-inline unsigned INeuron::weightSeed = 0;
-inline std::mt19937 INeuron::weightGen = std::mt19937();
-
 
 //=============================================================================
 //=============================================================================
@@ -42,7 +29,7 @@ typename = typename std::enable_if<
 std::is_base_of<Activation, Act_t>::value &&
 std::is_base_of<Aggregation, Aggr_t>::value,
 void>::type>
-class Neuron : public INeuron
+class Neuron
 {
 public:
     Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix const& weights = Matrix(), std::vector<double> const& bias = std::vector<double>()):
@@ -66,7 +53,7 @@ public:
     }
 
 
-    void init(Distrib distrib, double distVal1, double distVal2, unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, unsigned k)
+    void init(Distrib distrib, double distVal1, double distVal2, unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, unsigned k, std::mt19937& generator, bool useOutput)
     {
         _aggregResults = std::vector<std::pair<double, unsigned>>(batchSize, {0.0, 0});
         _actResults = std::vector<double>(batchSize, 0);
@@ -85,25 +72,25 @@ public:
         _previousWeightUpdate = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
         if(distrib == Distrib::Normal)
         {
-            double deviation = std::sqrt(distVal2 / (nbInputs + nbOutputs));
+            double deviation = std::sqrt(distVal2 / (nbInputs + (useOutput ? nbOutputs : 0)));
             std::normal_distribution<double> normalDist(distVal1, deviation);
             for(unsigned i = 0; i < _weights.size(); i++)
             {
                 for(unsigned j = 0; j < _weights[0].size(); j++)
                 {
-                    _weights[i][j] = normalDist(weightGen);
+                    _weights[i][j] = normalDist(generator);
                 }
             }
         }
         else if(distrib == Distrib::Uniform)
         {
-            double boundary = std::sqrt(distVal2 / (nbInputs + nbOutputs));
+            double boundary = std::sqrt(distVal2 / (nbInputs + (useOutput ? nbOutputs : 0)));
             std::uniform_real_distribution<double> uniformDist(-boundary, boundary);
             for(unsigned i = 0; i < _weights.size(); i++)
             {
                 for(unsigned j = 0; j < _weights[0].size(); j++)
                 {
-                    _weights[i][j] = uniformDist(weightGen);
+                    _weights[i][j] = uniformDist(generator);
                 }
             }
         }

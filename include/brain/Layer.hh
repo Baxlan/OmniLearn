@@ -26,6 +26,7 @@ struct LayerParam
     distrib(Distrib::Normal),
     mean_boundary(distrib == Distrib::Normal ? 0 : 6),
     deviation(2),
+    useOutput(true),
     k(1)
     {
     }
@@ -33,9 +34,10 @@ struct LayerParam
     unsigned size; //number of neurons
     double maxNorm;
     Distrib distrib;
-    double mean_boundary; //mean (if uniform), boundary (if uniform)
+    double mean_boundary; //mean (if normal), boundary (if uniform)
     double deviation; //deviation (if normal) or useless (if uniform)
-    unsigned k; //number of weight set for each neuron
+    bool useOutput; // calculate boundary/deviation by taking output number into account
+    unsigned k; //number of weight set for each neuron (for maxout)
 };
 
 
@@ -57,7 +59,7 @@ public:
     virtual void computeGradients(Matrix const& inputGradients, ThreadPool& t) = 0;
     virtual Matrix getGradients() = 0;
     virtual unsigned size() const = 0;
-    virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize) = 0;
+    virtual void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, std::mt19937& generator) = 0;
     virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
@@ -83,13 +85,9 @@ class Layer : public ILayer
 {
 public:
     Layer(ThreadPool& t, LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
+    _param(param),
     _inputSize(0),
     _batchSize(0),
-    _distrib(param.distrib),
-    _distVal1(param.mean_boundary),
-    _distVal2(param.deviation),
-    _maxNorm(param.maxNorm),
-    _k(param.k),
     _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
     {
         _localNThread = t.size();
@@ -105,13 +103,13 @@ public:
     }
 
 
-    void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize)
+    void init(unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, std::mt19937& generator)
     {
         _inputSize = nbInputs;
         _batchSize = batchSize;
         for(unsigned i = 0; i < size(); i++)
         {
-            _neurons[i].init(_distrib, _distVal1, _distVal2, nbInputs, nbOutputs, batchSize, _k);
+            _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, batchSize, _param.k, generator, _param.useOutput);
         }
     }
 
@@ -303,19 +301,15 @@ protected:
     {
         for(unsigned i = indexBeg; i < indexEnd; i++)
         {
-            _neurons[i].updateWeights(learningRate, L1, L2, _maxNorm, opti, momentum, window);
+            _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window);
         }
     }
 
 protected:
 
+    LayerParam _param;
     unsigned _inputSize;
     unsigned _batchSize;
-    Distrib _distrib;
-    double _distVal1; //mean (if uniform), boundary (if uniform)
-    double _distVal2; //deviation (if normal) or useless (if uniform)
-    double const _maxNorm;
-    unsigned _k; //number of weight set for each neuron
     std::vector<Neuron<Aggr_t, Act_t>> _neurons;
     unsigned _localNThread;
     unsigned _neuronPerThread;

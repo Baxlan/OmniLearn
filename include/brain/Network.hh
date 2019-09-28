@@ -14,6 +14,7 @@ namespace brain
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
+enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA, ZCA};
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 //=============================================================================
@@ -50,7 +51,8 @@ struct NetworkParam
     window(0.9),
     metric(Metric::L1),
     plateau(0.999),
-    normalizeOutputs(true)
+    normalizeOutputs(true),
+    preprocess({Preprocess::Standardize})
     {
     }
 
@@ -77,6 +79,7 @@ struct NetworkParam
     Metric metric;
     double plateau;
     bool normalizeOutputs;
+    std::vector<Preprocess> preprocess;
 };
 
 
@@ -94,26 +97,13 @@ class Network
 {
 public:
   Network(std::vector<std::string> const& labels, NetworkParam const& param = NetworkParam()):
+  _param(param),
   _seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
   _generator(std::mt19937(_seed)),
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
   _pool(param.threads),
-  _LRDecayConstant(param.LRDecayConstant),
-  _LRStepDecay(param.LRStepDecay),
-  _decay(param.decay),
-  _batchSize(param.batchSize),
-  _learningRate(param.learningRate),
-  _L1(param.L1),
-  _L2(param.L2),
-  _dropout(param.dropout),
-  _dropconnect(param.dropconnect),
-  _maxEpoch(param.epoch),
-  _patience(param.patience),
-  _loss(param.loss),
-  _validationRatio(param.validationRatio),
-  _testRatio(param.testRatio),
   _rawData(),
   _trainData(),
   _validationData(),
@@ -127,14 +117,7 @@ public:
   _validLosses(),
   _testMetric(),
   _testSecondMetric(),
-  _classValidity(param.classValidity),
-  _optimizer(param.optimizer),
-  _momentum(param.momentum),
-  _window(param.window),
-  _metric(param.metric),
   _labels(labels),
-  _plateau(param.plateau), //if loss * plateau >= optimalLoss after "patience" epochs, end learning
-  _normalizeOutputs(param.normalizeOutputs),
   _outputMinMax()
   {
   }
@@ -179,7 +162,7 @@ public:
     standardize(_validationData, a);
     standardize(_testData, a);
 
-    if(_normalizeOutputs)
+    if(_param.normalizeOutputs)
     {
       _outputMinMax = normalize(_trainRealResults);
       normalize(_validationRealResults, _outputMinMax);
@@ -197,25 +180,25 @@ public:
 
     double lowestLoss = computeLoss();
     std::cout << "\n";
-    for(_epoch = 1; _epoch < _maxEpoch; _epoch++)
+    for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
       performeOneEpoch();
 
       std::cout << "Epoch: " << _epoch;
       double validLoss = computeLoss();
-      std::cout << "   LR: " << _decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay) << "\n";
+      std::cout << "   LR: " << _param.decay(_param.learningRate, _epoch, _param.LRDecayConstant, _param.LRStepDecay) << "\n";
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss))
       {
         return false;
       }
       //EARLY STOPPING
-      if(validLoss < lowestLoss * _plateau) //if loss increases, or doesn't decrease more than 0.5% in _patience epochs, stop learning
+      if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than 0.5% in _param.patience epochs, stop learning
       {
         save();
         lowestLoss = validLoss;
         _optimalEpoch = _epoch;
       }
-      if(_epoch - _optimalEpoch > _patience)
+      if(_epoch - _optimalEpoch > _param.patience)
         break;
     }
     loadSaved();
@@ -231,7 +214,31 @@ public:
       inputs = _layers[i]->process(inputs, _pool);
     }
     // if cross-entropy loss is used, then score must be softmax
-    if(_loss == Loss::CrossEntropy)
+    if(_param.loss == Loss::CrossEntropy)
+    {
+      inputs = softmax(inputs);
+    }
+    //denormalize outputs
+    for(unsigned i = 0; i < inputs.size(); i++)
+    {
+      for(unsigned j = 0; j < inputs[0].size(); j++)
+      {
+        inputs[i][j] *= (_outputMinMax[j].second - _outputMinMax[j].first);
+        inputs[i][j] += _outputMinMax[j].first;
+      }
+    }
+    return inputs;
+  }
+
+
+  Matrix processForLoss(Matrix inputs) const
+  {
+    for(unsigned i = 0; i < _layers.size(); i++)
+    {
+      inputs = _layers[i]->process(inputs, _pool);
+    }
+    // if cross-entropy loss is used, then score must be softmax
+    if(_param.loss == Loss::CrossEntropy)
     {
       inputs = softmax(inputs);
     }
@@ -244,29 +251,20 @@ public:
     std::pair<std::vector<double>, std::vector<double>> acc;
     std::string loss;
     std::string metric;
-    if(_metric == Metric::Accuracy)
-    {
-      acc = accuracyPerOutput(_testRealResults, process(_testData), _classValidity);
+    if(_param.metric == Metric::Accuracy)
       metric = "accuracy";
-    }
-    else if(_metric == Metric::L1)
-    {
-      acc = L1MetricPerOutput(_testRealResults, process(_testData));
+    else if(_param.metric == Metric::L1)
       metric = "mae";
-    }
-    else if(_metric == Metric::L2)
-    {
-      acc = L2MetricPerOutput(_testRealResults, process(_testData));
+    else if(_param.metric == Metric::L2)
       metric = "mse";
-    }
 
-    if(_loss == Loss::BinaryCrossEntropy)
+    if(_param.loss == Loss::BinaryCrossEntropy)
       loss = "binary cross entropy";
-    else if(_loss == Loss::CrossEntropy)
+    else if(_param.loss == Loss::CrossEntropy)
       loss = "cross entropy";
-    else if(_loss == Loss::L1)
+    else if(_param.loss == Loss::L1)
       loss = "mae";
-    else if(_loss == Loss::L2)
+    else if(_param.loss == Loss::L2)
       loss = "mse";
 
     std::ofstream output(path);
@@ -295,15 +293,10 @@ public:
     {
         output << _testSecondMetric[i] << ",";
     }
-    output << "\n";
-    for(unsigned i=0; i<acc.first.size(); i++)
+    if(_param.metric == Metric::Accuracy)
     {
-        output << acc.first[i] << ",";
-    }
-        output << "\n";
-    for(unsigned i=0; i<acc.second.size(); i++)
-    {
-        output << acc.second[i] << ",";
+      output << "\nthreshold:\n";
+      output << _param.classValidity << "\n";
     }
     output << "\noptimal epoch:\n";
     output << _optimalEpoch;
@@ -317,6 +310,21 @@ public:
     {
         output << _outputMinMax[i].second << ",";
     }
+    Matrix testRes(process(_testData));
+    output << "\nexpected and predicted values:\n";
+    for(unsigned i = 0; i < _labels.size(); i++)
+    {
+      output << _labels[i] << "\n" ;
+      for(unsigned j = 0; j < _testRealResults.size(); j++)
+      {
+        output << _testRealResults[j][i] << ",";
+      }
+      output << "\n";
+      for(unsigned j = 0; j < testRes.size(); j++)
+      {
+        output << testRes[j][i] << ",";
+      }
+    }
   }
 
 
@@ -327,7 +335,7 @@ protected:
     {
         _layers[i]->init((i == 0 ? _rawData[0].first.size() : _layers[i-1]->size()),
                         (i == _layers.size()-1 ? _rawData[0].second.size() : _layers[i+1]->size()),
-                        _batchSize);
+                        _param.batchSize, _generator);
     }
   }
 
@@ -336,18 +344,18 @@ protected:
   {
     std::shuffle(_rawData.begin(), _rawData.end(), _generator);
 
-    double validation = _validationRatio * _rawData.size();
-    double test = _testRatio * _rawData.size();
-    double nbBatch = std::trunc(_rawData.size() - validation - test) / _batchSize;
+    double validation = _param.validationRatio * _rawData.size();
+    double test = _param.testRatio * _rawData.size();
+    double nbBatch = std::trunc(_rawData.size() - validation - test) / _param.batchSize;
 
     //add a batch if an incomplete batch has more than 0.5*batchsize data
     if(nbBatch - static_cast<unsigned>(nbBatch) >= 0.5)
       nbBatch = std::trunc(nbBatch) + 1;
 
-    unsigned nbTrain = static_cast<unsigned>(nbBatch)*_batchSize;
+    unsigned nbTrain = static_cast<unsigned>(nbBatch)*_param.batchSize;
     unsigned noTrain = _rawData.size() - nbTrain;
-    validation = std::round(noTrain*_validationRatio/(_validationRatio + _testRatio));
-    test = std::round(noTrain*_testRatio/(_validationRatio + _testRatio));
+    validation = std::round(noTrain*_param.validationRatio/(_param.validationRatio + _param.testRatio));
+    test = std::round(noTrain*_param.testRatio/(_param.validationRatio + _param.testRatio));
 
     for(unsigned i = 0; i < static_cast<unsigned>(validation); i++)
     {
@@ -382,17 +390,17 @@ protected:
   {
     for(unsigned batch = 0; batch < _nbBatch; batch++)
     {
-      Matrix input(_batchSize);
-      Matrix output(_batchSize);
-      for(unsigned i = 0; i < _batchSize; i++)
+      Matrix input(_param.batchSize);
+      Matrix output(_param.batchSize);
+      for(unsigned i = 0; i < _param.batchSize; i++)
       {
-        input[i] = _trainData[batch*_batchSize+i];
-        output[i] = _trainRealResults[batch*_batchSize+i];
+        input[i] = _trainData[batch*_param.batchSize+i];
+        output[i] = _trainRealResults[batch*_param.batchSize+i];
       }
 
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        input = _layers[i]->processToLearn(input, _dropout, _dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
+        input = _layers[i]->processToLearn(input, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
       }
 
       Matrix gradients(transpose(computeLossMatrix(output, input).second));
@@ -403,7 +411,7 @@ protected:
       }
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(_decay(_learningRate, _epoch, _LRDecayConstant, _LRStepDecay), _L1, _L2, _optimizer, _momentum, _window, _pool);
+        _layers[i]->updateWeights(_param.decay(_param.learningRate, _epoch, _param.LRDecayConstant, _param.LRStepDecay), _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
       }
     }
   }
@@ -411,11 +419,11 @@ protected:
 
   std::pair<Matrix, Matrix> computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
   {
-    if(_loss == Loss::L1)
+    if(_param.loss == Loss::L1)
       return L1Loss(realResults, predicted);
-    else if(_loss == Loss::L2)
+    else if(_param.loss == Loss::L2)
       return L2Loss(realResults, predicted);
-    else if(_loss == Loss::BinaryCrossEntropy)
+    else if(_param.loss == Loss::BinaryCrossEntropy)
       return binaryCrossEntropyLoss(realResults, predicted);
     else //if loss == crossEntropy
       return crossEntropyLoss(realResults, predicted);
@@ -455,8 +463,8 @@ protected:
       }
     }
 
-    L1 *= _L1;
-    L2 *= (_L2 * 0.5);
+    L1 *= _param.L1;
+    L2 *= (_param.L2 * 0.5);
 
     //training loss
     Matrix input(_trainData.size());
@@ -466,24 +474,24 @@ protected:
       input[i] = _trainData[i];
       output[i] = _trainRealResults[i];
     }
-    input = process(input);
+    input = processForLoss(input);
     double trainLoss = averageLoss(computeLossMatrix(output, input).first) + L1 + L2;
 
     //validation loss
-    Matrix validationResult = process(_validationData);
+    Matrix validationResult = processForLoss(_validationData);
     double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first) + L1 + L2;
 
     //test metric
     std::pair<double, double> testMetric;
-    if(_metric == Metric::Accuracy)
+    if(_param.metric == Metric::Accuracy)
     {
-      testMetric = accuracy(_testRealResults, process(_testData), _classValidity);
+      testMetric = accuracy(_testRealResults, process(_testData), _param.classValidity);
     }
-    else if(_metric == Metric::L1)
+    else if(_param.metric == Metric::L1)
     {
       testMetric = L1Metric(_testRealResults, process(_testData), _outputMinMax);
     }
-    else if(_metric == Metric::L2)
+    else if(_param.metric == Metric::L2)
     {
       testMetric = L2Metric(_testRealResults, process(_testData), _outputMinMax);
     }
@@ -517,8 +525,9 @@ protected:
 
 
 protected:
-  unsigned _seed;
+  NetworkParam _param;
 
+  unsigned _seed;
   std::mt19937 _generator;
   std::bernoulli_distribution _dropoutDist;
   std::bernoulli_distribution _dropconnectDist;
@@ -527,22 +536,6 @@ protected:
 
   mutable ThreadPool _pool;
 
-  double _LRDecayConstant;
-  unsigned _LRStepDecay;
-  double (* _decay)(double, unsigned, double, unsigned);
-
-  unsigned const _batchSize;
-  double _learningRate;
-  double _L1;
-  double _L2;
-  double _dropout;
-  double _dropconnect;
-  unsigned const _maxEpoch;
-  unsigned const _patience;
-  Loss _loss;
-
-  double _validationRatio;
-  double _testRatio;
   Dataset _rawData;
   Matrix _trainData;
   Matrix _trainRealResults;
@@ -559,16 +552,7 @@ protected:
   std::vector<double> _testMetric;
   std::vector<double> _testSecondMetric;
 
-  double _classValidity;
-
-  Optimizer _optimizer;
-  double _momentum; //momentum
-  double _window; //window effect on grads
-  Metric _metric;
-
   std::vector<std::string> _labels;
-  double _plateau;
-  bool _normalizeOutputs;
   std::vector<std::pair<double, double>> _outputMinMax;
 };
 

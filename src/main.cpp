@@ -82,7 +82,7 @@ int main()
     brain::NetworkParam netp;
     netp.threads = 1;
     netp.batchSize = 10;
-    netp.learningRate = 0.0001;
+    netp.learningRate = 0.001;
     netp.loss = brain::Loss::L2;
     netp.epoch = 200;
     netp.patience = 10;
@@ -98,10 +98,8 @@ int main()
     net.setData(data);
 
     brain::LayerParam lay;
-    lay.size = 16;
+    lay.size = 32;
     lay.maxNorm = 5;
-    net.addLayer<brain::Dot, brain::Relu>(lay);
-    net.addLayer<brain::Dot, brain::Relu>(lay);
     net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 23;
     net.addLayer<brain::Dot, brain::Linear>(lay);

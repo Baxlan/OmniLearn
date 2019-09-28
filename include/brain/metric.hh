@@ -113,43 +113,6 @@ std::pair<double, double> L1Metric(Matrix const& real, Matrix const& predicted, 
 }
 
 
-//first is mae (of normalized outputs), second is std deviation at 68%
-std::pair<std::vector<double>, std::vector<double>> L1MetricPerOutput(Matrix const& real, Matrix const& predicted)
-{
-    std::vector<double> means(real[0].size(), 0);
-    std::vector<double> dev(real[0].size(), 0);
-
-    //mean absolute error
-    for(unsigned i = 0; i < real.size(); i++)
-    {
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            means[j] += std::abs(real[i][j] - predicted[i][j]);
-        }
-    }
-    for(unsigned i = 0; i < real[0].size(); i++)
-    {
-        means[i] /= real.size();
-    }
-
-    //dev
-    for(unsigned i = 0; i < real.size(); i++)
-    {
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            dev[j] += std::pow(means[j] - std::abs(real[i][j] - predicted[i][j]), 2);
-        }
-    }
-    for(unsigned i = 0; i < real[0].size(); i++)
-    {
-        dev[i] /= (real.size() - 1);
-        dev[i] = std::sqrt(dev[i]);
-    }
-
-    return {means, dev};
-}
-
-
 //first is mse with normalized outputs, second is with unormalized ones
 std::pair<double, double> L2Metric(Matrix const& real, Matrix const& predicted, std::vector<std::pair<double, double>> const& mM)
 {
@@ -169,42 +132,6 @@ std::pair<double, double> L2Metric(Matrix const& real, Matrix const& predicted, 
     return {average(sums).first, average(unormalizedSums).first};
 }
 
-
-//first is mse (of normalized outputs), second is std deviation at 68%
-std::pair<std::vector<double>, std::vector<double>> L2MetricPerOutput(Matrix const& real, Matrix const& predicted)
-{
-    std::vector<double> means(real[0].size(), 0);
-    std::vector<double> dev(real[0].size(), 0);
-
-    //mean square error
-    for(unsigned i = 0; i < real.size(); i++)
-    {
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            means[j] += std::pow(real[i][j] - predicted[i][j], 2);
-        }
-    }
-    for(unsigned i = 0; i < real[0].size(); i++)
-    {
-        means[i] /= real.size();
-    }
-
-    //dev
-    for(unsigned i = 0; i < real.size(); i++)
-    {
-        for(unsigned j = 0; j < real[0].size(); j++)
-        {
-            dev[j] += std::pow(means[j] - std::pow(real[i][j] - predicted[i][j], 2), 2);
-        }
-    }
-    for(unsigned i = 0; i < real[0].size(); i++)
-    {
-        dev[i] /= (real.size() - 1);
-        dev[i] = std::sqrt(dev[i]);
-    }
-
-    return {means, dev};
-}
 
 
 } // namespace brain
