@@ -14,7 +14,7 @@ namespace brain
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
-enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA, ZCA};
+enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA};
 typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
 
 //=============================================================================
@@ -126,7 +126,7 @@ public:
   template <typename Aggr_t = Dot, typename Act_t = Relu>
   void addLayer(LayerParam const& param = LayerParam())
   {
-    _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(_pool, param));
+    _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(param));
   }
 
 
@@ -154,9 +154,9 @@ public:
 
   bool learn()
   {
-    initLayers();
     shuffleData();
-    check();
+    preprocess();
+    initLayers();
 
     auto a = standardize(_trainData);
     standardize(_validationData, a);
@@ -172,6 +172,8 @@ public:
     {
       _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults[0].size(), {0, 1});
     }
+
+    check();
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {
@@ -226,21 +228,6 @@ public:
         inputs[i][j] *= (_outputMinMax[j].second - _outputMinMax[j].first);
         inputs[i][j] += _outputMinMax[j].first;
       }
-    }
-    return inputs;
-  }
-
-
-  Matrix processForLoss(Matrix inputs) const
-  {
-    for(unsigned i = 0; i < _layers.size(); i++)
-    {
-      inputs = _layers[i]->process(inputs, _pool);
-    }
-    // if cross-entropy loss is used, then score must be softmax
-    if(_param.loss == Loss::CrossEntropy)
-    {
-      inputs = softmax(inputs);
     }
     return inputs;
   }
@@ -380,6 +367,34 @@ protected:
   }
 
 
+  void preprocess()
+  {
+    for(unsigned i = 0; i < _param.preprocess.size(); i++)
+    {
+      if(_param.preprocess[i] == Preprocess::Center)
+      {
+
+      }
+      else if(_param.preprocess[i] == Preprocess::Normalize)
+      {
+
+      }
+      else if(_param.preprocess[i] == Preprocess::Standardize)
+      {
+
+      }
+      else if(_param.preprocess[i] == Preprocess::Whiten)
+      {
+
+      }
+      else if(_param.preprocess[i] == Preprocess::PCA)
+      {
+
+      }
+    }
+  }
+
+
   void check() const
   {
 
@@ -414,6 +429,22 @@ protected:
         _layers[i]->updateWeights(_param.decay(_param.learningRate, _epoch, _param.LRDecayConstant, _param.LRStepDecay), _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
       }
     }
+  }
+
+
+  //process taking already processed inputs and giving normalized outputs
+  Matrix processForLoss(Matrix inputs) const
+  {
+    for(unsigned i = 0; i < _layers.size(); i++)
+    {
+      inputs = _layers[i]->process(inputs, _pool);
+    }
+    // if cross-entropy loss is used, then score must be softmax
+    if(_param.loss == Loss::CrossEntropy)
+    {
+      inputs = softmax(inputs);
+    }
+    return inputs;
   }
 
 

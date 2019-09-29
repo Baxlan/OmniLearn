@@ -84,22 +84,12 @@ void>::type>
 class Layer : public ILayer
 {
 public:
-    Layer(ThreadPool& t, LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
+    Layer(LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
     _param(param),
     _inputSize(0),
     _batchSize(0),
     _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
     {
-        _localNThread = t.size();
-        _neuronPerThread = static_cast<unsigned>(size() / _localNThread);
-
-        for(; _localNThread > 0; _localNThread--)
-        {
-            if(_neuronPerThread > 0)
-                break;
-            else
-                _neuronPerThread = static_cast<unsigned>(size() / _localNThread);
-        }
     }
 
 
@@ -120,12 +110,15 @@ public:
         Matrix output(inputs.size(), std::vector<double>(_neurons.size(), 0));
         std::vector<std::future<void>> threads;
 
-        for(unsigned i = 0; i < _localNThread; i++)
+        for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, std::ref(inputs), std::ref(output)));
-            else
-                threads.push_back(t.enqueue(performProcess, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output)));
+            threads.push_back(t.enqueue([this, &inputs, &output, i]()->void
+            {
+                //one result per feature (for each neuron)
+                std::vector<double> result = _neurons[i].process(inputs);
+                for(unsigned j = 0; j < result.size(); j++)
+                    output[j][i] = result[j];
+            }));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
@@ -141,12 +134,25 @@ public:
         Matrix output(_batchSize, std::vector<double>(_neurons.size(), 0));
         std::vector<std::future<void>> threads;
 
-        for(unsigned i = 0; i < _localNThread; i++)
+        for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
-            else
-                threads.push_back(t.enqueue(performProcessToLearn, this, _neuronPerThread*i, size(), std::ref(inputs), std::ref(output), dropout, dropconnect, std::ref(dropoutDist), std::ref(dropconnectDist), std::ref(dropGen)));
+            threads.push_back(t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
+            {
+                //one result per feature (for each neuron)
+                std::vector<double> result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
+                for(unsigned j = 0; j < result.size(); j++)
+                {
+                    output[j][i] = result[j];
+                    //dropOut
+                    if(dropout > std::numeric_limits<double>::epsilon())
+                    {
+                        if(dropoutDist(dropGen))
+                            output[j][i] = 0;
+                        else
+                            output[j][i] /= (1-dropout);
+                    }
+                }
+            }));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
@@ -160,12 +166,12 @@ public:
     {
         std::vector<std::future<void>> threads;
 
-        for(unsigned i = 0; i < _localNThread; i++)
+        for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, std::ref(inputGradients)));
-            else
-                threads.push_back(t.enqueue(performComputeGradients, this, _neuronPerThread*i, size(), std::ref(inputGradients)));
+            threads.push_back(t.enqueue([this, &inputGradients, i]()->void
+            {
+                _neurons[i].computeGradients(inputGradients[i]);
+            }));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
@@ -214,15 +220,14 @@ public:
 
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t)
     {
-        //check if there are more neurons than threads
         std::vector<std::future<void>> threads;
 
-        for(unsigned i = 0; i < _localNThread; i++)
+        for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            if(i != _localNThread-1)
-                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, _neuronPerThread*(i+1)-1, learningRate, L1, L2, opti, momentum, window));
-            else
-                threads.push_back(t.enqueue(performUpdateWeights, this, _neuronPerThread*i, size(), learningRate, L1, L2, opti, momentum, window));
+            threads.push_back(t.enqueue([=]()->void
+            {
+                _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window);
+            }));
         }
         for(unsigned i = 0; i < threads.size(); i++)
         {
@@ -252,67 +257,10 @@ public:
 
 protected:
 
-    void performProcess(unsigned indexBeg, unsigned indexEnd, Matrix const& inputs, Matrix& output) const
-    {
-        for(unsigned i = indexBeg; i < indexEnd; i++)
-        {
-            //one result per feature (for each neuron)
-            std::vector<double> result = _neurons[i].process(inputs);
-            for(unsigned j = 0; j < result.size(); j++)
-            {
-                output[j][i] = result[j];
-            }
-        }
-    }
-
-
-    void performProcessToLearn(unsigned indexBeg, unsigned indexEnd, Matrix const& inputs, Matrix& output, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
-    {
-        for(unsigned i = indexBeg; i < indexEnd; i++)
-        {
-            //one result per feature (for each neuron)
-            std::vector<double> result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
-            for(unsigned j = 0; j < result.size(); j++)
-            {
-                output[j][i] = result[j];
-                //dropOut
-                if(dropout > std::numeric_limits<double>::epsilon())
-                {
-                    if(dropoutDist(dropGen))
-                        output[j][i] = 0;
-                    else
-                        output[j][i] /= (1-dropout);
-                }
-            }
-        }
-    }
-
-
-    void performComputeGradients(unsigned indexBeg, unsigned indexEnd, Matrix const& inputGradients)
-    {
-        for(unsigned i = indexBeg; i < indexEnd; i++)
-        {
-            _neurons[i].computeGradients(inputGradients[i]);
-        }
-    }
-
-
-    void performUpdateWeights(unsigned indexBeg, unsigned indexEnd, double learningRate, double L1, double L2, Optimizer opti, double momentum, double window)
-    {
-        for(unsigned i = indexBeg; i < indexEnd; i++)
-        {
-            _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window);
-        }
-    }
-
-protected:
-
     LayerParam _param;
     unsigned _inputSize;
     unsigned _batchSize;
     std::vector<Neuron<Aggr_t, Act_t>> _neurons;
-    unsigned _localNThread;
-    unsigned _neuronPerThread;
 };
 
 

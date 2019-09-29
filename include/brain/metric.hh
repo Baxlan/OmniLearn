@@ -26,7 +26,7 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
     double validated = 0;
     double fp = 0; //false prediction
     double count = 0; // equals real.size() in case of "one label per data"
-                      // but is different is case of multi labaled data
+                      // but is different in case of multi labeled data
 
     for(unsigned i = 0; i < real.size(); i++)
     {

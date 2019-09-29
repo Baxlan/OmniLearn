@@ -87,7 +87,7 @@ int main()
     netp.epoch = 200;
     netp.patience = 10;
     netp.decay = brain::LRDecay::exp;
-    netp.LRDecayConstant = 0.05;
+    netp.LRDecayConstant = 0.3;
     netp.classValidity = 0.90;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.2;

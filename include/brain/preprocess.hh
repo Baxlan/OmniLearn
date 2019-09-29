@@ -85,9 +85,9 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 }
 
 
-//rotate data in the decorrelated space (and set their variance to 1).
+//rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
-//returns the eigenvectors of the cov matrix of the data
+//returns the rotation matrix (eigenvectors of the cov matrix of the data)
 Matrix whiten(Matrix& data, Matrix eigen = {})
 {
 
