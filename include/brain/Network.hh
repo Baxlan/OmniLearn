@@ -4,7 +4,7 @@
 #include "Layer.hh"
 #include "preprocess.hh"
 #include "cost.hh"
-#include "annealing.hh"
+#include "decay.hh"
 #include "metric.hh"
 
 #include <iostream>
@@ -30,20 +30,20 @@ struct NetworkParam
 {
     NetworkParam():
     seed(0),
-    batchSize(1),
+    batchSize(0),
     learningRate(0.001),
     L1(0),
     L2(0),
-    epoch(50),
+    epoch(30),
     patience(5),
     dropout(0),
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
     loss(Loss::L2),
-    LRDecayConstant(0.01),
-    LRStepDecay(10),
-    decay(LRDecay::none),
+    decayValue(0.05),
+    decayDelay(5),
+    decay(decay::none),
     classValidity(0.9),
     threads(1),
     optimizer(Optimizer::None),
@@ -51,8 +51,8 @@ struct NetworkParam
     window(0.9),
     metric(Metric::L1),
     plateau(0.999),
-    normalizeOutputs(true),
-    preprocess({Preprocess::Standardize})
+    normalizeOutputs(false),
+    preprocess()
     {
     }
 
@@ -68,8 +68,8 @@ struct NetworkParam
     double validationRatio;
     double testRatio;
     Loss loss;
-    double LRDecayConstant;
-    unsigned LRStepDecay;
+    double decayValue;
+    unsigned decayDelay;
     double (* decay)(double, unsigned, double, unsigned);
     double classValidity; // %
     unsigned threads;
@@ -110,6 +110,7 @@ public:
   _validationRealResults(),
   _testData(),
   _testRealResults(),
+  _testRawData(),
   _nbBatch(0),
   _epoch(0),
   _optimalEpoch(0),
@@ -118,7 +119,11 @@ public:
   _testMetric(),
   _testSecondMetric(),
   _labels(labels),
-  _outputMinMax()
+  _outputMinMax(),
+  _centerData(),
+  _normalizationData(),
+  _standardizationData(),
+  _whiteningData()
   {
   }
 
@@ -158,10 +163,6 @@ public:
     preprocess();
     initLayers();
 
-    auto a = standardize(_trainData);
-    standardize(_validationData, a);
-    standardize(_testData, a);
-
     if(_param.normalizeOutputs)
     {
       _outputMinMax = normalize(_trainRealResults);
@@ -188,11 +189,10 @@ public:
 
       std::cout << "Epoch: " << _epoch;
       double validLoss = computeLoss();
-      std::cout << "   LR: " << _param.decay(_param.learningRate, _epoch, _param.LRDecayConstant, _param.LRStepDecay) << "\n";
+      std::cout << "   LR: " << _param.decay(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay) << "\n";
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss))
-      {
         return false;
-      }
+
       //EARLY STOPPING
       if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than 0.5% in _param.patience epochs, stop learning
       {
@@ -211,6 +211,31 @@ public:
 
   Matrix process(Matrix inputs) const
   {
+    //preprocess inputs
+    for(unsigned i = 0; i < _param.preprocess.size(); i++)
+    {
+      if(_param.preprocess[i] == Preprocess::Center)
+      {
+        center(inputs, _centerData);
+      }
+      else if(_param.preprocess[i] == Preprocess::Normalize)
+      {
+        normalize(inputs, _normalizationData);
+      }
+      else if(_param.preprocess[i] == Preprocess::Standardize)
+      {
+        standardize(inputs, _standardizationData);
+      }
+      else if(_param.preprocess[i] == Preprocess::Whiten)
+      {
+        whiten(inputs, _whiteningData.first);
+      }
+      else if(_param.preprocess[i] == Preprocess::PCA)
+      {
+
+      }
+    }
+    //process
     for(unsigned i = 0; i < _layers.size(); i++)
     {
       inputs = _layers[i]->process(inputs, _pool);
@@ -297,7 +322,7 @@ public:
     {
         output << _outputMinMax[i].second << ",";
     }
-    Matrix testRes(process(_testData));
+    Matrix testRes(process(_testRawData));
     output << "\nexpected and predicted values:\n";
     for(unsigned i = 0; i < _labels.size(); i++)
     {
@@ -353,6 +378,7 @@ protected:
     for(unsigned i = 0; i < static_cast<unsigned>(test); i++)
     {
       _testData.push_back(_rawData[_rawData.size()-1].first);
+      _testRawData.push_back(_rawData[_rawData.size()-1].first);
       _testRealResults.push_back(_rawData[_rawData.size()-1].second);
       _rawData.pop_back();
     }
@@ -373,15 +399,21 @@ protected:
     {
       if(_param.preprocess[i] == Preprocess::Center)
       {
-
+        _centerData = center(_trainData);
+        center(_validationData, _centerData);
+        center(_testData, _centerData);
       }
       else if(_param.preprocess[i] == Preprocess::Normalize)
       {
-
+        _normalizationData = normalize(_trainData);
+        normalize(_validationData, _normalizationData);
+        normalize(_testData, _normalizationData);
       }
       else if(_param.preprocess[i] == Preprocess::Standardize)
       {
-
+        _standardizationData = standardize(_trainData);
+        standardize(_validationData, _standardizationData);
+        standardize(_testData, _standardizationData);
       }
       else if(_param.preprocess[i] == Preprocess::Whiten)
       {
@@ -426,7 +458,7 @@ protected:
       }
       for(unsigned i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(_param.decay(_param.learningRate, _epoch, _param.LRDecayConstant, _param.LRStepDecay), _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
+        _layers[i]->updateWeights(_param.decay(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay), _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
       }
     }
   }
@@ -505,27 +537,19 @@ protected:
       input[i] = _trainData[i];
       output[i] = _trainRealResults[i];
     }
-    input = processForLoss(input);
-    double trainLoss = averageLoss(computeLossMatrix(output, input).first) + L1 + L2;
+    double trainLoss = averageLoss(computeLossMatrix(output, processForLoss(input)).first) + L1 + L2;
 
     //validation loss
-    Matrix validationResult = processForLoss(_validationData);
-    double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, validationResult).first) + L1 + L2;
+    double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, processForLoss(_validationData)).first) + L1 + L2;
 
     //test metric
     std::pair<double, double> testMetric;
     if(_param.metric == Metric::Accuracy)
-    {
-      testMetric = accuracy(_testRealResults, process(_testData), _param.classValidity);
-    }
+      testMetric = accuracy(_testRealResults, processForLoss(_testData), _param.classValidity);
     else if(_param.metric == Metric::L1)
-    {
-      testMetric = L1Metric(_testRealResults, process(_testData), _outputMinMax);
-    }
+      testMetric = L1Metric(_testRealResults, processForLoss(_testData), _outputMinMax);
     else if(_param.metric == Metric::L2)
-    {
-      testMetric = L2Metric(_testRealResults, process(_testData), _outputMinMax);
-    }
+      testMetric = L2Metric(_testRealResults, processForLoss(_testData), _outputMinMax);
 
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
@@ -574,6 +598,7 @@ protected:
   Matrix _validationRealResults;
   Matrix _testData;
   Matrix _testRealResults;
+  Matrix _testRawData;
   unsigned _nbBatch;
 
   unsigned _epoch;
@@ -585,6 +610,11 @@ protected:
 
   std::vector<std::string> _labels;
   std::vector<std::pair<double, double>> _outputMinMax;
+
+  std::vector<double> _centerData;
+  std::vector<std::pair<double, double>> _normalizationData;
+  std::vector<std::pair<double, double>> _standardizationData;
+  std::pair<Matrix, std::vector<double>> _whiteningData;
 };
 
 

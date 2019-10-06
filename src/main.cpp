@@ -86,13 +86,15 @@ int main()
     netp.loss = brain::Loss::L2;
     netp.epoch = 200;
     netp.patience = 10;
-    netp.decay = brain::LRDecay::exp;
-    netp.LRDecayConstant = 0.3;
+    netp.decay = brain::decay::exp;
+    netp.decayValue = 0.3;
     netp.classValidity = 0.90;
     netp.validationRatio = 0.2;
     netp.testRatio = 0.2;
     netp.optimizer = brain::Optimizer::Rmsprop;
     netp.metric = brain::Metric::L1;
+    netp.preprocess = {brain::Preprocess::Standardize};
+    netp.normalizeOutputs = true;
 
     brain::Network net(labels, netp);
     net.setData(data);
