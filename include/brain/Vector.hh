@@ -21,24 +21,36 @@ public:
   {
   }
 
-  Vector(std::vector<double> const& vec):
-  _vec(vec)
+  //constructor taking any STL container
+  template <typename container_t>
+  Vector(container_t const& container):
+  _vec(container.begin(), container.end())
   {
   }
 
+  //copy contructor
   Vector(Vector const& vec):
   _vec(vec._vec)
   {
   }
 
+  //constructor taking a raw array of double
+  template <size_t N>
+  Vector(double (&table)[N]):
+  _vec(std::begin(table), std::end(table))
+  {
+  }
+
   Vector& operator=(std::vector<double> const& vec);
-  operator std::vector<double>() const {return _vec;};
+  template <typename T> operator T() const {return T(_vec.begin(), _vec.end());};
   double& at(size_t index);
-  double at(size_t index) const;
+  double const& at(size_t index) const;
   double& operator[](size_t index);
-  double operator[](size_t index) const;
-  auto begin();
-  auto end();
+  double const& operator[](size_t index) const;
+  std::vector<double>::iterator begin();
+  std::vector<double>::const_iterator begin() const;
+  std::vector<double>::iterator end();
+  std::vector<double>::const_iterator end() const;
   size_t size() const;
   void reserve(size_t size);
   void push_back(double val);
@@ -47,14 +59,16 @@ public:
   double sum() const;
   double quadraticSum(size_t order = 2) const;
   double absoluteSum() const;
-
-  std::pair<double, double> mean();
-  double dot(Vector const& vec) const;
-  double distance(Vector const& vec, size_t order = 2) const;
-  double distanceInf(Vector const& vec) const;
+  std::pair<double, double> mean(); // return mean and deviation
   double norm(size_t order = 2) const;
   double normInf() const;
-  Vector cross(Vector const& vec) const; //vectorial product, dim 3 or 7
+
+  static double dot(Vector const& a, Vector const& b);
+  static double distance(Vector const& a, Vector const& b, size_t order = 2);
+  static double distanceInf(Vector const& a, Vector const& b);
+  static Vector cross(Vector const& a, Vector const& b);
+  static Vector hadamard(Vector a, Vector const& b);
+  static Vector matrix(Vector const& a, Vector const& b);
 
 private:
   std::vector<double> _vec;
@@ -75,7 +89,7 @@ double& Vector::at(size_t index)
 }
 
 
-double Vector::at(size_t index) const
+double const& Vector::at(size_t index) const
 {
   return _vec.at(index);
 }
@@ -87,19 +101,31 @@ double& Vector::operator[](size_t index)
 }
 
 
-double Vector::operator[](size_t index) const
+double const& Vector::operator[](size_t index) const
 {
   return _vec[index];
 }
 
 
-auto Vector::begin()
+std::vector<double>::iterator Vector::begin()
 {
   return _vec.begin();
 }
 
 
-auto Vector::end()
+std::vector<double>::const_iterator Vector::begin() const
+{
+  return _vec.begin();
+}
+
+
+std::vector<double>::iterator Vector::end()
+{
+  return _vec.end();
+}
+
+
+std::vector<double>::const_iterator Vector::end() const
 {
   return _vec.end();
 }
@@ -158,11 +184,8 @@ double Vector::absoluteSum() const
 
 std::pair<double, double> Vector::mean()
 {
-  double mean = 0;
+  double mean = sum() / size();
   double dev = 0;
-  for(double val : _vec)
-    mean += val;
-  mean /= size();
   for(double val : _vec)
     dev += std::pow(mean - val, 2);
   dev /= (size() - 1);
@@ -171,36 +194,48 @@ std::pair<double, double> Vector::mean()
 }
 
 
-double Vector::dot(Vector const& vec) const
+double Vector::norm(size_t order) const
 {
-  if(size() != vec.size())
+  return distance(*this, Vector(size(), 0), order);
+}
+
+
+double Vector::normInf() const
+{
+  return distanceInf(*this, Vector(size(), 0));
+}
+
+
+double Vector::dot(Vector const& a, Vector const& b)
+{
+  if(a.size() != b.size())
     throw Exception("In a dot product, both vectors must have the same number of element.");
   double result = 0;
-  for(size_t i = 0; i < size(); i++)
-    result += ((*this)[i] * vec[i]);
+  for(size_t i = 0; i < a.size(); i++)
+    result += (a[i] * b[i]);
   return result;
 }
 
 
-double Vector::distance(Vector const& vec, size_t order) const
+double Vector::distance(Vector const& a, Vector const& b, size_t order)
 {
-  if(size() != vec.size())
+  if(a.size() != b.size())
     throw Exception("In a vector distance calculation, both vectors must have the same number of element.");
   double result = 0;
-  for(size_t i = 0; i < size(); i++)
-    result += std::pow(std::abs((*this)[i] - vec[i]), order);
+  for(size_t i = 0; i < a.size(); i++)
+    result += std::pow(std::abs(a[i] - b[i]), order);
   return std::pow(result, 1/order);
 }
 
 
-double Vector::distanceInf(Vector const& vec) const
+double Vector::distanceInf(Vector const& a, Vector const& b)
 {
-  if(size() != vec.size())
+  if(a.size() != b.size())
     throw Exception("In a vector distance calculation, both vectors must have the same number of element.");
   double result = 0;
-  for(size_t i = 0; i < size(); i++)
+  for(size_t i = 0; i < a.size(); i++)
   {
-    double temp = std::abs((*this)[i] - vec[i]);
+    double temp = std::abs(a[i] - b[i]);
     if(temp > result)
       result = temp;
   }
@@ -208,34 +243,38 @@ double Vector::distanceInf(Vector const& vec) const
 }
 
 
-double Vector::norm(size_t order) const
+Vector Vector::cross(Vector const& a, Vector const& b)
 {
-  return distance(Vector(size(), 0), order);
-}
-
-
-double Vector::normInf() const
-{
-  return distanceInf(Vector(size(), 0));
-}
-
-
-Vector Vector::cross(Vector const& vec) const //vectorial product, dim 3 or 7
-{
-  if(size() != vec.size())
+  if(a.size() != b.size())
     throw Exception("In a cross product, both vectors must have the same number of element.");
-  if(size() != 3 && size() != 7)
+  if(a.size() != 3 && a.size() != 7)
     throw Exception("Cross product only exists in 3D and 7D space.");
-  Vector res(3);
-  if(size() == 3)
+  Vector res(a.size());
+  if(a.size() == 3)
   {
 
   }
-  else if(size() == 7)
+  else //size = 7
   {
 
   }
   return res;
+}
+
+
+Vector Vector::hadamard(Vector a, Vector const& b)
+{
+  if(a.size() != b.size())
+    throw Exception("In a hadamard product, both vectors must have the same number of element.");
+  for(size_t i = 0; i < a.size(); i++)
+    a[i] *= b[i];
+  return a;
+}
+
+
+Vector Vector::matrix(Vector const& a, Vector const& b)
+{
+
 }
 
 
