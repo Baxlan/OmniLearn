@@ -3,6 +3,7 @@
 #include <map>
 #include "brain/brain.hh"
 #include "brain/json.hh"
+#include "brain/Vector.hh"
 
 
 using json = nlohmann::json;

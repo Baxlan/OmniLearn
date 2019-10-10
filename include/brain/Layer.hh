@@ -108,11 +108,11 @@ public:
     {
         //lines are features, columns are neurons
         Matrix output(inputs.size(), std::vector<double>(_neurons.size(), 0));
-        std::vector<std::future<void>> threads;
+        std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            threads.push_back(t.enqueue([this, &inputs, &output, i]()->void
+            tasks.push_back(t.enqueue([this, &inputs, &output, i]()->void
             {
                 //one result per feature (for each neuron)
                 std::vector<double> result = _neurons[i].process(inputs);
@@ -120,9 +120,9 @@ public:
                     output[j][i] = result[j];
             }));
         }
-        for(unsigned i = 0; i < threads.size(); i++)
+        for(unsigned i = 0; i < tasks.size(); i++)
         {
-            threads[i].get();
+            tasks[i].get();
         }
         return output;
     }
@@ -132,11 +132,11 @@ public:
     {
         //lines are features, columns are neurons
         Matrix output(_batchSize, std::vector<double>(_neurons.size(), 0));
-        std::vector<std::future<void>> threads;
+        std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            threads.push_back(t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
+            tasks.push_back(t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
             {
                 //one result per feature (for each neuron)
                 std::vector<double> result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
@@ -154,9 +154,9 @@ public:
                 }
             }));
         }
-        for(unsigned i = 0; i < threads.size(); i++)
+        for(unsigned i = 0; i < tasks.size(); i++)
         {
-            threads[i].get();
+            tasks[i].get();
         }
         return output;
     }
@@ -164,18 +164,18 @@ public:
 
     void computeGradients(Matrix const& inputGradients, ThreadPool& t)
     {
-        std::vector<std::future<void>> threads;
+        std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            threads.push_back(t.enqueue([this, &inputGradients, i]()->void
+            tasks.push_back(t.enqueue([this, &inputGradients, i]()->void
             {
                 _neurons[i].computeGradients(inputGradients[i]);
             }));
         }
-        for(unsigned i = 0; i < threads.size(); i++)
+        for(unsigned i = 0; i < tasks.size(); i++)
         {
-            threads[i].get();
+            tasks[i].get();
         }
     }
 
@@ -220,18 +220,18 @@ public:
 
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t)
     {
-        std::vector<std::future<void>> threads;
+        std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
-            threads.push_back(t.enqueue([=]()->void
+            tasks.push_back(t.enqueue([=]()->void
             {
                 _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window);
             }));
         }
-        for(unsigned i = 0; i < threads.size(); i++)
+        for(unsigned i = 0; i < tasks.size(); i++)
         {
-            threads[i].get();
+            tasks[i].get();
         }
     }
 

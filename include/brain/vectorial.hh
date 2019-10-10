@@ -40,7 +40,7 @@ double dot(std::vector<double> const& a, std::vector<double> const& b)
 double distance(std::vector<double> const& a, std::vector<double> const& b, double order = 2)
 {
     if(a.size() != b.size())
-        throw Exception("To calculate the dispance between two vectors, they must have the same number of element.");
+        throw Exception("To calculate the distance between two vectors, they must have the same number of element.");
 
     double result = 0;
     for(unsigned i=0; i<a.size(); i++)
@@ -77,7 +77,7 @@ double sum(std::vector<double> const& vec)
 {
     double result = 0;
     for(double a : vec)
-        result += std::abs(a);
+        result += a;
     return result;
 }
 
