@@ -2,29 +2,53 @@
 #define BRAIN_VECTOR_HH_
 
 #include <vector>
+#include <type_traits>
 
 namespace brain
 {
 
 
 
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== IS_ITERABLE =============================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+template <typename T>
+struct is_iterable
+{
+  template<typename U, typename U::const_iterator (U::*)() const> struct SFINAE {};
+  template<typename U> static char Test(SFINAE<U, &U::end>*);
+  template<typename U> static int Test(...);
+  static const bool value = sizeof(Test<T>(0)) == sizeof(char);
+};
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== VECTOR IMPLEMENTATION ===================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
 class Vector
 {
 public:
-  Vector():
-  _vec()
-  {
-  }
+  typedef std::vector<double>::iterator iterator;
+  typedef std::vector<double>::const_iterator const_iterator;
 
-  Vector(size_t size, double val = 0):
-  _vec(std::vector<double>(size, val))
-  {
-  }
-
-  //constructor taking any STL container
-  template <typename container_t>
-  Vector(container_t const& container):
-  _vec(container.begin(), container.end())
+  // "default" constructor
+  Vector(size_t size = 0, double val = 0):
+  _vec(size, val)
   {
   }
 
@@ -32,6 +56,14 @@ public:
   Vector(Vector const& vec):
   _vec(vec._vec)
   {
+  }
+
+  //constructor taking any STL container
+  template <typename T, typename = typename std::enable_if<is_iterable<T>::value, void>::type>
+  Vector(T const& container):
+  _vec(container.begin(), container.end())
+  {
+    static_assert(std::is_same<typename T::value_type, double>::value, "Container must hold double type.");
   }
 
   //constructor taking a raw array of double
@@ -42,15 +74,15 @@ public:
   }
 
   Vector& operator=(std::vector<double> const& vec);
-  template <typename T> operator T() const {return T(_vec.begin(), _vec.end());};
+  template <typename T, typename = typename std::enable_if<is_iterable<T>::value, void>::type> operator T() const {return T(_vec.begin(), _vec.end());}
   double& at(size_t index);
   double const& at(size_t index) const;
   double& operator[](size_t index);
   double const& operator[](size_t index) const;
-  std::vector<double>::iterator begin();
-  std::vector<double>::const_iterator begin() const;
-  std::vector<double>::iterator end();
-  std::vector<double>::const_iterator end() const;
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
   size_t size() const;
   void reserve(size_t size);
   void push_back(double val);

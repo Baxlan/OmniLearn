@@ -4,6 +4,7 @@
 #include "brain/brain.hh"
 #include "brain/json.hh"
 #include "brain/Vector.hh"
+#include <deque>
 
 
 using json = nlohmann::json;
@@ -112,6 +113,9 @@ int main()
     {
         net.writeInfo("output.out");
     }
+
+    std::deque<double> a;
+    brain::Vector b(a);
 
     return 0;
 }
