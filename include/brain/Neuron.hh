@@ -5,7 +5,6 @@
 #include "Aggregation.hh"
 
 #include <memory>
-#include <type_traits>
 #include <random>
 
 namespace brain
@@ -32,7 +31,7 @@ void>::type>
 class Neuron
 {
 public:
-    Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix const& weights = Matrix(), std::vector<double> const& bias = std::vector<double>()):
+    Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix const& weights = Matrix(), Vector const& bias = Vector()):
     _aggregation(aggregation),
     _activation(activation),
     _weights(weights),
@@ -56,27 +55,27 @@ public:
     void init(Distrib distrib, double distVal1, double distVal2, unsigned nbInputs, unsigned nbOutputs, unsigned batchSize, unsigned k, std::mt19937& generator, bool useOutput)
     {
         _aggregResults = std::vector<std::pair<double, unsigned>>(batchSize, {0.0, 0});
-        _actResults = std::vector<double>(batchSize, 0);
-        _actGradients = std::vector<double>(batchSize, 0);
-        _inputGradients = std::vector<double>(nbOutputs, 0);
+        _actResults = Vector(batchSize, 0);
+        _actGradients = Vector(batchSize, 0);
+        _inputGradients = Vector(nbOutputs, 0);
 
-        if(_weights.size() == 0)
+        if(_weights.lines() == 0)
         {
-            _weights = Matrix(k, std::vector<double>(nbInputs, 0));
-            _bias = std::vector<double>(k, 0);
+            _weights = Matrix(k, Vector(nbInputs, 0));
+            _bias = Vector(k, 0);
         }
-        _gradientsPerFeature = Matrix(batchSize, std::vector<double>(_weights[0].size(), 0));
-        _biasGradients = std::vector<double>(_bias.size(), 0);
-        _gradients = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
-        _previousBiasUpdate = std::vector<double>(_bias.size(), 0);
-        _previousWeightUpdate = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
+        _gradientsPerFeature = Matrix(batchSize, Vector(_weights[0].size(), 0));
+        _biasGradients = Vector(_bias.size(), 0);
+        _gradients = Matrix(_weights.lines(), Vector(_weights.columns(), 0));
+        _previousBiasUpdate = Vector(_bias.size(), 0);
+        _previousWeightUpdate = Matrix(_weights.lines(), Vector(_weights.columns(), 0));
         if(distrib == Distrib::Normal)
         {
             double deviation = std::sqrt(distVal2 / (nbInputs + (useOutput ? nbOutputs : 0)));
             std::normal_distribution<double> normalDist(distVal1, deviation);
-            for(unsigned i = 0; i < _weights.size(); i++)
+            for(unsigned i = 0; i < _weights.lines(); i++)
             {
-                for(unsigned j = 0; j < _weights[0].size(); j++)
+                for(unsigned j = 0; j < _weights.columns(); j++)
                 {
                     _weights[i][j] = normalDist(generator);
                 }
@@ -86,9 +85,9 @@ public:
         {
             double boundary = std::sqrt(distVal2 / (nbInputs + (useOutput ? nbOutputs : 0)));
             std::uniform_real_distribution<double> uniformDist(-boundary, boundary);
-            for(unsigned i = 0; i < _weights.size(); i++)
+            for(unsigned i = 0; i < _weights.lines(); i++)
             {
-                for(unsigned j = 0; j < _weights[0].size(); j++)
+                for(unsigned j = 0; j < _weights.columns(); j++)
                 {
                     _weights[i][j] = uniformDist(generator);
                 }
@@ -98,11 +97,11 @@ public:
 
 
     //each line of the input matrix is a feature of the batch. Returns one result per feature.
-    std::vector<double> process(Matrix const& inputs) const
+    Vector process(Matrix const& inputs) const
     {
-        std::vector<double> results(inputs.size(), 0);
+        Vector results(inputs.lines(), 0);
 
-        for(unsigned i = 0; i < inputs.size(); i++)
+        for(unsigned i = 0; i < inputs.lines(); i++)
         {
             results[i] = _activation.activate(_aggregation.aggregate(inputs[i], _weights, _bias).first);
         }
@@ -111,16 +110,16 @@ public:
 
 
     //each line of the input matrix is a feature of the batch. Returns one result per feature.
-    std::vector<double> processToLearn(Matrix const& inputs, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
+    Vector processToLearn(Matrix const& inputs, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
     {
         _inputs = inputs;
 
         //dropConnect
         if(dropconnect > std::numeric_limits<double>::epsilon())
         {
-            for(unsigned i=0; i<_inputs.size(); i++)
+            for(unsigned i=0; i<_inputs.lines(); i++)
             {
-                for(unsigned j=0; j<_inputs[0].size(); j++)
+                for(unsigned j=0; j<_inputs.columns(); j++)
                 {
                     if(dropconnectDist(dropGen))
                         _inputs[i][j] = 0;
@@ -131,7 +130,7 @@ public:
         }
 
         //processing
-        for(unsigned i = 0; i < inputs.size(); i++)
+        for(unsigned i = 0; i < inputs.lines(); i++)
         {
             _aggregResults[i] = _aggregation.aggregate(inputs[i], _weights, _bias);
             _actResults[i] = _activation.activate(_aggregResults[i].first);
@@ -142,18 +141,18 @@ public:
 
 
     //one input gradient per feature
-    void computeGradients(std::vector<double> const& inputGradients)
+    void computeGradients(Vector const& inputGradients)
     {
         _inputGradients = inputGradients;
-        _gradientsPerFeature = Matrix(_inputGradients.size(), std::vector<double>(_weights[0].size(), 0));
-        _gradients = Matrix(_weights.size(), std::vector<double>(_weights[0].size(), 0));
-        _biasGradients = std::vector<double>(_bias.size(), 0);
+        _gradientsPerFeature = Matrix(_inputGradients.size(), Vector(_weights[0].size(), 0));
+        _gradients = Matrix(_weights.lines(), Vector(_weights.columns(), 0));
+        _biasGradients = Vector(_bias.size(), 0);
 
-        std::vector<unsigned> setCount(_weights.size(), 0); //store the amount of feature that passed through each weight set
+        std::vector<unsigned> setCount(_weights.lines(), 0); //store the amount of feature that passed through each weight set
         for(unsigned feature = 0; feature < _actResults.size(); feature++)
         {
             _actGradients[feature] = _activation.prime(_actResults[feature]) * _inputGradients[feature];
-            std::vector<double> grad(_aggregation.prime(_inputs[feature], _weights[_aggregResults[feature].second]));
+            Vector grad(_aggregation.prime(_inputs[feature], _weights[_aggregResults[feature].second]));
 
             for(unsigned i = 0; i < grad.size(); i++)
             {
@@ -165,11 +164,11 @@ public:
         }
 
         //average gradients over features
-        for(unsigned i = 0; i < _gradients.size(); i++)
+        for(unsigned i = 0; i < _gradients.lines(); i++)
         {
             if(setCount[i] != 0)
             {
-                for(unsigned j = 0; j < _gradients[0].size(); j++)
+                for(unsigned j = 0; j < _gradients.columns(); j++)
                 {
                     _gradients[i][j] /= setCount[i];
                 }
@@ -198,9 +197,9 @@ public:
         _activation.learn(averageInputGrad, learningRate); //TAKE OPTIMIZER INTO ACCOUNT
         _aggregation.learn(averageActGrad, learningRate); //TAKE OPTIMIZER INTO ACCOUNT
 
-        for(unsigned i = 0; i < _weights.size(); i++)
+        for(unsigned i = 0; i < _weights.lines(); i++)
         {
-            for(unsigned j = 0; j < _weights[0].size(); j++)
+            for(unsigned j = 0; j < _weights.columns(); j++)
             {
                 if(opti == Optimizer::None)
                 {
@@ -253,9 +252,9 @@ public:
         //max norm constraint
         if(maxNorm > 0)
         {
-            for(unsigned i = 0; i < _weights.size(); i++)
+            for(unsigned i = 0; i < _weights.lines(); i++)
             {
-                double norm = std::sqrt(quadraticSum(_weights[i]) + std::pow(_bias[i], 2));
+                double norm = std::sqrt(_weights[i].quadraticSum() + std::pow(_bias[i], 2));
                 if(norm > maxNorm)
                 {
                     for(unsigned j=0; j<_weights[i].size(); j++)
@@ -291,7 +290,7 @@ public:
 
 
     //first is weights, second is bias
-    std::pair<Matrix, std::vector<double>> getWeights() const
+    std::pair<Matrix, Vector> getWeights() const
     {
         return {_weights, _bias};
     }
@@ -302,22 +301,22 @@ protected:
     Act_t _activation;
 
     Matrix _weights;
-    std::vector<double> _bias;
+    Vector _bias;
 
     Matrix _inputs;
     std::vector<std::pair<double, unsigned>> _aggregResults;
-    std::vector<double> _actResults;
+    Vector _actResults;
 
-    std::vector<double> _inputGradients; //gradient from next layer for each feature of the batch
-    std::vector<double> _actGradients; //gradient between aggregation and activation
+    Vector _inputGradients; //gradient from next layer for each feature of the batch
+    Vector _actGradients; //gradient between aggregation and activation
     Matrix _gradients; //sum (over all features of the batch) of partial gradient for each weight
-    std::vector<double> _biasGradients;
+    Vector _biasGradients;
     Matrix _gradientsPerFeature; // store gradients for each feature, summed over weight set
     Matrix _previousWeightUpdate;
-    std::vector<double> _previousBiasUpdate;
+    Vector _previousBiasUpdate;
 
     Matrix _savedWeights;
-    std::vector<double> _savedBias;
+    Vector _savedBias;
 };
 
 

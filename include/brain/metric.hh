@@ -1,7 +1,7 @@
 #ifndef BRAIN_TEST_HH_
 #define BRAIN_TEST_HH_
 
-#include "vectorial.hh"
+#include "Matrix.hh"
 
 namespace brain
 {
@@ -11,12 +11,12 @@ namespace brain
 // the inputs are loss, the output is average loss
 double averageLoss(Matrix const& loss)
 {
-    std::vector<double> feature(loss.size(), 0);
-    for(unsigned i = 0; i < loss.size(); i++)
+    Vector feature(loss.lines(), 0);
+    for(unsigned i = 0; i < loss.lines(); i++)
     {
-        feature[i] = sum(loss[i]);
+        feature[i] = loss[i].sum();
     }
-    return average(feature).first;
+    return feature.mean().first;
 }
 
 
@@ -28,9 +28,9 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
     double count = 0; // equals real.size() in case of "one label per data"
                       // but is different in case of multi labeled data
 
-    for(unsigned i = 0; i < real.size(); i++)
+    for(unsigned i = 0; i < real.lines(); i++)
     {
-        for(unsigned j = 0; j < real[0].size(); j++)
+        for(unsigned j = 0; j < real.columns(); j++)
         {
             if(std::abs(real[i][j] - 1) <= std::numeric_limits<double>::epsilon())
             {
@@ -56,15 +56,15 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
 
 
 //first is "accuracy", second is "false prediction"
-std::pair<std::vector<double>, std::vector<double>> accuracyPerOutput(Matrix const& real, Matrix const& predicted, double classValidity)
+std::pair<Vector, Vector> accuracyPerOutput(Matrix const& real, Matrix const& predicted, double classValidity)
 {
-    std::vector<double> validated(real[0].size(), 0);
-    std::vector<double> fp(real[0].size(), 0); //false prediction
+    Vector validated(real[0].size(), 0);
+    Vector fp(real[0].size(), 0); //false prediction
     std::vector<unsigned> count(real[0].size(), 0);
 
-    for(unsigned i = 0; i < real.size(); i++)
+    for(unsigned i = 0; i < real.lines(); i++)
     {
-        for(unsigned j = 0; j < real[0].size(); j++)
+        for(unsigned j = 0; j < real.columns(); j++)
         {
             if(std::abs(real[i][j] - 1) <= std::numeric_limits<double>::epsilon())
             {
@@ -96,40 +96,40 @@ std::pair<std::vector<double>, std::vector<double>> accuracyPerOutput(Matrix con
 //first is mae with normalized outputs, second is with unormalized ones
 std::pair<double, double> L1Metric(Matrix const& real, Matrix const& predicted, std::vector<std::pair<double, double>> const& mM)
 {
-    std::vector<double> sums(real.size(), 0);
-    std::vector<double> unormalizedSums(real.size(), 0);
+    Vector sums(real.lines(), 0);
+    Vector unormalizedSums(real.lines(), 0);
 
     //mean absolute error
-    for(unsigned i = 0; i < real.size(); i++)
+    for(unsigned i = 0; i < real.lines(); i++)
     {
-        for(unsigned j = 0; j < real[0].size(); j++)
+        for(unsigned j = 0; j < real.columns(); j++)
         {
             sums[i] += std::abs(real[i][j] - predicted[i][j]);
             unormalizedSums[i] += std::abs(real[i][j] - predicted[i][j]) * std::abs(mM[j].second - mM[j].first);
         }
     }
 
-    return {average(sums).first, average(unormalizedSums).first};
+    return {sums.mean().first, unormalizedSums.mean().first};
 }
 
 
 //first is mse with normalized outputs, second is with unormalized ones
 std::pair<double, double> L2Metric(Matrix const& real, Matrix const& predicted, std::vector<std::pair<double, double>> const& mM)
 {
-    std::vector<double> sums(real.size(), 0);
-    std::vector<double> unormalizedSums(real.size(), 0);
+    Vector sums(real.lines(), 0);
+    Vector unormalizedSums(real.lines(), 0);
 
     //mean square error
-    for(unsigned i = 0; i < real.size(); i++)
+    for(unsigned i = 0; i < real.lines(); i++)
     {
-        for(unsigned j = 0; j < real[0].size(); j++)
+        for(unsigned j = 0; j < real.columns(); j++)
         {
             sums[i] += std::pow(real[i][j] - predicted[i][j], 2);
             unormalizedSums[i] += std::pow(real[i][j] - predicted[i][j], 2) * std::pow(mM[j].second - mM[j].first, 2);
         }
     }
 
-    return {average(sums).first, average(unormalizedSums).first};
+    return {sums.mean().first, unormalizedSums.mean().first};
 }
 
 

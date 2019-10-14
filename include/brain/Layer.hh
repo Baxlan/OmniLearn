@@ -63,7 +63,7 @@ public:
     virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
-    virtual std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const = 0;
+    virtual std::vector<std::pair<Matrix, Vector>> getWeights() const = 0;
 };
 
 
@@ -107,7 +107,7 @@ public:
     Matrix process(Matrix const& inputs, ThreadPool& t)
     {
         //lines are features, columns are neurons
-        Matrix output(inputs.size(), std::vector<double>(_neurons.size(), 0));
+        Matrix output(inputs.lines(), Vector(_neurons.size(), 0));
         std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < _neurons.size(); i++)
@@ -115,7 +115,7 @@ public:
             tasks.push_back(t.enqueue([this, &inputs, &output, i]()->void
             {
                 //one result per feature (for each neuron)
-                std::vector<double> result = _neurons[i].process(inputs);
+                Vector result = _neurons[i].process(inputs);
                 for(unsigned j = 0; j < result.size(); j++)
                     output[j][i] = result[j];
             }));
@@ -131,7 +131,7 @@ public:
     Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
     {
         //lines are features, columns are neurons
-        Matrix output(_batchSize, std::vector<double>(_neurons.size(), 0));
+        Matrix output(_batchSize, Vector(_neurons.size(), 0));
         std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < _neurons.size(); i++)
@@ -139,7 +139,7 @@ public:
             tasks.push_back(t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
             {
                 //one result per feature (for each neuron)
-                std::vector<double> result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
+                Vector result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
                 for(unsigned j = 0; j < result.size(); j++)
                 {
                     output[j][i] = result[j];
@@ -202,14 +202,14 @@ public:
     //SHOULD THIS FUNCTION BE PARALELLIZED ?
     Matrix getGradients()
     {
-        Matrix grad(_inputSize, std::vector<double>(_batchSize, 0));
+        Matrix grad(_inputSize, Vector(_batchSize, 0));
 
         for(unsigned i = 0; i < _neurons.size(); i++)
         {
             Matrix neuronGrad = _neurons[i].getGradients();
-            for(unsigned j = 0; j < neuronGrad.size(); j++)
+            for(unsigned j = 0; j < neuronGrad.lines(); j++)
             {
-                for(unsigned k = 0; k < neuronGrad[0].size(); k++)
+                for(unsigned k = 0; k < neuronGrad.columns(); k++)
                 grad[k][j] += neuronGrad[j][k];
             }
         }
@@ -242,9 +242,9 @@ public:
     }
 
 
-    std::vector<std::pair<Matrix, std::vector<double>>> getWeights() const
+    std::vector<std::pair<Matrix, Vector>> getWeights() const
     {
-        std::vector<std::pair<Matrix, std::vector<double>>> weights(size());
+        std::vector<std::pair<Matrix, Vector>> weights(size());
 
         for(unsigned i = 0; i < size(); i++)
          {

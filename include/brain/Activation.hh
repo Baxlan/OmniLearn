@@ -4,7 +4,7 @@
 #include <cmath>
 #include <algorithm>
 
-#include "vectorial.hh"
+#include "Matrix.hh"
 
 namespace brain
 {
@@ -420,7 +420,7 @@ protected:
 
 Matrix softmax(Matrix inputs)
 {
-    for(unsigned i = 0; i < inputs.size(); i++)
+    for(unsigned i = 0; i < inputs.lines(); i++)
     {
         double c = *std::max_element(inputs[i].begin(), inputs[i].end());
         double sum = 0;

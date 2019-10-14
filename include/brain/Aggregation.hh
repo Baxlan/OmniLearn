@@ -1,8 +1,7 @@
 #ifndef BRAIN_AGGREGATION_HH_
 #define BRAIN_AGGREGATION_HH_
 
-#include "vectorial.hh"
-#include "Exception.hh"
+#include "Matrix.hh"
 
 namespace brain
 {
@@ -13,8 +12,8 @@ class Aggregation //abstract class
 {
 public:
     virtual ~Aggregation(){}
-    virtual std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const = 0; //double is the result, unsigned is the index of the weight set used
-    virtual std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
+    virtual std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, unsigned is the index of the weight set used
+    virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual void learn(double gradient, double learningRate) = 0;
 };
 
@@ -33,15 +32,15 @@ public:
 class Dot : public Aggregation
 {
 public:
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const
+    std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
-        if(weights.size() > 1)
+        if(weights.lines() > 1)
             throw Exception("Dot aggregation only requires one weight set.");
-        return {dot(inputs, weights[0]) + bias[0], 0};
+        return {Vector::dot(inputs, weights[0]) + bias[0], 0};
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights) const
+    Vector prime(Vector const& inputs, [[maybe_unused]] Vector const& weights) const
     {
         return inputs;
     }
@@ -74,18 +73,18 @@ public:
     }
 
 
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const
+    std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
-        if(weights.size() > 1)
+        if(weights.lines() > 1)
             throw Exception("Distance aggregation only requires one weight set.");
-        return {distance(inputs, weights[0], _order) + bias[0], 0};
+        return {Vector::distance(inputs, weights[0], _order) + bias[0], 0};
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, std::vector<double> const& weights) const
+    Vector prime(Vector const& inputs, Vector const& weights) const
     {
         double a = std::pow(aggregate(inputs, {weights}, {0}).first, (1-_order));
-        std::vector<double> result(weights.size(), 0);
+        Vector result(weights.size(), 0);
 
         for(unsigned i = 0; i < weights.size(); i++)
         {
@@ -119,17 +118,17 @@ protected:
 class Maxout : public Aggregation
 {
 public:
-    std::pair<double, unsigned> aggregate(std::vector<double> const& inputs, Matrix const& weights, std::vector<double> const& bias) const
+    std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
-        if(weights.size() < 2)
+        if(weights.lines() < 2)
             throw Exception("Maxout aggregation requires multiple weight sets.");
 
         //each index represents a weight set
-        std::vector<double> dots(weights.size(), 0);
+        Vector dots(weights.lines(), 0);
 
-        for(unsigned i = 0; i < weights.size(); i++)
+        for(unsigned i = 0; i < weights.lines(); i++)
         {
-            dots[i] = dot(inputs, weights[i]) + bias[i];
+            dots[i] = Vector::dot(inputs, weights[i]) + bias[i];
         }
 
         //max and index of the max
@@ -147,7 +146,7 @@ public:
     }
 
 
-    std::vector<double> prime(std::vector<double> const& inputs, [[maybe_unused]] std::vector<double> const& weights) const
+    Vector prime(Vector const& inputs, [[maybe_unused]] Vector const& weights) const
     {
         return inputs;
     }

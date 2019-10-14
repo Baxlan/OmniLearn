@@ -15,7 +15,7 @@ namespace brain
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA};
-typedef std::vector<std::pair<std::vector<double>, std::vector<double>>> Dataset;
+typedef std::vector<std::pair<Vector, Vector>> Dataset;
 
 //=============================================================================
 //=============================================================================
@@ -246,9 +246,9 @@ public:
       inputs = softmax(inputs);
     }
     //denormalize outputs
-    for(unsigned i = 0; i < inputs.size(); i++)
+    for(unsigned i = 0; i < inputs.lines(); i++)
     {
-      for(unsigned j = 0; j < inputs[0].size(); j++)
+      for(unsigned j = 0; j < inputs.columns(); j++)
       {
         inputs[i][j] *= (_outputMinMax[j].second - _outputMinMax[j].first);
         inputs[i][j] += _outputMinMax[j].first;
@@ -260,7 +260,7 @@ public:
 
   void writeInfo(std::string const& path) const
   {
-    std::pair<std::vector<double>, std::vector<double>> acc;
+    std::pair<Vector, Vector> acc;
     std::string loss;
     std::string metric;
     if(_param.metric == Metric::Accuracy)
@@ -327,12 +327,12 @@ public:
     for(unsigned i = 0; i < _labels.size(); i++)
     {
       output << _labels[i] << "\n" ;
-      for(unsigned j = 0; j < _testRealResults.size(); j++)
+      for(unsigned j = 0; j < _testRealResults.lines(); j++)
       {
         output << _testRealResults[j][i] << ",";
       }
       output << "\n";
-      for(unsigned j = 0; j < testRes.size(); j++)
+      for(unsigned j = 0; j < testRes.lines(); j++)
       {
         output << testRes[j][i] << ",";
       }
@@ -371,22 +371,22 @@ protected:
 
     for(unsigned i = 0; i < static_cast<unsigned>(validation); i++)
     {
-      _validationData.push_back(_rawData[_rawData.size()-1].first);
-      _validationRealResults.push_back(_rawData[_rawData.size()-1].second);
+      _validationData.addLine(_rawData[_rawData.size()-1].first);
+      _validationRealResults.addLine(_rawData[_rawData.size()-1].second);
       _rawData.pop_back();
     }
     for(unsigned i = 0; i < static_cast<unsigned>(test); i++)
     {
-      _testData.push_back(_rawData[_rawData.size()-1].first);
-      _testRawData.push_back(_rawData[_rawData.size()-1].first);
-      _testRealResults.push_back(_rawData[_rawData.size()-1].second);
+      _testData.addLine(_rawData[_rawData.size()-1].first);
+      _testRawData.addLine(_rawData[_rawData.size()-1].first);
+      _testRealResults.addLine(_rawData[_rawData.size()-1].second);
       _rawData.pop_back();
     }
     unsigned size = _rawData.size();
     for(unsigned i = 0; i < size; i++)
     {
-      _trainData.push_back(_rawData[_rawData.size()-1].first);
-      _trainRealResults.push_back(_rawData[_rawData.size()-1].second);
+      _trainData.addLine(_rawData[_rawData.size()-1].first);
+      _trainRealResults.addLine(_rawData[_rawData.size()-1].second);
       _rawData.pop_back();
     }
     _nbBatch = static_cast<unsigned>(nbBatch);
@@ -450,7 +450,7 @@ protected:
         input = _layers[i]->processToLearn(input, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
       }
 
-      Matrix gradients(transpose(computeLossMatrix(output, input).second));
+      Matrix gradients(Matrix::transpose(computeLossMatrix(output, input).second));
       for(unsigned i = 0; i < _layers.size(); i++)
       {
         _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
@@ -497,7 +497,7 @@ protected:
   double computeLoss()
   {
     //for each layer, for each neuron, first are weights, second are bias
-    std::vector<std::vector<std::pair<Matrix, std::vector<double>>>> weights(_layers.size());
+    std::vector<std::vector<std::pair<Matrix, Vector>>> weights(_layers.size());
     for(unsigned i = 0; i < _layers.size(); i++)
     {
       weights[i] = _layers[i]->getWeights();
@@ -513,7 +513,7 @@ protected:
       for(unsigned j = 0; j < weights[i].size(); j++)
       //for each neuron
       {
-        for(unsigned k = 0; k < weights[i][j].first.size(); k++)
+        for(unsigned k = 0; k < weights[i][j].first.lines(); k++)
         //for each weight set
         {
           for(unsigned l = 0; l < weights[i][j].first[k].size(); l++)
@@ -530,9 +530,9 @@ protected:
     L2 *= (_param.L2 * 0.5);
 
     //training loss
-    Matrix input(_trainData.size());
-    Matrix output(_trainRealResults.size());
-    for(unsigned i = 0; i < _trainData.size(); i++)
+    Matrix input(_trainData.lines());
+    Matrix output(_trainRealResults.lines());
+    for(unsigned i = 0; i < _trainData.lines(); i++)
     {
       input[i] = _trainData[i];
       output[i] = _trainRealResults[i];
@@ -603,18 +603,18 @@ protected:
 
   unsigned _epoch;
   unsigned _optimalEpoch;
-  std::vector<double> _trainLosses;
-  std::vector<double> _validLosses;
-  std::vector<double> _testMetric;
-  std::vector<double> _testSecondMetric;
+  Vector _trainLosses;
+  Vector _validLosses;
+  Vector _testMetric;
+  Vector _testSecondMetric;
 
   std::vector<std::string> _labels;
   std::vector<std::pair<double, double>> _outputMinMax;
 
-  std::vector<double> _centerData;
+  Vector _centerData;
   std::vector<std::pair<double, double>> _normalizationData;
   std::vector<std::pair<double, double>> _standardizationData;
-  std::pair<Matrix, std::vector<double>> _whiteningData;
+  std::pair<Matrix, Vector> _whiteningData;
 };
 
 

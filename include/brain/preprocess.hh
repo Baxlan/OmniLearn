@@ -2,7 +2,7 @@
 #ifndef BRAIN_PREPROCESS_HH_
 #define BRAIN_PREPROCESS_HH_
 
-#include "vectorial.hh"
+#include "Matrix.hh"
 
 namespace brain
 {
@@ -10,22 +10,22 @@ namespace brain
 
 //subtract the mean of each comumn to each elements of these columns
 //returns the mean of each column
-std::vector<double> center(Matrix& data, std::vector<double> mean = {})
+Vector center(Matrix& data, Vector mean = {})
 {
   if(mean.size() == 0)
   {
-    mean = std::vector<double>(data[0].size(), 0);
+    mean = Vector(data[0].size(), 0);
     //calculate mean
     for(unsigned i = 0; i < data[0].size(); i++)
     {
-      mean[i] = average(column(data, i)).first;
+      mean[i] = data.column(i).mean().first;
     }
   }
 
   //center
-  for(unsigned i = 0; i < data.size(); i++)
+  for(unsigned i = 0; i < data.lines(); i++)
   {
-    for(unsigned j = 0; j < data[0].size(); j++)
+    for(unsigned j = 0; j < data.columns(); j++)
     {
       data[i][j] -= mean[j];
     }
@@ -44,13 +44,13 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
     //search min and max
     for(unsigned i = 0; i < data[0].size(); i++)
     {
-      mM[i] = minMax(column(data, i));
+      mM[i] = data.column(i).minMax();
     }
   }
   //normalize
-  for(unsigned i = 0; i < data.size(); i++)
+  for(unsigned i = 0; i < data.lines(); i++)
   {
-    for(unsigned j = 0; j < data[0].size(); j++)
+    for(unsigned j = 0; j < data.columns(); j++)
     {
       data[i][j] = (data[i][j] - mM[j].first) / (mM[j].second - mM[j].first);
     }
@@ -69,13 +69,13 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     //calculate mean and deviation
     for(unsigned i = 0; i < data[0].size(); i++)
     {
-      meanDev[i] = average(column(data, i));
+      meanDev[i] = data.column(i).mean();
     }
   }
   //standardize
-  for(unsigned i = 0; i < data.size(); i++)
+  for(unsigned i = 0; i < data.lines(); i++)
   {
-    for(unsigned j = 0; j < data[0].size(); j++)
+    for(unsigned j = 0; j < data.columns(); j++)
     {
       data[i][j] -= meanDev[j].first;
       data[i][j] /= meanDev[j].second;
@@ -88,7 +88,7 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 //rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
 //first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<Matrix, std::vector<double>> whiten(Matrix& data, Matrix rotation = {})
+std::pair<Matrix, Vector> whiten(Matrix& data, Matrix rotation = {})
 {
 
 }

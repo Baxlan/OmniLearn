@@ -3,7 +3,7 @@
 #include <map>
 #include "brain/brain.hh"
 #include "brain/json.hh"
-#include "brain/Vector.hh"
+#include "brain/Matrix.hh"
 #include <deque>
 
 
@@ -22,7 +22,7 @@ brain::Dataset extractData(DataType dataType)
         std::fstream dataFile("dataset/iris.json");
         json dataset = json::parse(dataFile)["list"];
 
-        std::map<std::string, std::vector<double>> dataRes;
+        std::map<std::string, brain::Vector> dataRes;
         dataRes["setosa"] = {1, 0, 0};
         dataRes["versicolor"] = {0, 1, 0};
         dataRes["virginica"] = {0, 0, 1};
@@ -50,8 +50,8 @@ brain::Dataset extractData(DataType dataType)
         for(std::string line : content)
         {
             line+=";";
-            std::vector<double> inputs;
-            std::vector<double> outputs;
+            brain::Vector inputs;
+            brain::Vector outputs;
 
             //time
             inputs.push_back(std::stod(line.substr(0, line.find(";"))));

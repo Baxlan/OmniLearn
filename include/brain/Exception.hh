@@ -1,6 +1,7 @@
 #ifndef BRAIN_EXCEPTION_HH_
 #define BRAIN_EXCEPTION_HH_
 
+#include <string>
 #include <exception>
 
 namespace brain

@@ -3,6 +3,10 @@
 
 #include <vector>
 #include <type_traits>
+#include <initializer_list>
+#include <cmath>
+
+#include "Exception.hh"
 
 namespace brain
 {
@@ -19,6 +23,7 @@ namespace brain
 
 
 
+// we consider T is iterable if it has a end() method returning an iterator
 template <typename T>
 struct is_iterable
 {
@@ -46,7 +51,7 @@ public:
   typedef std::vector<double>::iterator iterator;
   typedef std::vector<double>::const_iterator const_iterator;
 
-  // "default" constructor
+  //"default" constructor
   Vector(size_t size = 0, double val = 0):
   _vec(size, val)
   {
@@ -59,22 +64,45 @@ public:
   }
 
   //constructor taking any STL container
-  template <typename T, typename = typename std::enable_if<is_iterable<T>::value, void>::type>
+  template <typename T, typename = typename std::enable_if<is_iterable<T>::value>::type, typename = typename std::enable_if<std::is_arithmetic<typename T::value_type>::value>::type>
   Vector(T const& container):
   _vec(container.begin(), container.end())
   {
-    static_assert(std::is_same<typename T::value_type, double>::value, "Container must hold double type.");
   }
 
-  //constructor taking a raw array of double
-  template <size_t N>
-  Vector(double (&table)[N]):
+
+  //constructor taking an initializer_list to allow brace enclosed initializer list
+  Vector(std::initializer_list<double> const& list):
+  _vec(list.begin(), list.end())
+  {
+  }
+
+
+  //constructor taking range
+  template <typename T, typename = typename std::enable_if<std::is_arithmetic<typename std::iterator_traits<T>::value_type>::value>::type>
+  Vector(T const& beg, T const& end):
+  _vec(beg, end)
+  {
+  }
+
+  //constructor taking a raw array
+  template <typename T, size_t N, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+  Vector(T (&table)[N]):
   _vec(std::begin(table), std::end(table))
   {
   }
 
-  Vector& operator=(std::vector<double> const& vec);
-  template <typename T, typename = typename std::enable_if<is_iterable<T>::value, void>::type> operator T() const {return T(_vec.begin(), _vec.end());}
+  template <typename T, typename = typename std::enable_if<is_iterable<T>::value, void>::type, typename = typename std::enable_if<std::is_arithmetic<typename T::value_type>::value>::type>
+  operator T() const {return T(_vec.begin(), _vec.end());}
+
+  //assignment operator taking any type
+  template <typename T, typename = typename std::enable_if<is_iterable<T>::value, void>::type>
+  Vector& operator=(T const& container)
+  {
+    *this = Vector(container);
+    return *this;
+  }
+
   double& at(size_t index);
   double const& at(size_t index) const;
   double& operator[](size_t index);
@@ -87,13 +115,15 @@ public:
   void reserve(size_t size);
   void push_back(double val);
   void pop_back();
+  double const* data() const;
 
   double sum() const;
   double quadraticSum(size_t order = 2) const;
   double absoluteSum() const;
-  std::pair<double, double> mean(); // return mean and deviation
+  std::pair<double, double> mean() const; // return mean and deviation
   double norm(size_t order = 2) const;
   double normInf() const;
+  std::pair<double, double> minMax() const;
 
   static double dot(Vector const& a, Vector const& b);
   static double distance(Vector const& a, Vector const& b, size_t order = 2);
@@ -102,17 +132,28 @@ public:
   static Vector hadamard(Vector a, Vector const& b);
   static Vector matrix(Vector const& a, Vector const& b);
 
+  Vector& operator+=(Vector const& vec);
+  Vector& operator-=(Vector const& vec);
+
+  template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+  Vector& operator*=(T val)
+  {
+    for(double& a : _vec)
+      a *= val;
+    return *this;
+  }
+
+  template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+  Vector& operator/=(T val)
+  {
+    for(double& a : _vec)
+      a /= val;
+    return *this;
+  }
+
 private:
   std::vector<double> _vec;
 };
-
-
-
-Vector& Vector::operator=(std::vector<double> const& vec)
-{
-  _vec = vec;
-  return *this;
-}
 
 
 double& Vector::at(size_t index)
@@ -139,25 +180,25 @@ double const& Vector::operator[](size_t index) const
 }
 
 
-std::vector<double>::iterator Vector::begin()
+Vector::iterator Vector::begin()
 {
   return _vec.begin();
 }
 
 
-std::vector<double>::const_iterator Vector::begin() const
+Vector::const_iterator Vector::begin() const
 {
   return _vec.begin();
 }
 
 
-std::vector<double>::iterator Vector::end()
+Vector::iterator Vector::end()
 {
   return _vec.end();
 }
 
 
-std::vector<double>::const_iterator Vector::end() const
+Vector::const_iterator Vector::end() const
 {
   return _vec.end();
 }
@@ -184,6 +225,12 @@ void Vector::push_back(double val)
 void Vector::pop_back()
 {
   _vec.pop_back();
+}
+
+
+double const* Vector::data() const
+{
+  return _vec.data();
 }
 
 
@@ -214,7 +261,7 @@ double Vector::absoluteSum() const
 }
 
 
-std::pair<double, double> Vector::mean()
+std::pair<double, double> Vector::mean() const
 {
   double mean = sum() / size();
   double dev = 0;
@@ -235,6 +282,12 @@ double Vector::norm(size_t order) const
 double Vector::normInf() const
 {
   return distanceInf(*this, Vector(size(), 0));
+}
+
+
+std::pair<double, double> Vector::minMax() const
+{
+  return {*std::min_element(begin(), end()), *std::max_element(begin(), end())};
 }
 
 
@@ -307,6 +360,66 @@ Vector Vector::hadamard(Vector a, Vector const& b)
 Vector Vector::matrix(Vector const& a, Vector const& b)
 {
 
+}
+
+
+Vector& Vector::operator+=(Vector const& vec)
+{
+  if(size() != vec.size())
+    throw Exception("To sum two vectors, they must have the same length.");
+  for(size_t i = 0; i < size(); i++)
+    _vec[i] += vec[i];
+  return *this;
+}
+
+
+Vector& Vector::operator-=(Vector const& vec)
+{
+  if(size() != vec.size())
+    throw Exception("To subtract two vectors, they must have the same length.");
+  for(size_t i = 0; i < size(); i++)
+    _vec[i] -= vec[i];
+  return *this;
+}
+
+
+Vector operator+(Vector a, Vector const& b)
+{
+  return a += b;
+}
+
+
+Vector operator-(Vector a, Vector const& b)
+{
+  return a -= b;
+}
+
+
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+operator*(T val, Vector a)
+{
+  return a *= val;
+}
+
+
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+operator*(Vector a, T val)
+{
+  return a *= val;
+}
+
+
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+operator/(T val, Vector a)
+{
+  return a /= val;
+}
+
+
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+operator/(Vector a, T val)
+{
+  return a /= val;
 }
 
 
