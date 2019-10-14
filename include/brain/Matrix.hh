@@ -333,7 +333,7 @@ Matrix operator*(Matrix a, T val)
 
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-Matrix operator*(T val, Matrix b)
+Matrix operator*(T val, Matrix a)
 {
   return a *= val;
 }
@@ -348,6 +348,21 @@ void Matrix::check() const
       if(_matrix[i].size() != size)
         throw Exception("All lines of a matrix must have the same length.");
   }
+}
+
+
+//return a Matrix
+Matrix Vector::matrix(Vector const& a, Vector const& b)
+{
+  Matrix matrix(a.size(), Vector(b.size(), 0));
+  for(size_t i = 0; i < a.size(); i++)
+  {
+    for(size_t j = 0; j < b.size(); j++)
+    {
+      matrix[i][j] = a[i]*b[j];
+    }
+  }
+  return matrix;
 }
 
 
