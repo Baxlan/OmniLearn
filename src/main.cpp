@@ -4,6 +4,7 @@
 #include "brain/brain.hh"
 #include "brain/json.hh"
 #include "brain/Matrix.hh"
+#include "brain/csv.hh"
 #include <deque>
 
 
@@ -80,6 +81,8 @@ int main()
 
     std::vector<std::string> labels = {"Mo95","Tc99","Ru101","Rh103","Ag109","Cs133","Nd143","Sm147","Sm149","Sm150","Sm151","Sm152","Gd155","Eu153","U235","U238","Pu238","Pu239","Pu240","Pu241","Pu242","Am241","Am242"};
     //std::vector<std::string> labels = {"setosa", "versicolor", "virginica"};
+
+    //brain::Data d = brain::loadData("dataset/vesta.csv");
 
     brain::NetworkParam netp;
     netp.threads = 1;
