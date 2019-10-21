@@ -24,7 +24,7 @@ public:
   ThreadPool(size_t);
   template<class F, class... Args>
   auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
-  unsigned size() const;
+  size_t size() const;
   ~ThreadPool();
 
 
@@ -92,7 +92,7 @@ auto ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::res
 }
 
 
-unsigned ThreadPool::size() const
+size_t ThreadPool::size() const
 {
   return workers.size();
 }

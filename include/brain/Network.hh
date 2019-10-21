@@ -6,6 +6,7 @@
 #include "cost.hh"
 #include "decay.hh"
 #include "metric.hh"
+#include "csv.hh"
 
 #include <iostream>
 
@@ -15,7 +16,6 @@ namespace brain
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA};
-typedef std::vector<std::pair<Vector, Vector>> Dataset;
 
 //=============================================================================
 //=============================================================================
@@ -71,7 +71,7 @@ struct NetworkParam
     double decayValue;
     unsigned decayDelay;
     double (* decay)(double, unsigned, double, unsigned);
-    double classValidity; // %
+    double classValidity;
     unsigned threads;
     Optimizer optimizer;
     double momentum; //momentum
@@ -96,7 +96,7 @@ struct NetworkParam
 class Network
 {
 public:
-  Network(std::vector<std::string> const& labels, NetworkParam const& param = NetworkParam()):
+  Network(Data const& data, NetworkParam const& param):
   _param(param),
   _seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
   _generator(std::mt19937(_seed)),
@@ -104,13 +104,13 @@ public:
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
   _pool(param.threads),
-  _rawData(),
-  _trainData(),
-  _validationData(),
-  _validationRealResults(),
-  _testData(),
-  _testRealResults(),
-  _testRawData(),
+  _trainData(data.inputs),
+  _trainRealResults(data.outputs),
+  _validationData(0),
+  _validationRealResults(0),
+  _testData(0),
+  _testRealResults(0),
+  _testRawData(0),
   _nbBatch(0),
   _epoch(0),
   _optimalEpoch(0),
@@ -118,7 +118,8 @@ public:
   _validLosses(),
   _testMetric(),
   _testSecondMetric(),
-  _labels(labels),
+  _inputLabels(data.inputLabels),
+  _outputLabels(data.outputLabels),
   _outputMinMax(),
   _centerData(),
   _normalizationData(),
@@ -128,16 +129,15 @@ public:
   }
 
 
+  Network(NetworkParam const& param, Data const& data):
+  Network(data, param)
+  {
+  }
+
   template <typename Aggr_t = Dot, typename Act_t = Relu>
   void addLayer(LayerParam const& param = LayerParam())
   {
     _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(param));
-  }
-
-
-  void setData(Dataset const& data)
-  {
-    _rawData = data;
   }
 
 
@@ -281,9 +281,9 @@ public:
 
     std::ofstream output(path);
     output << "labels:\n";
-    for(unsigned i=0; i<_labels.size(); i++)
+    for(unsigned i=0; i<_outputLabels.size(); i++)
     {
-        output << _labels[i] << ",";
+        output << _outputLabels[i] << ",";
     }
     output << "\n" << "loss:" << "\n" << loss << "\n";
     for(unsigned i=0; i<_trainLosses.size(); i++)
@@ -324,9 +324,9 @@ public:
     }
     Matrix testRes(process(_testRawData));
     output << "\nexpected and predicted values:\n";
-    for(unsigned i = 0; i < _labels.size(); i++)
+    for(unsigned i = 0; i < _outputLabels.size(); i++)
     {
-      output << _labels[i] << "\n" ;
+      output << _outputLabels[i] << "\n" ;
       for(unsigned j = 0; j < _testRealResults.lines(); j++)
       {
         output << _testRealResults[j][i] << ",";
@@ -345,8 +345,8 @@ protected:
   {
     for(unsigned i = 0; i < _layers.size(); i++)
     {
-        _layers[i]->init((i == 0 ? _rawData[0].first.size() : _layers[i-1]->size()),
-                        (i == _layers.size()-1 ? _rawData[0].second.size() : _layers[i+1]->size()),
+        _layers[i]->init((i == 0 ? _trainData.columns() : _layers[i-1]->size()),
+                        (i == _layers.size()-1 ? _trainRealResults.columns() : _layers[i+1]->size()),
                         _param.batchSize, _generator);
     }
   }
@@ -354,40 +354,49 @@ protected:
 
   void shuffleData()
   {
-    std::shuffle(_rawData.begin(), _rawData.end(), _generator);
+    //shuffle inputs and outputs in the same order
+    std::vector<size_t> indexes(_trainData.lines(), 0);
+    for(size_t i = 0; i < indexes.size(); i++)
+      indexes[i] = i;
+    std::shuffle(indexes.begin(), indexes.end(), _generator);
 
-    double validation = _param.validationRatio * _rawData.size();
-    double test = _param.testRatio * _rawData.size();
-    double nbBatch = std::trunc(_rawData.size() - validation - test) / _param.batchSize;
+    Matrix temp(_trainData.lines());
+    for(size_t i = 0; i < indexes.size(); i++)
+      temp[i] = _trainData[indexes[i]];
+    std::swap(_trainData, temp);
+
+    for(size_t i = 0; i < indexes.size(); i++)
+      temp[i] = _trainRealResults[indexes[i]];
+    std::swap(_trainRealResults, temp);
+
+
+    double validation = _param.validationRatio * _trainData.lines();
+    double test = _param.testRatio * _trainData.lines();
+    double nbBatch = std::trunc(_trainData.lines() - validation - test) / _param.batchSize;
 
     //add a batch if an incomplete batch has more than 0.5*batchsize data
     if(nbBatch - static_cast<unsigned>(nbBatch) >= 0.5)
       nbBatch = std::trunc(nbBatch) + 1;
 
     unsigned nbTrain = static_cast<unsigned>(nbBatch)*_param.batchSize;
-    unsigned noTrain = _rawData.size() - nbTrain;
+    unsigned noTrain = _trainData.lines() - nbTrain;
     validation = std::round(noTrain*_param.validationRatio/(_param.validationRatio + _param.testRatio));
     test = std::round(noTrain*_param.testRatio/(_param.validationRatio + _param.testRatio));
 
     for(unsigned i = 0; i < static_cast<unsigned>(validation); i++)
     {
-      _validationData.addLine(_rawData[_rawData.size()-1].first);
-      _validationRealResults.addLine(_rawData[_rawData.size()-1].second);
-      _rawData.pop_back();
+      _validationData.addLine(_trainData[_trainData.lines()-1]);
+      _validationRealResults.addLine(_trainRealResults[_trainRealResults.lines()-1]);
+      _trainData.popLine();
+      _trainRealResults.popLine();
     }
     for(unsigned i = 0; i < static_cast<unsigned>(test); i++)
     {
-      _testData.addLine(_rawData[_rawData.size()-1].first);
-      _testRawData.addLine(_rawData[_rawData.size()-1].first);
-      _testRealResults.addLine(_rawData[_rawData.size()-1].second);
-      _rawData.pop_back();
-    }
-    unsigned size = _rawData.size();
-    for(unsigned i = 0; i < size; i++)
-    {
-      _trainData.addLine(_rawData[_rawData.size()-1].first);
-      _trainRealResults.addLine(_rawData[_rawData.size()-1].second);
-      _rawData.pop_back();
+      _testData.addLine(_trainData[_trainData.lines()-1]);
+      _testRealResults.addLine(_trainRealResults[_trainRealResults.lines()-1]);
+      _testRawData.addLine(_trainData[_trainData.lines()-1]);
+      _trainData.popLine();
+      _trainRealResults.popLine();
     }
     _nbBatch = static_cast<unsigned>(nbBatch);
   }
@@ -500,7 +509,7 @@ protected:
     std::vector<std::vector<std::pair<Matrix, Vector>>> weights(_layers.size());
     for(unsigned i = 0; i < _layers.size(); i++)
     {
-      weights[i] = _layers[i]->getWeights();
+      weights[i] = _layers[i]->getWeights(_pool);
     }
 
     //L1 and L2 regularization loss
@@ -591,7 +600,6 @@ protected:
 
   mutable ThreadPool _pool;
 
-  Dataset _rawData;
   Matrix _trainData;
   Matrix _trainRealResults;
   Matrix _validationData;
@@ -608,7 +616,8 @@ protected:
   Vector _testMetric;
   Vector _testSecondMetric;
 
-  std::vector<std::string> _labels;
+  std::vector<std::string> _inputLabels;
+  std::vector<std::string> _outputLabels;
   std::vector<std::pair<double, double>> _outputMinMax;
 
   Vector _centerData;

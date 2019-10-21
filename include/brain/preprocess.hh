@@ -45,6 +45,10 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
     for(unsigned i = 0; i < data[0].size(); i++)
     {
       mM[i] = data.column(i).minMax();
+      //if all values of a column are the same, divide by 0.
+      //this in this case, we divide by the data itself to normalize to 1
+      if(std::abs(mM[i].second - mM[i].first) < std::numeric_limits<double>::epsilon())
+        mM[i] = {0, data[0][i]};
     }
   }
   //normalize
@@ -70,6 +74,10 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     for(unsigned i = 0; i < data[0].size(); i++)
     {
       meanDev[i] = data.column(i).mean();
+      //if all values of a column are the same, divide by 0 (dev is 0).
+      //this in this case, we divide by 1
+      if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
+        meanDev[i].second = 1;
     }
   }
   //standardize

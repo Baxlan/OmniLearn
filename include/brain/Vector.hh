@@ -112,7 +112,7 @@ public:
   iterator end();
   const_iterator end() const;
   size_t size() const;
-  void reserve(size_t size);
+  void resize(size_t size);
   void push_back(double val);
   void pop_back();
   double const* data() const;
@@ -210,9 +210,9 @@ size_t Vector::size() const
 }
 
 
-void Vector::reserve(size_t size)
+void Vector::resize(size_t size)
 {
-  _vec.reserve(size);
+  _vec.resize(size);
 }
 
 
@@ -263,11 +263,11 @@ double Vector::absoluteSum() const
 
 std::pair<double, double> Vector::mean() const
 {
-  double mean = sum() / size();
+  double mean = sum() / static_cast<double>(size());
   double dev = 0;
   for(double val : _vec)
     dev += std::pow(mean - val, 2);
-  dev /= (size() - 1);
+  dev /= static_cast<double>(size() - 1);
   dev = std::sqrt(dev);
   return {mean, dev};
 }

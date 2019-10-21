@@ -73,10 +73,12 @@ public:
   const_iterator end() const;
   size_t lines() const;
   size_t columns() const;
-  void reserveLines(size_t lines);
-  void reserveColumns(size_t col);
+  void resizeLines(size_t lines);
+  void resizeColumns(size_t col);
   void addLine(Vector const& line);
   void addColumn(Vector const& col);
+  void popLine();
+  void popColumn();
   std::vector<Vector> data() const;
 
   void transpose();
@@ -185,16 +187,16 @@ size_t Matrix::columns() const
 }
 
 
-void Matrix::reserveLines(size_t lines)
+void Matrix::resizeLines(size_t lines)
 {
-  _matrix.reserve(lines);
+  _matrix.resize(lines);
 }
 
 
-void Matrix::reserveColumns(size_t col)
+void Matrix::resizeColumns(size_t col)
 {
   for(Vector& vec : _matrix)
-    vec.reserve(col);
+    vec.resize(col);
 }
 
 
@@ -210,6 +212,19 @@ void Matrix::addColumn(Vector const& col)
     throw Exception("The length of the column must be the same as the number of lines of the matrix.");
   for(size_t i = 0; i < lines(); i++)
     _matrix[i].push_back(col[i]);
+}
+
+
+void Matrix::popLine()
+{
+  _matrix.pop_back();
+}
+
+
+void Matrix::popColumn()
+{
+  for(Vector& a: _matrix)
+    a.pop_back();
 }
 
 

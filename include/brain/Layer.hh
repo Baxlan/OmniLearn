@@ -63,7 +63,7 @@ public:
     virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
-    virtual std::vector<std::pair<Matrix, Vector>> getWeights() const = 0;
+    virtual std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const = 0;
 };
 
 
@@ -97,9 +97,16 @@ public:
     {
         _inputSize = nbInputs;
         _batchSize = batchSize;
-        for(unsigned i = 0; i < size(); i++)
+        try
         {
-            _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, batchSize, _param.k, generator, _param.useOutput);
+            for(unsigned i = 0; i < size(); i++)
+            {
+                _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, batchSize, _param.k, generator, _param.useOutput);
+            }
+        }
+        catch(std::bad_alloc const& e)
+        {
+            throw Exception("std::bad_alloc have been thrown while initializing the model. Try to decrease the batch size or the maxout k. Is your executable 64-bits ?");
         }
     }
 
@@ -210,7 +217,7 @@ public:
             for(unsigned j = 0; j < neuronGrad.lines(); j++)
             {
                 for(unsigned k = 0; k < neuronGrad.columns(); k++)
-                grad[k][j] += neuronGrad[j][k];
+                    grad[k][j] += neuronGrad[j][k];
             }
         }
 
@@ -242,15 +249,22 @@ public:
     }
 
 
-    std::vector<std::pair<Matrix, Vector>> getWeights() const
+    std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const
     {
         std::vector<std::pair<Matrix, Vector>> weights(size());
+        std::vector<std::future<void>> tasks;
 
         for(unsigned i = 0; i < size(); i++)
-         {
-             weights[i] = _neurons[i].getWeights();
-         }
-
+        {
+            tasks.push_back(t.enqueue([this, &weights, i]()->void
+            {
+                weights[i] = _neurons[i].getWeights();
+            }));
+        }
+        for(unsigned i = 0; i < tasks.size(); i++)
+        {
+            tasks[i].get();
+        }
          return weights;
     }
 
