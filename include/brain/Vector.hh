@@ -131,6 +131,7 @@ public:
   static Vector cross(Vector const& a, Vector const& b);
   static Vector hadamard(Vector a, Vector const& b);
   static Matrix matrix(Vector const& a, Vector const& b); // implemented in Matrix.hh because Matrix implementation is needed
+  static std::pair<double, double> regression(Vector const& a, Vector const& b);
 
   Vector& operator+=(Vector const& vec);
   Vector& operator-=(Vector const& vec);
@@ -362,6 +363,19 @@ Vector Vector::hadamard(Vector a, Vector const& b)
   for(size_t i = 0; i < a.size(); i++)
     a[i] *= b[i];
   return a;
+}
+
+
+// returns slope and origin
+std::pair<double, double> Vector::regression(Vector const& x, Vector const& y)
+{
+  if(x.size() != y.size())
+    throw Exception("In a linear regression, both vectors must have the same number of element.");
+
+  double a = ((x.size()*hadamard(x, y).sum()) - (x.sum() * y.sum()))        / ((x.size() * x.quadraticSum()) - std::pow(x.sum(), 2));
+  double b = ((y.sum()*x.quadraticSum()) - (x.sum()*hadamard(x, y).sum())) / ((x.size() * x.quadraticSum()) - std::pow(x.sum(), 2));
+
+  return {a, b};
 }
 
 

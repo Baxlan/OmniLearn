@@ -141,19 +141,11 @@ public:
   }
 
 
-  //should take Dataset
-  void setValidData(Matrix const& inputs, Matrix const& outputs)
+  void setTestData(Data const& data)
   {
-    _validationData = inputs;
-    _validationRealResults = outputs;
-  }
-
-
-  //should take Dataset
-  void setTestData(Matrix const& inputs, Matrix const& outputs)
-  {
-    _testData = inputs;
-    _testRealResults = outputs;
+    _testData = data.inputs;
+    _testRealResults = data.outputs;
+    _testRawData = data.inputs;
   }
 
 
@@ -173,8 +165,6 @@ public:
     {
       _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults[0].size(), {0, 1});
     }
-
-    check();
 
     if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
     {
@@ -308,7 +298,7 @@ public:
     if(_param.metric == Metric::Accuracy)
     {
       output << "\nthreshold:\n";
-      output << _param.classValidity << "\n";
+      output << _param.classValidity;
     }
     output << "\noptimal epoch:\n";
     output << _optimalEpoch;
@@ -369,6 +359,8 @@ protected:
       temp[i] = _trainRealResults[indexes[i]];
     std::swap(_trainRealResults, temp);
 
+    if(_testData.lines() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
+      throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
     double validation = _param.validationRatio * _trainData.lines();
     double test = _param.testRatio * _trainData.lines();
@@ -436,23 +428,24 @@ protected:
   }
 
 
-  void check() const
-  {
-
-  }
-
-
   void performeOneEpoch()
   {
     for(unsigned batch = 0; batch < _nbBatch; batch++)
     {
       Matrix input(_param.batchSize);
       Matrix output(_param.batchSize);
+
+      std::vector<std::future<void>> tasks;
       for(unsigned i = 0; i < _param.batchSize; i++)
       {
-        input[i] = _trainData[batch*_param.batchSize+i];
-        output[i] = _trainRealResults[batch*_param.batchSize+i];
+        tasks.push_back(_pool.enqueue([this, &input, &output, i, batch]()->void
+        {
+          input[i] = _trainData[batch*_param.batchSize+i];
+          output[i] = _trainRealResults[batch*_param.batchSize+i];
+        }));
       }
+      for(unsigned i = 0; i < tasks.size(); i++)
+        tasks[i].get();
 
       for(unsigned i = 0; i < _layers.size(); i++)
       {

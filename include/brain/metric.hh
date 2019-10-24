@@ -49,8 +49,8 @@ std::pair<double, double> accuracy(Matrix const& real, Matrix const& predicted, 
             }
         }
     }
-    validated = 100*validated/count;
     fp = 100*fp/(validated + fp);
+    validated = 100*validated/count;
     return {validated, fp};
 }
 

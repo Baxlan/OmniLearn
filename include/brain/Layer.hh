@@ -206,7 +206,6 @@ public:
 
 
     //one gradient per input neuron (line) and per feature (col)
-    //SHOULD THIS FUNCTION BE PARALELLIZED ?
     Matrix getGradients()
     {
         Matrix grad(_inputSize, Vector(_batchSize, 0));
