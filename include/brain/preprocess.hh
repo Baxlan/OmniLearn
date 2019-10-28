@@ -16,16 +16,16 @@ Vector center(Matrix& data, Vector mean = {})
   {
     mean = Vector(data[0].size(), 0);
     //calculate mean
-    for(unsigned i = 0; i < data[0].size(); i++)
+    for(size_t i = 0; i < data[0].size(); i++)
     {
       mean[i] = data.column(i).mean().first;
     }
   }
 
   //center
-  for(unsigned i = 0; i < data.lines(); i++)
+  for(size_t i = 0; i < data.lines(); i++)
   {
-    for(unsigned j = 0; j < data.columns(); j++)
+    for(size_t j = 0; j < data.columns(); j++)
     {
       data[i][j] -= mean[j];
     }
@@ -42,7 +42,7 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
   {
     mM = std::vector<std::pair<double, double>>(data[0].size(), {0, 0});
     //search min and max
-    for(unsigned i = 0; i < data[0].size(); i++)
+    for(size_t i = 0; i < data[0].size(); i++)
     {
       mM[i] = data.column(i).minMax();
       //if all values of a column are the same, divide by 0.
@@ -52,9 +52,9 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
     }
   }
   //normalize
-  for(unsigned i = 0; i < data.lines(); i++)
+  for(size_t i = 0; i < data.lines(); i++)
   {
-    for(unsigned j = 0; j < data.columns(); j++)
+    for(size_t j = 0; j < data.columns(); j++)
     {
       data[i][j] = (data[i][j] - mM[j].first) / (mM[j].second - mM[j].first);
     }
@@ -71,7 +71,7 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
   {
     meanDev = std::vector<std::pair<double, double>>(data[0].size(), {0, 0});
     //calculate mean and deviation
-    for(unsigned i = 0; i < data[0].size(); i++)
+    for(size_t i = 0; i < data[0].size(); i++)
     {
       meanDev[i] = data.column(i).mean();
       //if all values of a column are the same, divide by 0 (dev is 0).
@@ -81,9 +81,9 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     }
   }
   //standardize
-  for(unsigned i = 0; i < data.lines(); i++)
+  for(size_t i = 0; i < data.lines(); i++)
   {
-    for(unsigned j = 0; j < data.columns(); j++)
+    for(size_t j = 0; j < data.columns(); j++)
     {
       data[i][j] -= meanDev[j].first;
       data[i][j] /= meanDev[j].second;

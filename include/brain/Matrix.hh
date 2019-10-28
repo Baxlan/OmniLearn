@@ -129,7 +129,7 @@ Vector const&  Matrix::operator[](size_t line) const
 Vector const Matrix::column(size_t col) const
 {
   Vector vec(lines(), 0);
-  for(unsigned i = 0; i < lines(); i++)
+  for(size_t i = 0; i < lines(); i++)
   {
     vec[i] = _matrix[i][col];
   }
@@ -141,7 +141,7 @@ void Matrix::column(size_t col, Vector const& vec)
 {
   if(vec.size() != lines())
     throw Exception("The length of the column must be the same as the number of lines of the matrix.");
-  for(unsigned i = 0; i < lines(); i++)
+  for(size_t i = 0; i < lines(); i++)
   {
     _matrix[i][col] = vec[i];
   }
@@ -243,9 +243,9 @@ void Matrix::transpose()
 Matrix Matrix::transpose(Matrix const& matrix)
 {
   Matrix returnMatrix(matrix.columns(), Vector(matrix.lines(), 0));
-  for(unsigned i = 0; i < matrix.lines(); i++)
+  for(size_t i = 0; i < matrix.lines(); i++)
   {
-    for(unsigned j = 0; j < matrix[0].size(); j++)
+    for(size_t j = 0; j < matrix[0].size(); j++)
     {
       returnMatrix[j][i] = matrix[i][j];
     }

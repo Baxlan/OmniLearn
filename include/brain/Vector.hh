@@ -372,8 +372,8 @@ std::pair<double, double> Vector::regression(Vector const& x, Vector const& y)
   if(x.size() != y.size())
     throw Exception("In a linear regression, both vectors must have the same number of element.");
 
-  double a = ((x.size()*hadamard(x, y).sum()) - (x.sum() * y.sum()))        / ((x.size() * x.quadraticSum()) - std::pow(x.sum(), 2));
-  double b = ((y.sum()*x.quadraticSum()) - (x.sum()*hadamard(x, y).sum())) / ((x.size() * x.quadraticSum()) - std::pow(x.sum(), 2));
+  double a = ((static_cast<double>(x.size())*hadamard(x, y).sum()) - (static_cast<double>(x.size()) * static_cast<double>(y.size()))) / ((static_cast<double>(x.size()) * x.quadraticSum()) - std::pow(x.sum(), 2));
+  double b = ((y.sum()*x.quadraticSum()) - (x.sum()*hadamard(x, y).sum())) / ((static_cast<double>(x.size()) * x.quadraticSum()) - std::pow(x.sum(), 2));
 
   return {a, b};
 }

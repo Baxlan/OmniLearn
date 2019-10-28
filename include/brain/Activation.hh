@@ -420,16 +420,16 @@ protected:
 
 Matrix softmax(Matrix inputs)
 {
-    for(unsigned i = 0; i < inputs.lines(); i++)
+    for(size_t i = 0; i < inputs.lines(); i++)
     {
         double c = *std::max_element(inputs[i].begin(), inputs[i].end());
         double sum = 0;
         //subtraction for stability
-        for(unsigned j = 0; j < inputs[0].size(); j++)
+        for(size_t j = 0; j < inputs[0].size(); j++)
         {
             sum += std::exp(inputs[i][j] - c);
         }
-        for(unsigned j = 0; j < inputs[0].size(); j++)
+        for(size_t j = 0; j < inputs[0].size(); j++)
         {
             inputs[i][j] = std::exp(inputs[i][j] - c) / sum;
         }

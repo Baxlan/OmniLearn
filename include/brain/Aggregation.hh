@@ -12,7 +12,7 @@ class Aggregation //abstract class
 {
 public:
     virtual ~Aggregation(){}
-    virtual std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, unsigned is the index of the weight set used
+    virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, size_t is the index of the weight set used
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual void learn(double gradient, double learningRate) = 0;
 };
@@ -32,7 +32,7 @@ public:
 class Dot : public Aggregation
 {
 public:
-    std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
+    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
         if(weights.lines() > 1)
             throw Exception("Dot aggregation only requires one weight set.");
@@ -67,13 +67,13 @@ public:
 class Distance : public Aggregation
 {
 public:
-    Distance(unsigned order = 2):
+    Distance(size_t order = 2):
     _order(order)
     {
     }
 
 
-    std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
+    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
         if(weights.lines() > 1)
             throw Exception("Distance aggregation only requires one weight set.");
@@ -86,7 +86,7 @@ public:
         double a = std::pow(aggregate(inputs, {weights}, {0}).first, (1-_order));
         Vector result(weights.size(), 0);
 
-        for(unsigned i = 0; i < weights.size(); i++)
+        for(size_t i = 0; i < weights.size(); i++)
         {
           result[i] += (-std::pow((inputs[i] - weights[i]), _order-1) * a);
         }
@@ -100,7 +100,7 @@ public:
     }
 
 protected:
-    unsigned const _order;
+    size_t const _order;
 };
 
 
@@ -118,7 +118,7 @@ protected:
 class Maxout : public Aggregation
 {
 public:
-    std::pair<double, unsigned> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
+    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
         if(weights.lines() < 2)
             throw Exception("Maxout aggregation requires multiple weight sets.");
@@ -126,14 +126,14 @@ public:
         //each index represents a weight set
         Vector dots(weights.lines(), 0);
 
-        for(unsigned i = 0; i < weights.lines(); i++)
+        for(size_t i = 0; i < weights.lines(); i++)
         {
             dots[i] = Vector::dot(inputs, weights[i]) + bias[i];
         }
 
         //max and index of the max
-        std::pair<double, unsigned> max = {dots[0], 0};
-        for(unsigned i = 0; i < dots.size(); i++)
+        std::pair<double, size_t> max = {dots[0], 0};
+        for(size_t i = 0; i < dots.size(); i++)
         {
             if(dots[i] > max.first)
             {

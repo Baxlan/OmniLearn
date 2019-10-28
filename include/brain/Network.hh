@@ -16,6 +16,7 @@ namespace brain
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA};
+enum class Decay {None, Inverse, Exp, Step, Plateau};
 
 //=============================================================================
 //=============================================================================
@@ -43,40 +44,38 @@ struct NetworkParam
     loss(Loss::L2),
     decayValue(0.05),
     decayDelay(5),
-    decay(decay::none),
+    decay(Decay::None),
     classValidity(0.9),
     threads(1),
     optimizer(Optimizer::None),
     momentum(0.9),
     window(0.9),
-    metric(Metric::L1),
-    plateau(0.999),
+    plateau(0.99),
     normalizeOutputs(false),
     preprocess()
     {
     }
 
-    unsigned seed;
-    unsigned batchSize;
+    size_t seed;
+    size_t batchSize;
     double learningRate;
     double L1;
     double L2;
-    unsigned epoch;
-    unsigned patience;
+    size_t epoch;
+    size_t patience;
     double dropout;
     double dropconnect;
     double validationRatio;
     double testRatio;
     Loss loss;
     double decayValue;
-    unsigned decayDelay;
-    double (* decay)(double, unsigned, double, unsigned);
+    size_t decayDelay;
+    Decay decay;
     double classValidity;
-    unsigned threads;
+    size_t threads;
     Optimizer optimizer;
     double momentum; //momentum
     double window; //window effect on grads
-    Metric metric;
     double plateau;
     bool normalizeOutputs;
     std::vector<Preprocess> preprocess;
@@ -98,7 +97,7 @@ class Network
 public:
   Network(Data const& data, NetworkParam const& param):
   _param(param),
-  _seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
+  _seed(param.seed == 0 ? static_cast<size_t>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
   _generator(std::mt19937(_seed)),
   _dropoutDist(std::bernoulli_distribution(param.dropout)),
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
@@ -179,12 +178,24 @@ public:
 
       std::cout << "Epoch: " << _epoch;
       double validLoss = computeLoss();
-      std::cout << "   LR: " << _param.decay(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay) << "\n";
-      if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss))
+
+      double lr = _param.learningRate;
+      if(_param.decay == Decay::Inverse)
+        lr = inverse(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Exp)
+        lr = exp(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Step)
+        lr = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
+      else if(_param.decay == Decay::Plateau)
+        if(_epoch - _optimalEpoch > _param.decayDelay)
+            _param.learningRate /= _param.decayValue;
+
+      std::cout << "   LR: " << lr << "\n";
+      if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss) || std::isnan(_testMetric[_epoch]))
         return false;
 
       //EARLY STOPPING
-      if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than 0.5% in _param.patience epochs, stop learning
+      if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than _param.plateau percent in _param.patience epochs, stop learning
       {
         save();
         lowestLoss = validLoss;
@@ -202,7 +213,7 @@ public:
   Matrix process(Matrix inputs) const
   {
     //preprocess inputs
-    for(unsigned i = 0; i < _param.preprocess.size(); i++)
+    for(size_t i = 0; i < _param.preprocess.size(); i++)
     {
       if(_param.preprocess[i] == Preprocess::Center)
       {
@@ -226,7 +237,7 @@ public:
       }
     }
     //process
-    for(unsigned i = 0; i < _layers.size(); i++)
+    for(size_t i = 0; i < _layers.size(); i++)
     {
       inputs = _layers[i]->process(inputs, _pool);
     }
@@ -236,9 +247,9 @@ public:
       inputs = softmax(inputs);
     }
     //denormalize outputs
-    for(unsigned i = 0; i < inputs.lines(); i++)
+    for(size_t i = 0; i < inputs.lines(); i++)
     {
-      for(unsigned j = 0; j < inputs.columns(); j++)
+      for(size_t j = 0; j < inputs.columns(); j++)
       {
         inputs[i][j] *= (_outputMinMax[j].second - _outputMinMax[j].first);
         inputs[i][j] += _outputMinMax[j].first;
@@ -250,52 +261,57 @@ public:
 
   void writeInfo(std::string const& path) const
   {
-    std::pair<Vector, Vector> acc;
     std::string loss;
     std::string metric;
-    if(_param.metric == Metric::Accuracy)
-      metric = "accuracy";
-    else if(_param.metric == Metric::L1)
-      metric = "mae";
-    else if(_param.metric == Metric::L2)
-      metric = "mse";
 
     if(_param.loss == Loss::BinaryCrossEntropy)
+    {
       loss = "binary cross entropy";
+      metric = "classification";
+    }
     else if(_param.loss == Loss::CrossEntropy)
+    {
       loss = "cross entropy";
+      metric = "classification";
+    }
     else if(_param.loss == Loss::L1)
+    {
       loss = "mae";
+      metric = "regression";
+    }
     else if(_param.loss == Loss::L2)
+    {
       loss = "mse";
+      metric = "regression";
+    }
 
     std::ofstream output(path);
-    output << "labels:\n";
-    for(unsigned i=0; i<_outputLabels.size(); i++)
+    output << "output labels:\n";
+    for(size_t i=0; i<_outputLabels.size(); i++)
     {
         output << _outputLabels[i] << ",";
     }
     output << "\n" << "loss:" << "\n" << loss << "\n";
-    for(unsigned i=0; i<_trainLosses.size(); i++)
+    for(size_t i=0; i<_trainLosses.size(); i++)
     {
         output << _trainLosses[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_validLosses.size(); i++)
+    for(size_t i=0; i<_validLosses.size(); i++)
     {
         output << _validLosses[i] << ",";
     }
     output << "\n" << "metric:" << "\n" << metric << "\n";
-    for(unsigned i=0; i<_testMetric.size(); i++)
+    for(size_t i=0; i<_testMetric.size(); i++)
     {
         output << _testMetric[i] << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_testSecondMetric.size(); i++)
+    for(size_t i=0; i<_testSecondMetric.size(); i++)
     {
         output << _testSecondMetric[i] << ",";
     }
-    if(_param.metric == Metric::Accuracy)
+    if(metric == "classification")
     {
       output << "\nthreshold:\n";
       output << _param.classValidity;
@@ -303,29 +319,30 @@ public:
     output << "\noptimal epoch:\n";
     output << _optimalEpoch;
     output << "\noutput normalization:\n";
-    for(unsigned i=0; i<_outputMinMax.size(); i++)
+    for(size_t i=0; i<_outputMinMax.size(); i++)
     {
         output << _outputMinMax[i].first << ",";
     }
     output << "\n";
-    for(unsigned i=0; i<_outputMinMax.size(); i++)
+    for(size_t i=0; i<_outputMinMax.size(); i++)
     {
         output << _outputMinMax[i].second << ",";
     }
     Matrix testRes(process(_testRawData));
     output << "\nexpected and predicted values:\n";
-    for(unsigned i = 0; i < _outputLabels.size(); i++)
+    for(size_t i = 0; i < _outputLabels.size(); i++)
     {
-      output << _outputLabels[i] << "\n" ;
-      for(unsigned j = 0; j < _testRealResults.lines(); j++)
+      output << "label: " << _outputLabels[i] << "\n" ;
+      for(size_t j = 0; j < _testRealResults.lines(); j++)
       {
         output << _testRealResults[j][i] << ",";
       }
       output << "\n";
-      for(unsigned j = 0; j < testRes.lines(); j++)
+      for(size_t j = 0; j < testRes.lines(); j++)
       {
         output << testRes[j][i] << ",";
       }
+      output << "\n";
     }
   }
 
@@ -333,7 +350,7 @@ public:
 protected:
   void initLayers()
   {
-    for(unsigned i = 0; i < _layers.size(); i++)
+    for(size_t i = 0; i < _layers.size(); i++)
     {
         _layers[i]->init((i == 0 ? _trainData.columns() : _layers[i-1]->size()),
                         (i == _layers.size()-1 ? _trainRealResults.columns() : _layers[i+1]->size()),
@@ -362,27 +379,28 @@ protected:
     if(_testData.lines() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
       throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
-    double validation = _param.validationRatio * _trainData.lines();
-    double test = _param.testRatio * _trainData.lines();
-    double nbBatch = std::trunc(_trainData.lines() - validation - test) / _param.batchSize;
+    double validation = _param.validationRatio * static_cast<double>(_trainData.lines());
+    double test = _param.testRatio * static_cast<double>(_trainData.lines());
+    double nbBatch = std::trunc(static_cast<double>(_trainData.lines()) - validation - test) / static_cast<double>(_param.batchSize);
+    if(_param.batchSize == 0)
+      nbBatch = 1; // if batch size == 0, then is batch gradient descend
 
     //add a batch if an incomplete batch has more than 0.5*batchsize data
-    if(nbBatch - static_cast<unsigned>(nbBatch) >= 0.5)
+    if(nbBatch - std::trunc(nbBatch) >= 0.5)
       nbBatch = std::trunc(nbBatch) + 1;
 
-    unsigned nbTrain = static_cast<unsigned>(nbBatch)*_param.batchSize;
-    unsigned noTrain = _trainData.lines() - nbTrain;
-    validation = std::round(noTrain*_param.validationRatio/(_param.validationRatio + _param.testRatio));
-    test = std::round(noTrain*_param.testRatio/(_param.validationRatio + _param.testRatio));
+    size_t noTrain = _trainData.lines() - (static_cast<size_t>(nbBatch)*_param.batchSize);
+    validation = std::round(static_cast<double>(noTrain)*_param.validationRatio/(_param.validationRatio + _param.testRatio));
+    test = std::round(static_cast<double>(noTrain)*_param.testRatio/(_param.validationRatio + _param.testRatio));
 
-    for(unsigned i = 0; i < static_cast<unsigned>(validation); i++)
+    for(size_t i = 0; i < static_cast<size_t>(validation); i++)
     {
       _validationData.addLine(_trainData[_trainData.lines()-1]);
       _validationRealResults.addLine(_trainRealResults[_trainRealResults.lines()-1]);
       _trainData.popLine();
       _trainRealResults.popLine();
     }
-    for(unsigned i = 0; i < static_cast<unsigned>(test); i++)
+    for(size_t i = 0; i < static_cast<size_t>(test); i++)
     {
       _testData.addLine(_trainData[_trainData.lines()-1]);
       _testRealResults.addLine(_trainRealResults[_trainRealResults.lines()-1]);
@@ -390,13 +408,13 @@ protected:
       _trainData.popLine();
       _trainRealResults.popLine();
     }
-    _nbBatch = static_cast<unsigned>(nbBatch);
+    _nbBatch = static_cast<size_t>(nbBatch);
   }
 
 
   void preprocess()
   {
-    for(unsigned i = 0; i < _param.preprocess.size(); i++)
+    for(size_t i = 0; i < _param.preprocess.size(); i++)
     {
       if(_param.preprocess[i] == Preprocess::Center)
       {
@@ -430,13 +448,13 @@ protected:
 
   void performeOneEpoch()
   {
-    for(unsigned batch = 0; batch < _nbBatch; batch++)
+    Matrix input(_param.batchSize);
+    Matrix output(_param.batchSize);
+    for(size_t batch = 0; batch < _nbBatch; batch++)
     {
-      Matrix input(_param.batchSize);
-      Matrix output(_param.batchSize);
 
       std::vector<std::future<void>> tasks;
-      for(unsigned i = 0; i < _param.batchSize; i++)
+      for(size_t i = 0; i < _param.batchSize; i++)
       {
         tasks.push_back(_pool.enqueue([this, &input, &output, i, batch]()->void
         {
@@ -444,23 +462,33 @@ protected:
           output[i] = _trainRealResults[batch*_param.batchSize+i];
         }));
       }
-      for(unsigned i = 0; i < tasks.size(); i++)
+      for(size_t i = 0; i < tasks.size(); i++)
         tasks[i].get();
 
-      for(unsigned i = 0; i < _layers.size(); i++)
+      for(size_t i = 0; i < _layers.size(); i++)
       {
         input = _layers[i]->processToLearn(input, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
       }
 
       Matrix gradients(Matrix::transpose(computeLossMatrix(output, input).second));
-      for(unsigned i = 0; i < _layers.size(); i++)
+      for(size_t i = 0; i < _layers.size(); i++)
       {
         _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
         gradients = _layers[_layers.size() - i - 1]->getGradients();
       }
-      for(unsigned i = 0; i < _layers.size(); i++)
+
+      double lr = _param.learningRate;
+      //plateau decay is taken into account in learn()
+      if(_param.decay == Decay::Inverse)
+        lr = inverse(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Exp)
+        lr = exp(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Step)
+        lr = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
+
+      for(size_t i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(_param.decay(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay), _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
+        _layers[i]->updateWeights(lr, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
       }
     }
   }
@@ -469,7 +497,7 @@ protected:
   //process taking already processed inputs and giving normalized outputs
   Matrix processForLoss(Matrix inputs) const
   {
-    for(unsigned i = 0; i < _layers.size(); i++)
+    for(size_t i = 0; i < _layers.size(); i++)
     {
       inputs = _layers[i]->process(inputs, _pool);
     }
@@ -485,13 +513,13 @@ protected:
   std::pair<Matrix, Matrix> computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
   {
     if(_param.loss == Loss::L1)
-      return L1Loss(realResults, predicted);
+      return L1Loss(realResults, predicted, _pool);
     else if(_param.loss == Loss::L2)
-      return L2Loss(realResults, predicted);
+      return L2Loss(realResults, predicted, _pool);
     else if(_param.loss == Loss::BinaryCrossEntropy)
-      return binaryCrossEntropyLoss(realResults, predicted);
+      return binaryCrossEntropyLoss(realResults, predicted, _pool);
     else //if loss == crossEntropy
-      return crossEntropyLoss(realResults, predicted);
+      return crossEntropyLoss(realResults, predicted, _pool);
   }
 
 
@@ -500,7 +528,7 @@ protected:
   {
     //for each layer, for each neuron, first are weights, second are bias
     std::vector<std::vector<std::pair<Matrix, Vector>>> weights(_layers.size());
-    for(unsigned i = 0; i < _layers.size(); i++)
+    for(size_t i = 0; i < _layers.size(); i++)
     {
       weights[i] = _layers[i]->getWeights(_pool);
     }
@@ -509,16 +537,16 @@ protected:
     double L1 = 0;
     double L2 = 0;
 
-    for(unsigned i = 0; i < weights.size(); i++)
+    for(size_t i = 0; i < weights.size(); i++)
     //for each layer
     {
-      for(unsigned j = 0; j < weights[i].size(); j++)
+      for(size_t j = 0; j < weights[i].size(); j++)
       //for each neuron
       {
-        for(unsigned k = 0; k < weights[i][j].first.lines(); k++)
+        for(size_t k = 0; k < weights[i][j].first.lines(); k++)
         //for each weight set
         {
-          for(unsigned l = 0; l < weights[i][j].first[k].size(); l++)
+          for(size_t l = 0; l < weights[i][j].first[k].size(); l++)
           //for each weight
           {
             L1 += std::abs(weights[i][j].first[k][l]);
@@ -534,7 +562,7 @@ protected:
     //training loss
     Matrix input(_trainData.lines());
     Matrix output(_trainRealResults.lines());
-    for(unsigned i = 0; i < _trainData.lines(); i++)
+    for(size_t i = 0; i < _trainData.lines(); i++)
     {
       input[i] = _trainData[i];
       output[i] = _trainRealResults[i];
@@ -546,13 +574,10 @@ protected:
 
     //test metric
     std::pair<double, double> testMetric;
-    if(_param.metric == Metric::Accuracy)
-      testMetric = accuracy(_testRealResults, processForLoss(_testData), _param.classValidity);
-    else if(_param.metric == Metric::L1)
-      testMetric = L1Metric(_testRealResults, processForLoss(_testData), _outputMinMax);
-    else if(_param.metric == Metric::L2)
-      testMetric = L2Metric(_testRealResults, processForLoss(_testData), _outputMinMax);
-
+    if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
+      testMetric = regressionMetrics(_testRealResults, processForLoss(_testData));
+    else
+      testMetric = classificationMetrics(_testRealResults, processForLoss(_testData), _param.classValidity);
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
     _trainLosses.push_back(trainLoss);
@@ -565,7 +590,7 @@ protected:
 
   void save()
   {
-     for(unsigned i = 0; i < _layers.size(); i++)
+     for(size_t i = 0; i < _layers.size(); i++)
       {
           _layers[i]->save();
       }
@@ -574,7 +599,7 @@ protected:
 
   void loadSaved()
   {
-     for(unsigned i = 0; i < _layers.size(); i++)
+     for(size_t i = 0; i < _layers.size(); i++)
       {
           _layers[i]->loadSaved();
       }
@@ -584,7 +609,7 @@ protected:
 protected:
   NetworkParam _param;
 
-  unsigned _seed;
+  size_t _seed;
   std::mt19937 _generator;
   std::bernoulli_distribution _dropoutDist;
   std::bernoulli_distribution _dropconnectDist;
@@ -600,10 +625,10 @@ protected:
   Matrix _testData;
   Matrix _testRealResults;
   Matrix _testRawData;
-  unsigned _nbBatch;
+  size_t _nbBatch;
 
-  unsigned _epoch;
-  unsigned _optimalEpoch;
+  size_t _epoch;
+  size_t _optimalEpoch;
   Vector _trainLosses;
   Vector _validLosses;
   Vector _testMetric;

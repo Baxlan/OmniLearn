@@ -7,35 +7,24 @@ namespace brain
 {
 
 
-namespace decay
-{
 
-
-double none(double initialLR, [[maybe_unused]] unsigned epoch, [[maybe_unused]] double decayValue, [[maybe_unused]] unsigned delay)
+double inverse(double initialLR, size_t epoch, double decayValue)
 {
-    return initialLR;
+    return initialLR / (1 + (decayValue * static_cast<double>(epoch-1)));
 }
 
 
-double inverse(double initialLR, unsigned epoch, double decayValue, [[maybe_unused]] unsigned delay)
+double exp(double initialLR, size_t epoch, double decayValue)
 {
-    return initialLR / (1 + (decayValue * (epoch-1)));
+    return initialLR * std::exp(-decayValue * static_cast<double>(epoch-1));
 }
 
 
-double exp(double initialLR, unsigned epoch, double decayValue, [[maybe_unused]] unsigned delay)
-{
-    return initialLR * std::exp(-decayValue * (epoch-1));
-}
-
-
-double step(double initialLR, unsigned epoch, double decayValue, unsigned delay)
+double step(double initialLR, size_t epoch, double decayValue, size_t delay)
 {
     return initialLR * std::pow(decayValue, std::floor((epoch-1)/delay));
 }
 
-
-} // namespace LRDecay
 
 
 } // namespace brain
