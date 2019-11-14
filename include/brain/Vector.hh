@@ -1,5 +1,7 @@
+/*
 #ifndef BRAIN_VECTOR_HH_
 #define BRAIN_VECTOR_HH_
+
 
 #include <vector>
 #include <type_traits>
@@ -443,3 +445,4 @@ operator/(Vector a, T val)
 } // namespace brain
 
 #endif // BRAIN_VECTOR_HH_
+*/

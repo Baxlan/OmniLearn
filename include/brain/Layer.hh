@@ -114,7 +114,7 @@ public:
     Matrix process(Matrix const& inputs, ThreadPool& t)
     {
         //lines are features, columns are neurons
-        Matrix output(inputs.lines(), Vector(_neurons.size(), 0));
+        Matrix output = Matrix::Constant(inputs.rows(), _neurons.size(), 0);
         std::vector<std::future<void>> tasks;
 
         for(size_t i = 0; i < _neurons.size(); i++)
@@ -124,7 +124,7 @@ public:
                 //one result per feature (for each neuron)
                 Vector result = _neurons[i].process(inputs);
                 for(size_t j = 0; j < result.size(); j++)
-                    output[j][i] = result[j];
+                    output(j, i) = result[j];
             }));
         }
         for(size_t i = 0; i < tasks.size(); i++)
@@ -138,7 +138,7 @@ public:
     Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
     {
         //lines are features, columns are neurons
-        Matrix output(_batchSize, Vector(_neurons.size(), 0));
+        Matrix output = Matrix::Constant(_batchSize, _neurons.size(), 0);
         std::vector<std::future<void>> tasks;
 
         for(size_t i = 0; i < _neurons.size(); i++)
@@ -149,14 +149,14 @@ public:
                 Vector result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
                 for(size_t j = 0; j < result.size(); j++)
                 {
-                    output[j][i] = result[j];
+                    output(j, i) = result[j];
                     //dropOut
                     if(dropout > std::numeric_limits<double>::epsilon())
                     {
                         if(dropoutDist(dropGen))
-                            output[j][i] = 0;
+                            output(j, i) = 0;
                         else
-                            output[j][i] /= (1-dropout);
+                            output(j, i) /= (1-dropout);
                     }
                 }
             }));
@@ -177,7 +177,7 @@ public:
         {
             tasks.push_back(t.enqueue([this, &inputGradients, i]()->void
             {
-                _neurons[i].computeGradients(inputGradients[i]);
+                _neurons[i].computeGradients(inputGradients.row(i));
             }));
         }
         for(size_t i = 0; i < tasks.size(); i++)
@@ -208,15 +208,15 @@ public:
     //one gradient per input neuron (line) and per feature (col)
     Matrix getGradients()
     {
-        Matrix grad(_inputSize, Vector(_batchSize, 0));
+        Matrix grad = Matrix::Constant(_inputSize, _batchSize, 0);
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
             Matrix neuronGrad = _neurons[i].getGradients();
-            for(size_t j = 0; j < neuronGrad.lines(); j++)
+            for(size_t j = 0; j < neuronGrad.rows(); j++)
             {
-                for(size_t k = 0; k < neuronGrad.columns(); k++)
-                    grad[k][j] += neuronGrad[j][k];
+                for(size_t k = 0; k < neuronGrad.cols(); k++)
+                    grad(k, j) += neuronGrad(j, k);
             }
         }
 

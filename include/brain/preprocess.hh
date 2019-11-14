@@ -10,24 +10,24 @@ namespace brain
 
 //subtract the mean of each comumn to each elements of these columns
 //returns the mean of each column
-Vector center(Matrix& data, Vector mean = {})
+Vector center(Matrix& data, Vector mean = Vector(0))
 {
   if(mean.size() == 0)
   {
-    mean = Vector(data[0].size(), 0);
+    mean = Vector::Constant(data.cols(), 0);
     //calculate mean
-    for(size_t i = 0; i < data[0].size(); i++)
+    for(size_t i = 0; i < data.cols(); i++)
     {
-      mean[i] = data.column(i).mean().first;
+      mean[i] = data.col(i).mean();
     }
   }
 
   //center
-  for(size_t i = 0; i < data.lines(); i++)
+  for(size_t i = 0; i < data.rows(); i++)
   {
-    for(size_t j = 0; j < data.columns(); j++)
+    for(size_t j = 0; j < data.cols(); j++)
     {
-      data[i][j] -= mean[j];
+      data(i, j) -= mean[j];
     }
   }
   return mean;
@@ -40,23 +40,23 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
 {
   if(mM.size() == 0)
   {
-    mM = std::vector<std::pair<double, double>>(data[0].size(), {0, 0});
+    mM = std::vector<std::pair<double, double>>(data.cols(), {0, 0});
     //search min and max
-    for(size_t i = 0; i < data[0].size(); i++)
+    for(size_t i = 0; i < data.cols(); i++)
     {
-      mM[i] = data.column(i).minMax();
+      mM[i] = {data.col(i).minCoeff(), data.col(i).maxCoeff()};
       //if all values of a column are the same, divide by 0.
       //this in this case, we divide by the data itself to normalize to 1
       if(std::abs(mM[i].second - mM[i].first) < std::numeric_limits<double>::epsilon())
-        mM[i] = {0, data[0][i]};
+        mM[i] = {0, data(0, i)};
     }
   }
   //normalize
-  for(size_t i = 0; i < data.lines(); i++)
+  for(size_t i = 0; i < data.rows(); i++)
   {
-    for(size_t j = 0; j < data.columns(); j++)
+    for(size_t j = 0; j < data.cols(); j++)
     {
-      data[i][j] = (data[i][j] - mM[j].first) / (mM[j].second - mM[j].first);
+      data(i, j) = (data(i, j) - mM[j].first) / (mM[j].second - mM[j].first);
     }
   }
   return mM;
@@ -69,11 +69,11 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 {
   if(meanDev.size() == 0)
   {
-    meanDev = std::vector<std::pair<double, double>>(data[0].size(), {0, 0});
+    meanDev = std::vector<std::pair<double, double>>(data.cols(), {0, 0});
     //calculate mean and deviation
-    for(size_t i = 0; i < data[0].size(); i++)
+    for(size_t i = 0; i < data.cols(); i++)
     {
-      meanDev[i] = data.column(i).mean();
+      meanDev[i] = {data.col(i).mean(), dev(data.col(i))};
       //if all values of a column are the same, divide by 0 (dev is 0).
       //this in this case, we divide by 1
       if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
@@ -81,12 +81,12 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     }
   }
   //standardize
-  for(size_t i = 0; i < data.lines(); i++)
+  for(size_t i = 0; i < data.rows(); i++)
   {
-    for(size_t j = 0; j < data.columns(); j++)
+    for(size_t j = 0; j < data.cols(); j++)
     {
-      data[i][j] -= meanDev[j].first;
-      data[i][j] /= meanDev[j].second;
+      data(i, j) -= meanDev[j].first;
+      data(i, j) /= meanDev[j].second;
     }
   }
   return meanDev;
@@ -96,7 +96,7 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 //rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
 //first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<Matrix, Vector> whiten(Matrix& data, Matrix rotation = {})
+std::pair<Matrix, Vector> whiten(Matrix& data, Matrix rotation = Matrix(0,0))
 {
 
 }

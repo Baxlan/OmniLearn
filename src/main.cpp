@@ -10,7 +10,7 @@ int main()
     brain::NetworkParam netp;
     netp.threads = 4;
     netp.batchSize = 100;
-    netp.learningRate = 0.00002;
+    netp.learningRate = 0.0001;
     netp.loss = brain::Loss::CrossEntropy;
     netp.epoch = 500;
     netp.patience = 5;
@@ -21,7 +21,7 @@ int main()
     netp.classValidity = 0.80;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.0;
-    netp.optimizer = brain::Optimizer::None;
+    netp.optimizer = brain::Optimizer::Rmsprop;
     netp.preprocess = {};
     netp.normalizeOutputs = false;
 
@@ -30,7 +30,7 @@ int main()
 
     brain::LayerParam lay;
     lay.maxNorm = 5;
-    lay.size = 300;
+    lay.size = 100;
     net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 10;
     net.addLayer<brain::Dot, brain::Linear>(lay);

@@ -105,14 +105,14 @@ public:
   _pool(param.threads),
   _trainData(data.inputs),
   _trainRealResults(data.outputs),
-  _validationData(0),
-  _validationRealResults(0),
-  _testData(0),
-  _testRealResults(0),
-  _testRawData(0),
-  _nbBatch(0),
-  _epoch(0),
-  _optimalEpoch(0),
+  _validationData(),
+  _validationRealResults(),
+  _testData(),
+  _testRealResults(),
+  _testRawData(),
+  _nbBatch(),
+  _epoch(),
+  _optimalEpoch(),
   _trainLosses(),
   _validLosses(),
   _testMetric(),
@@ -162,10 +162,10 @@ public:
     }
     else
     {
-      _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults[0].size(), {0, 1});
+      _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults.cols(), {0, 1});
     }
 
-    if(_layers[_layers.size()-1]->size() != _trainRealResults[0].size())
+    if(_layers[_layers.size()-1]->size() != _trainRealResults.cols())
     {
       throw Exception("The last layer must have as much neurons as outputs.");
     }
@@ -203,6 +203,22 @@ public:
       }
       if(_epoch - _optimalEpoch > _param.patience)
         break;
+
+      //shuffle train data between each epoch
+      std::vector<size_t> indexes(_trainData.rows(), 0);
+      for(size_t i = 0; i < indexes.size(); i++)
+        indexes[i] = i;
+      std::shuffle(indexes.begin(), indexes.end(), _generator);
+
+      Matrix temp = Matrix(_trainData.rows(), _trainData.cols());
+      for(size_t i = 0; i < indexes.size(); i++)
+        temp.row(i) = _trainData.row(indexes[i]);
+      std::swap(_trainData, temp);
+
+      temp.resize(_trainRealResults.rows(), _trainRealResults.cols());
+      for(size_t i = 0; i < indexes.size(); i++)
+        temp.row(i) = _trainRealResults.row(indexes[i]);
+      std::swap(_trainRealResults, temp);
     }
     loadSaved();
     std::cout << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
@@ -247,12 +263,12 @@ public:
       inputs = softmax(inputs);
     }
     //denormalize outputs
-    for(size_t i = 0; i < inputs.lines(); i++)
+    for(size_t i = 0; i < inputs.rows(); i++)
     {
-      for(size_t j = 0; j < inputs.columns(); j++)
+      for(size_t j = 0; j < inputs.cols(); j++)
       {
-        inputs[i][j] *= (_outputMinMax[j].second - _outputMinMax[j].first);
-        inputs[i][j] += _outputMinMax[j].first;
+        inputs(i,j) *= (_outputMinMax[j].second - _outputMinMax[j].first);
+        inputs(i,j) += _outputMinMax[j].first;
       }
     }
     return inputs;
@@ -333,14 +349,14 @@ public:
     for(size_t i = 0; i < _outputLabels.size(); i++)
     {
       output << "label: " << _outputLabels[i] << "\n" ;
-      for(size_t j = 0; j < _testRealResults.lines(); j++)
+      for(size_t j = 0; j < _testRealResults.rows(); j++)
       {
-        output << _testRealResults[j][i] << ",";
+        output << _testRealResults(j,i) << ",";
       }
       output << "\n";
-      for(size_t j = 0; j < testRes.lines(); j++)
+      for(size_t j = 0; j < testRes.rows(); j++)
       {
-        output << testRes[j][i] << ",";
+        output << testRes(j,i) << ",";
       }
       output << "\n";
     }
@@ -352,8 +368,8 @@ protected:
   {
     for(size_t i = 0; i < _layers.size(); i++)
     {
-        _layers[i]->init((i == 0 ? _trainData.columns() : _layers[i-1]->size()),
-                        (i == _layers.size()-1 ? _trainRealResults.columns() : _layers[i+1]->size()),
+        _layers[i]->init((i == 0 ? _trainData.cols() : _layers[i-1]->size()),
+                        (i == _layers.size()-1 ? _trainRealResults.cols() : _layers[i+1]->size()),
                         _param.batchSize, _generator);
     }
   }
@@ -362,26 +378,27 @@ protected:
   void shuffleData()
   {
     //shuffle inputs and outputs in the same order
-    std::vector<size_t> indexes(_trainData.lines(), 0);
+    std::vector<size_t> indexes(_trainData.rows(), 0);
     for(size_t i = 0; i < indexes.size(); i++)
       indexes[i] = i;
     std::shuffle(indexes.begin(), indexes.end(), _generator);
 
-    Matrix temp(_trainData.lines());
+    Matrix temp = Matrix(_trainData.rows(), _trainData.cols());
     for(size_t i = 0; i < indexes.size(); i++)
-      temp[i] = _trainData[indexes[i]];
+      temp.row(i) = _trainData.row(indexes[i]);
     std::swap(_trainData, temp);
 
+    temp = Matrix(_trainRealResults.rows(), _trainRealResults.cols());
     for(size_t i = 0; i < indexes.size(); i++)
-      temp[i] = _trainRealResults[indexes[i]];
+      temp.row(i) = _trainRealResults.row(indexes[i]);
     std::swap(_trainRealResults, temp);
 
-    if(_testData.lines() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
+    if(_testData.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
       throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
-    double validation = _param.validationRatio * static_cast<double>(_trainData.lines());
-    double test = _param.testRatio * static_cast<double>(_trainData.lines());
-    double nbBatch = std::trunc(static_cast<double>(_trainData.lines()) - validation - test) / static_cast<double>(_param.batchSize);
+    double validation = _param.validationRatio * static_cast<double>(_trainData.rows());
+    double test = _param.testRatio * static_cast<double>(_trainData.rows());
+    double nbBatch = std::trunc(static_cast<double>(_trainData.rows()) - validation - test) / static_cast<double>(_param.batchSize);
     if(_param.batchSize == 0)
       nbBatch = 1; // if batch size == 0, then is batch gradient descend
 
@@ -389,25 +406,31 @@ protected:
     if(nbBatch - std::trunc(nbBatch) >= 0.5)
       nbBatch = std::trunc(nbBatch) + 1;
 
-    size_t noTrain = _trainData.lines() - (static_cast<size_t>(nbBatch)*_param.batchSize);
+    size_t noTrain = _trainData.rows() - (static_cast<size_t>(nbBatch)*_param.batchSize);
     validation = std::round(static_cast<double>(noTrain)*_param.validationRatio/(_param.validationRatio + _param.testRatio));
     test = std::round(static_cast<double>(noTrain)*_param.testRatio/(_param.validationRatio + _param.testRatio));
 
+    _validationData = Matrix::Constant(static_cast<size_t>(validation), _trainData.cols(), 0);
+    _validationRealResults = Matrix::Constant(static_cast<size_t>(validation), _trainRealResults.cols(), 0);
+    if(_testData.rows() == 0)
+    {
+      _testData = Matrix::Constant(static_cast<size_t>(test), _trainData.cols(), 0);
+      _testRealResults = Matrix::Constant(static_cast<size_t>(test), _trainRealResults.cols(), 0);
+    }
+
     for(size_t i = 0; i < static_cast<size_t>(validation); i++)
     {
-      _validationData.addLine(_trainData[_trainData.lines()-1]);
-      _validationRealResults.addLine(_trainRealResults[_trainRealResults.lines()-1]);
-      _trainData.popLine();
-      _trainRealResults.popLine();
+      _validationData.row(i) = _trainData.row(_trainData.rows()-1-i);
+      _validationRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
     }
-    for(size_t i = 0; i < static_cast<size_t>(test); i++)
+    for(size_t i = validation; i < static_cast<size_t>(test) + static_cast<size_t>(validation); i++)
     {
-      _testData.addLine(_trainData[_trainData.lines()-1]);
-      _testRealResults.addLine(_trainRealResults[_trainRealResults.lines()-1]);
-      _testRawData.addLine(_trainData[_trainData.lines()-1]);
-      _trainData.popLine();
-      _trainRealResults.popLine();
+      _testData.row(i) = _trainData.row(_trainData.rows()-1-i);
+      _testRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
+      _testRawData.row(i) = _trainData.row(_trainData.rows()-1-i);
     }
+    _trainData = Matrix(_trainData.topRows(_trainData.rows() - validation - test));
+    _trainRealResults = Matrix(_trainRealResults.topRows(_trainRealResults.rows() - validation - test));
     _nbBatch = static_cast<size_t>(nbBatch);
   }
 
@@ -448,18 +471,18 @@ protected:
 
   void performeOneEpoch()
   {
-    Matrix input(_param.batchSize);
-    Matrix output(_param.batchSize);
     for(size_t batch = 0; batch < _nbBatch; batch++)
     {
+      Matrix input(_param.batchSize, _trainData.cols());
+      Matrix output(_param.batchSize, _trainRealResults.cols());
 
       std::vector<std::future<void>> tasks;
       for(size_t i = 0; i < _param.batchSize; i++)
       {
         tasks.push_back(_pool.enqueue([this, &input, &output, i, batch]()->void
         {
-          input[i] = _trainData[batch*_param.batchSize+i];
-          output[i] = _trainRealResults[batch*_param.batchSize+i];
+          input.row(i) = _trainData.row(batch*_param.batchSize+i);
+          output.row(i) = _trainRealResults.row(batch*_param.batchSize+i);
         }));
       }
       for(size_t i = 0; i < tasks.size(); i++)
@@ -470,7 +493,7 @@ protected:
         input = _layers[i]->processToLearn(input, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
       }
 
-      Matrix gradients(Matrix::transpose(computeLossMatrix(output, input).second));
+      Matrix gradients(computeLossMatrix(output, input).second.transpose());
       for(size_t i = 0; i < _layers.size(); i++)
       {
         _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
@@ -543,14 +566,14 @@ protected:
       for(size_t j = 0; j < weights[i].size(); j++)
       //for each neuron
       {
-        for(size_t k = 0; k < weights[i][j].first.lines(); k++)
+        for(size_t k = 0; k < weights[i][j].first.rows(); k++)
         //for each weight set
         {
-          for(size_t l = 0; l < weights[i][j].first[k].size(); l++)
+          for(size_t l = 0; l < weights[i][j].first.cols(); l++)
           //for each weight
           {
-            L1 += std::abs(weights[i][j].first[k][l]);
-            L2 += std::pow(weights[i][j].first[k][l], 2);
+            L1 += std::abs(weights[i][j].first(k, l));
+            L2 += std::pow(weights[i][j].first(k, l), 2);
           }
         }
       }
@@ -560,12 +583,12 @@ protected:
     L2 *= (_param.L2 * 0.5);
 
     //training loss
-    Matrix input(_trainData.lines());
-    Matrix output(_trainRealResults.lines());
-    for(size_t i = 0; i < _trainData.lines(); i++)
+    Matrix input = Matrix::Constant(_trainData.rows(), _trainData.cols(), 0);
+    Matrix output = Matrix::Constant(_trainRealResults.rows(), _trainRealResults.cols(), 0);
+    for(size_t i = 0; i < _trainData.rows(); i++)
     {
-      input[i] = _trainData[i];
-      output[i] = _trainRealResults[i];
+      input.row(i) = _trainData.row(i);
+      output.row(i) = _trainRealResults.row(i);
     }
     double trainLoss = averageLoss(computeLossMatrix(output, processForLoss(input)).first) + L1 + L2;
 
@@ -580,10 +603,14 @@ protected:
       testMetric = classificationMetrics(_testRealResults, processForLoss(_testData), _param.classValidity);
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
-    _trainLosses.push_back(trainLoss);
-    _validLosses.push_back(validationLoss);
-    _testMetric.push_back(testMetric.first);
-    _testSecondMetric.push_back(testMetric.second);
+    _trainLosses.conservativeResize(_trainLosses.size() + 1);
+    _trainLosses[_trainLosses.size()-1] = trainLoss;
+    _validLosses.conservativeResize(_validLosses.size() + 1);
+    _validLosses[_validLosses.size()-1] = validationLoss;
+    _testMetric.conservativeResize(_testMetric.size() + 1);
+    _testMetric[_testMetric.size()-1] = testMetric.first;
+    _testSecondMetric.conservativeResize(_testSecondMetric.size() + 1);
+    _testSecondMetric[_testSecondMetric.size()-1] = testMetric.second;
     return validationLoss;
   }
 

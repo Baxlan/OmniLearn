@@ -1,6 +1,7 @@
 #ifndef BRAIN_AGGREGATION_HH_
 #define BRAIN_AGGREGATION_HH_
 
+#include "Exception.hh"
 #include "Matrix.hh"
 
 namespace brain
@@ -34,9 +35,9 @@ class Dot : public Aggregation
 public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
-        if(weights.lines() > 1)
+        if(weights.rows() > 1)
             throw Exception("Dot aggregation only requires one weight set.");
-        return {Vector::dot(inputs, weights[0]) + bias[0], 0};
+        return {inputs.dot(weights.row(0)) + bias[0], 0};
     }
 
 
@@ -75,16 +76,16 @@ public:
 
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
-        if(weights.lines() > 1)
+        if(weights.rows() > 1)
             throw Exception("Distance aggregation only requires one weight set.");
-        return {Vector::distance(inputs, weights[0], _order) + bias[0], 0};
+        return {norm(inputs - weights.row(0), _order) + bias[0], 0};
     }
 
 
     Vector prime(Vector const& inputs, Vector const& weights) const
     {
-        double a = std::pow(aggregate(inputs, {weights}, {0}).first, (1-_order));
-        Vector result(weights.size(), 0);
+        double a = std::pow(aggregate(inputs, weights, {1, 0}).first, (1-_order));
+        Vector result = Vector::Constant(weights.size(), 0);
 
         for(size_t i = 0; i < weights.size(); i++)
         {
@@ -120,29 +121,20 @@ class Maxout : public Aggregation
 public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
     {
-        if(weights.lines() < 2)
+        if(weights.rows() < 2)
             throw Exception("Maxout aggregation requires multiple weight sets.");
 
         //each index represents a weight set
-        Vector dots(weights.lines(), 0);
+        Vector dots = Vector::Constant(weights.rows(), 0);
 
-        for(size_t i = 0; i < weights.lines(); i++)
+        for(size_t i = 0; i < weights.rows(); i++)
         {
-            dots[i] = Vector::dot(inputs, weights[i]) + bias[i];
+            dots[i] = inputs.dot(weights.row(i)) + bias[i];
         }
 
-        //max and index of the max
-        std::pair<double, size_t> max = {dots[0], 0};
-        for(size_t i = 0; i < dots.size(); i++)
-        {
-            if(dots[i] > max.first)
-            {
-                max.first = dots[i];
-                max.second = i;
-            }
-        }
-
-        return max;
+        size_t index = 0;
+        double max = dots.maxCoeff(&index);
+        return {max, index};
     }
 
 

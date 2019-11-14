@@ -1,3 +1,4 @@
+// progschj/ThreadPool
 
 #ifndef BRAIN_THREAD_POOL_HH_
 #define BRAIN_THREAD_POOL_HH_

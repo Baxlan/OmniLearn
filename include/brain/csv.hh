@@ -82,30 +82,24 @@ Data loadData(std::string const& path, char separator)
     content[0].erase(0, content[0].find(separator) + 1);
   }
 
-  //remove label line
-  content.erase(content.begin());
+  data.inputs  = Matrix(content.size()-1, data.inputLabels.size());
+  data.outputs = Matrix(content.size()-1, data.outputLabels.size());
 
-  data.inputs.resizeLines(content.size());
-  data.inputs.resizeColumns(data.inputLabels.size());
-  data.outputs.resizeLines(content.size());
-  data.outputs.resizeColumns(data.outputLabels.size());
-
-  for(size_t j = 0; j < content.size(); j++)
+  for(size_t j = 0; j < content.size()-1; j++)
   {
-    val = content[j];
+    val = content[j+1]; // do not read the label line
     for(i = 0; i < data.inputLabels.size(); i++)
     {
-      data.inputs[j][i] = (std::stod(val.substr(0, val.find(separator))));
+      data.inputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
       val.erase(0, val.find(separator) + 1);
     }
     val.erase(0, val.find(separator) + 1);
     for(i = 0; i < data.outputLabels.size(); i++)
     {
-      data.outputs[j][i] = (std::stod(val.substr(0, val.find(separator))));
+      data.outputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
       val.erase(0, val.find(separator) + 1);
     }
   }
-
   return data;
 }
 
