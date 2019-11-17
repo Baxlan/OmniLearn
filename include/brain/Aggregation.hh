@@ -85,11 +85,11 @@ public:
     Vector prime(Vector const& inputs, Vector const& weights) const
     {
         double a = std::pow(aggregate(inputs, weights, {1, 0}).first, (1-_order));
-        Vector result = Vector::Constant(weights.size(), 0);
+        Vector result(weights.size());
 
         for(size_t i = 0; i < weights.size(); i++)
         {
-          result[i] += (-std::pow((inputs[i] - weights[i]), _order-1) * a);
+          result[i] = (-std::pow((inputs[i] - weights[i]), _order-1) * a);
         }
         return result;
     }
@@ -125,7 +125,7 @@ public:
             throw Exception("Maxout aggregation requires multiple weight sets.");
 
         //each index represents a weight set
-        Vector dots = Vector::Constant(weights.rows(), 0);
+        Vector dots(weights.rows());
 
         for(size_t i = 0; i < weights.rows(); i++)
         {

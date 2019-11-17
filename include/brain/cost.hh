@@ -1,10 +1,7 @@
 #ifndef BRAIN_COST_HH_
 #define BRAIN_COST_HH_
 
-#include <cmath>
-
 #include "Activation.hh"
-#include "matrix.hh"
 
 namespace brain
 {
@@ -16,8 +13,8 @@ namespace brain
 // use linear activation at the last layer
 std::pair<Matrix, Matrix> L1Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
-    Matrix loss = Matrix::Constant(real.rows(), real.cols(), 0);
-    Matrix gradients = Matrix::Constant(real.rows(), real.cols(), 0);
+    Matrix loss(real.rows(), real.cols());
+    Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks;
     for(size_t i = 0; i < loss.rows(); i++)
     {
@@ -46,8 +43,8 @@ std::pair<Matrix, Matrix> L1Loss(Matrix const& real, Matrix const& predicted, Th
 // use linear activation at the last layer
 std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
-    Matrix loss = Matrix::Constant(real.rows(), real.cols(), 0);
-    Matrix gradients = Matrix::Constant(real.rows(), real.cols(), 0);
+    Matrix loss(real.rows(), real.cols());
+    Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks;
     for(size_t i = 0; i < loss.rows(); i++)
     {
@@ -97,8 +94,8 @@ std::pair<Matrix, Matrix> crossEntropyLoss(Matrix const& real, Matrix const& pre
 // use sigmoid activation at last layer (all outputs must be [0, 1])
 std::pair<Matrix, Matrix> binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
-    Matrix loss = Matrix::Constant(real.rows(), real.cols(), 0);
-    Matrix gradients = Matrix::Constant(real.rows(), real.cols(), 0);
+    Matrix loss(real.rows(), real.cols());
+    Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks;
     for(size_t i = 0; i < loss.rows(); i++)
     {

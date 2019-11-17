@@ -114,7 +114,7 @@ public:
     Matrix process(Matrix const& inputs, ThreadPool& t)
     {
         //lines are features, columns are neurons
-        Matrix output = Matrix::Constant(inputs.rows(), _neurons.size(), 0);
+        Matrix output(inputs.rows(), _neurons.size());
         std::vector<std::future<void>> tasks;
 
         for(size_t i = 0; i < _neurons.size(); i++)
@@ -138,7 +138,7 @@ public:
     Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
     {
         //lines are features, columns are neurons
-        Matrix output = Matrix::Constant(_batchSize, _neurons.size(), 0);
+        Matrix output(_batchSize, _neurons.size());
         std::vector<std::future<void>> tasks;
 
         for(size_t i = 0; i < _neurons.size(); i++)

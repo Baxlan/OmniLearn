@@ -8,8 +8,8 @@
 namespace brain
 {
 
-typedef Eigen::MatrixXd Matrix;
-typedef Eigen::VectorXd Vector;
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Matrix;
+typedef Eigen::Matrix<double, Eigen::Dynamic, 1> Vector;
 typedef Eigen::Matrix<double, 1, Eigen::Dynamic> rowVector;
 
 

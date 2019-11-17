@@ -1,9 +1,6 @@
 #ifndef BRAIN_ACTIVATION_HH_
 #define BRAIN_ACTIVATION_HH_
 
-#include <cmath>
-#include <algorithm>
-
 #include "Matrix.hh"
 
 namespace brain

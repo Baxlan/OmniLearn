@@ -14,7 +14,7 @@ Vector center(Matrix& data, Vector mean = Vector(0))
 {
   if(mean.size() == 0)
   {
-    mean = Vector::Constant(data.cols(), 0);
+    mean = Vector(data.cols());
     //calculate mean
     for(size_t i = 0; i < data.cols(); i++)
     {

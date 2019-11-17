@@ -55,18 +55,13 @@ public:
     void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t batchSize, size_t k, std::mt19937& generator, bool useOutput)
     {
         _aggregResults = std::vector<std::pair<double, size_t>>(batchSize, {0.0, 0});
-        _actResults = Vector::Constant(batchSize, 0);
-        _actGradients = Vector::Constant(batchSize, 0);
-        _inputGradients = Vector::Constant(nbOutputs, 0);
-
+        _actResults = Vector(batchSize);
+        _actGradients = Vector(batchSize);
         if(_weights.rows() == 0)
         {
-            _weights = Matrix::Constant(k, nbInputs, 0);
+            _weights = Matrix(k, nbInputs);
             _bias = Vector::Constant(k, 0);
         }
-        _gradientsPerFeature = Matrix::Constant(batchSize, _weights.cols(), 0);
-        _biasGradients = Vector::Constant(_bias.size(), 0);
-        _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
         _previousBiasUpdate = Vector::Constant(_bias.size(), 0);
         _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
         if(distrib == Distrib::Normal)
@@ -99,7 +94,7 @@ public:
     //each line of the input matrix is a feature of the batch. Returns one result per feature.
     Vector process(Matrix const& inputs) const
     {
-        Vector results = Vector::Constant(inputs.rows(), 0);
+        Vector results = Vector(inputs.rows());
 
         for(size_t i = 0; i < inputs.rows(); i++)
         {

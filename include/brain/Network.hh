@@ -205,20 +205,7 @@ public:
         break;
 
       //shuffle train data between each epoch
-      std::vector<size_t> indexes(_trainData.rows(), 0);
-      for(size_t i = 0; i < indexes.size(); i++)
-        indexes[i] = i;
-      std::shuffle(indexes.begin(), indexes.end(), _generator);
-
-      Matrix temp = Matrix(_trainData.rows(), _trainData.cols());
-      for(size_t i = 0; i < indexes.size(); i++)
-        temp.row(i) = _trainData.row(indexes[i]);
-      std::swap(_trainData, temp);
-
-      temp.resize(_trainRealResults.rows(), _trainRealResults.cols());
-      for(size_t i = 0; i < indexes.size(); i++)
-        temp.row(i) = _trainRealResults.row(indexes[i]);
-      std::swap(_trainRealResults, temp);
+      shuffleTrainData();
     }
     loadSaved();
     std::cout << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
@@ -375,7 +362,7 @@ protected:
   }
 
 
-  void shuffleData()
+  void shuffleTrainData()
   {
     //shuffle inputs and outputs in the same order
     std::vector<size_t> indexes(_trainData.rows(), 0);
@@ -392,6 +379,12 @@ protected:
     for(size_t i = 0; i < indexes.size(); i++)
       temp.row(i) = _trainRealResults.row(indexes[i]);
     std::swap(_trainRealResults, temp);
+  }
+
+
+  void shuffleData()
+  {
+    shuffleTrainData();
 
     if(_testData.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
       throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
@@ -410,12 +403,12 @@ protected:
     validation = std::round(static_cast<double>(noTrain)*_param.validationRatio/(_param.validationRatio + _param.testRatio));
     test = std::round(static_cast<double>(noTrain)*_param.testRatio/(_param.validationRatio + _param.testRatio));
 
-    _validationData = Matrix::Constant(static_cast<size_t>(validation), _trainData.cols(), 0);
-    _validationRealResults = Matrix::Constant(static_cast<size_t>(validation), _trainRealResults.cols(), 0);
+    _validationData = Matrix(static_cast<size_t>(validation), _trainData.cols());
+    _validationRealResults = Matrix(static_cast<size_t>(validation), _trainRealResults.cols());
     if(_testData.rows() == 0)
     {
-      _testData = Matrix::Constant(static_cast<size_t>(test), _trainData.cols(), 0);
-      _testRealResults = Matrix::Constant(static_cast<size_t>(test), _trainRealResults.cols(), 0);
+      _testData = Matrix(static_cast<size_t>(test), _trainData.cols());
+      _testRealResults = Matrix(static_cast<size_t>(test), _trainRealResults.cols());
     }
 
     for(size_t i = 0; i < static_cast<size_t>(validation); i++)
@@ -583,8 +576,8 @@ protected:
     L2 *= (_param.L2 * 0.5);
 
     //training loss
-    Matrix input = Matrix::Constant(_trainData.rows(), _trainData.cols(), 0);
-    Matrix output = Matrix::Constant(_trainRealResults.rows(), _trainRealResults.cols(), 0);
+    Matrix input(_trainData.rows(), _trainData.cols());
+    Matrix output(_trainRealResults.rows(), _trainRealResults.cols());
     for(size_t i = 0; i < _trainData.rows(); i++)
     {
       input.row(i) = _trainData.row(i);

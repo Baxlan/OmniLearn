@@ -11,7 +11,7 @@ namespace brain
 // the inputs are loss, the output is average loss
 double averageLoss(Matrix const& loss)
 {
-    Vector feature = Vector::Constant(loss.rows(), 0);
+    Vector feature(loss.rows());
     for(size_t i = 0; i < loss.rows(); i++)
     {
         feature[i] = loss.row(i).sum();
