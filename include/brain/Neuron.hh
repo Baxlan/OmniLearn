@@ -68,9 +68,9 @@ public:
         {
             double deviation = std::sqrt(distVal2 / static_cast<double>(nbInputs + (useOutput ? nbOutputs : 0)));
             std::normal_distribution<double> normalDist(distVal1, deviation);
-            for(size_t i = 0; i < _weights.rows(); i++)
+            for(eigen_size_t i = 0; i < _weights.rows(); i++)
             {
-                for(size_t j = 0; j < _weights.cols(); j++)
+                for(eigen_size_t j = 0; j < _weights.cols(); j++)
                 {
                     _weights(i, j) = normalDist(generator);
                 }
@@ -80,9 +80,9 @@ public:
         {
             double boundary = std::sqrt(distVal2 / static_cast<double>(nbInputs + (useOutput ? nbOutputs : 0)));
             std::uniform_real_distribution<double> uniformDist(-boundary, boundary);
-            for(size_t i = 0; i < _weights.rows(); i++)
+            for(eigen_size_t i = 0; i < _weights.rows(); i++)
             {
-                for(size_t j = 0; j < _weights.cols(); j++)
+                for(eigen_size_t j = 0; j < _weights.cols(); j++)
                 {
                     _weights(i, j) = uniformDist(generator);
                 }
@@ -96,7 +96,7 @@ public:
     {
         Vector results = Vector(inputs.rows());
 
-        for(size_t i = 0; i < inputs.rows(); i++)
+        for(eigen_size_t i = 0; i < inputs.rows(); i++)
         {
             results[i] = _activation.activate(_aggregation.aggregate(inputs.row(i), _weights, _bias).first);
         }
@@ -112,9 +112,9 @@ public:
         //dropConnect
         if(dropconnect > std::numeric_limits<double>::epsilon())
         {
-            for(size_t i=0; i<_inputs.rows(); i++)
+            for(eigen_size_t i=0; i<_inputs.rows(); i++)
             {
-                for(size_t j=0; j<_inputs.cols(); j++)
+                for(eigen_size_t j=0; j<_inputs.cols(); j++)
                 {
                     if(dropconnectDist(dropGen))
                         _inputs(i, j) = 0;
@@ -125,7 +125,7 @@ public:
         }
 
         //processing
-        for(size_t i = 0; i < inputs.rows(); i++)
+        for(eigen_size_t i = 0; i < inputs.rows(); i++)
         {
             _aggregResults[i] = _aggregation.aggregate(inputs.row(i), _weights, _bias);
             _actResults[i] = _activation.activate(_aggregResults[i].first);
@@ -144,12 +144,12 @@ public:
         _biasGradients = Vector::Constant(_bias.size(), 0);
 
         std::vector<size_t> setCount(_weights.rows(), 0); //store the amount of feature that passed through each weight set
-        for(size_t feature = 0; feature < _actResults.size(); feature++)
+        for(eigen_size_t feature = 0; feature < _actResults.size(); feature++)
         {
             _actGradients[feature] = _activation.prime(_actResults[feature]) * _inputGradients[feature];
             Vector grad(_aggregation.prime(_inputs.row(feature), _weights.row(_aggregResults[feature].second)));
 
-            for(size_t i = 0; i < grad.size(); i++)
+            for(eigen_size_t i = 0; i < grad.size(); i++)
             {
                 _gradients(_aggregResults[feature].second, i) += (_actGradients[feature]*grad[i]);
                 _biasGradients[_aggregResults[feature].second] += _actGradients[feature];
@@ -159,11 +159,11 @@ public:
         }
 
         //average gradients over features
-        for(size_t i = 0; i < _gradients.rows(); i++)
+        for(eigen_size_t i = 0; i < _gradients.rows(); i++)
         {
             if(setCount[i] != 0)
             {
-                for(size_t j = 0; j < _gradients.cols(); j++)
+                for(eigen_size_t j = 0; j < _gradients.cols(); j++)
                 {
                     _gradients(i, j) /= static_cast<double>(setCount[i]);
                 }
@@ -176,14 +176,14 @@ public:
     void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window)
     {
         double averageInputGrad = 0;
-        for(size_t i = 0; i < _inputGradients.size(); i++)
+        for(eigen_size_t i = 0; i < _inputGradients.size(); i++)
         {
             averageInputGrad += _inputGradients[i];
         }
         averageInputGrad /= static_cast<double>(_inputGradients.size());
 
         double averageActGrad = 0;
-        for(size_t i = 0; i < _actGradients.size(); i++)
+        for(eigen_size_t i = 0; i < _actGradients.size(); i++)
         {
             averageActGrad += _actGradients[i];
         }
@@ -192,9 +192,9 @@ public:
         _activation.learn(averageInputGrad, learningRate); //TAKE OPTIMIZER INTO ACCOUNT
         _aggregation.learn(averageActGrad, learningRate); //TAKE OPTIMIZER INTO ACCOUNT
 
-        for(size_t i = 0; i < _weights.rows(); i++)
+        for(eigen_size_t i = 0; i < _weights.rows(); i++)
         {
-            for(size_t j = 0; j < _weights.cols(); j++)
+            for(eigen_size_t j = 0; j < _weights.cols(); j++)
             {
                 if(opti == Optimizer::None)
                 {
@@ -247,12 +247,12 @@ public:
         //max norm constraint
         if(maxNorm > 0)
         {
-            for(size_t i = 0; i < _weights.rows(); i++)
+            for(eigen_size_t i = 0; i < _weights.rows(); i++)
             {
                 double Norm = norm((rowVector(_weights.cols()+1) << _weights.row(i), _bias[i]).finished());
                 if(Norm > maxNorm)
                 {
-                    for(size_t j=0; j<_weights.cols(); j++)
+                    for(eigen_size_t j=0; j<_weights.cols(); j++)
                     {
                         _weights(i, j) *= (maxNorm/Norm);
                     }

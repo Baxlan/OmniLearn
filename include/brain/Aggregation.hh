@@ -87,7 +87,7 @@ public:
         double a = std::pow(aggregate(inputs, weights, {1, 0}).first, (1-_order));
         Vector result(weights.size());
 
-        for(size_t i = 0; i < weights.size(); i++)
+        for(eigen_size_t i = 0; i < weights.size(); i++)
         {
           result[i] = (-std::pow((inputs[i] - weights[i]), _order-1) * a);
         }
@@ -127,7 +127,7 @@ public:
         //each index represents a weight set
         Vector dots(weights.rows());
 
-        for(size_t i = 0; i < weights.rows(); i++)
+        for(eigen_size_t i = 0; i < weights.rows(); i++)
         {
             dots[i] = inputs.dot(weights.row(i)) + bias[i];
         }

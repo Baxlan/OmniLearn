@@ -16,11 +16,11 @@ std::pair<Matrix, Matrix> L1Loss(Matrix const& real, Matrix const& predicted, Th
     Matrix loss(real.rows(), real.cols());
     Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
-    for(size_t i = 0; i < loss.rows(); i++)
+    for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
         tasks[i] = t.enqueue([&real, &predicted, &loss, &gradients, i]()->void
         {
-            for(size_t j = 0; j < loss.cols(); j++)
+            for(eigen_size_t j = 0; j < loss.cols(); j++)
             {
                 loss(i, j) = std::abs(real(i, j) - predicted(i, j));
                 if (real(i, j) < predicted(i, j))
@@ -46,11 +46,11 @@ std::pair<Matrix, Matrix> L2Loss(Matrix const& real, Matrix const& predicted, Th
     Matrix loss(real.rows(), real.cols());
     Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
-    for(size_t i = 0; i < loss.rows(); i++)
+    for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
         tasks[i] = t.enqueue([&real, &predicted, &loss, &gradients, i]()->void
         {
-            for(size_t j = 0; j < loss.cols(); j++)
+            for(eigen_size_t j = 0; j < loss.cols(); j++)
             {
                 loss(i, j) = 0.5 * std::pow(real(i, j) - predicted(i, j), 2);
                 gradients(i, j) = (real(i, j) - predicted(i, j));
@@ -72,11 +72,11 @@ std::pair<Matrix, Matrix> crossEntropyLoss(Matrix const& real, Matrix const& pre
     Matrix loss(real.rows(), real.cols());
     Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
-    for(size_t i = 0; i < loss.rows(); i++)
+    for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
         tasks[i] = t.enqueue([&real, &predicted, &softMax, &loss, &gradients, i]()->void
         {
-            for(size_t j = 0; j < loss.cols(); j++)
+            for(eigen_size_t j = 0; j < loss.cols(); j++)
             {
                 loss(i, j) = real(i, j) * -std::log(softMax(i, j));
                 gradients(i, j) = real(i, j) - softMax(i, j);
@@ -97,11 +97,11 @@ std::pair<Matrix, Matrix> binaryCrossEntropyLoss(Matrix const& real, Matrix cons
     Matrix loss(real.rows(), real.cols());
     Matrix gradients(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
-    for(size_t i = 0; i < loss.rows(); i++)
+    for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
         tasks[i] = t.enqueue([&real, &predicted, &loss, &gradients, i]()->void
         {
-            for(size_t j = 0; j < loss.cols(); j++)
+            for(eigen_size_t j = 0; j < loss.cols(); j++)
             {
                 loss(i, j) = -(real(i, j) * std::log(predicted(i, j)) + (1 - real(i, j)) * std::log(1 - predicted(i, j)));
                 gradients(i, j) = (real(i, j) - predicted(i, j)) / ( predicted(i, j) * (1 -  predicted(i, j)));

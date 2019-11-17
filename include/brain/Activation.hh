@@ -417,16 +417,16 @@ protected:
 
 Matrix softmax(Matrix inputs)
 {
-    for(size_t i = 0; i < inputs.rows(); i++)
+    for(eigen_size_t i = 0; i < inputs.rows(); i++)
     {
         double c = inputs.row(i).maxCoeff();
         double sum = 0;
         //subtraction for stability
-        for(size_t j = 0; j < inputs.cols(); j++)
+        for(eigen_size_t j = 0; j < inputs.cols(); j++)
         {
             sum += std::exp(inputs(i,j) - c);
         }
-        for(size_t j = 0; j < inputs.cols(); j++)
+        for(eigen_size_t j = 0; j < inputs.cols(); j++)
         {
             inputs(i,j) = std::exp(inputs(i,j) - c) / sum;
         }

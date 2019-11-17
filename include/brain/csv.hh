@@ -91,17 +91,17 @@ Data loadData(std::string const& path, char separator, size_t threads = 1)
   {
     tasks[j] = t.enqueue([j, &content, &data, separator]()->void
     {
-      std::string val = content[j+1]; // do not read the label line
-      for(size_t i = 0; i < data.inputLabels.size(); i++)
+      std::string line = content[j+1]; // do not read the label line
+      for(size_t col = 0; col < data.inputLabels.size(); col++)
       {
-        data.inputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
-        val.erase(0, val.find(separator) + 1);
+        data.inputs(j,col) = (std::stod(line.substr(0, line.find(separator))));
+        line.erase(0, line.find(separator) + 1);
       }
-      val.erase(0, val.find(separator) + 1);
-      for(size_t i = 0; i < data.outputLabels.size(); i++)
+      line.erase(0, line.find(separator) + 1);
+      for(size_t col = 0; col < data.outputLabels.size(); col++)
       {
-        data.outputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
-        val.erase(0, val.find(separator) + 1);
+        data.outputs(j,col) = (std::stod(line.substr(0, line.find(separator))));
+        line.erase(0, line.find(separator) + 1);
       }
     });
   }

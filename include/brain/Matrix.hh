@@ -1,9 +1,10 @@
 #ifndef BRAIN_MATRIX_HH_
 #define BRAIN_MATRIX_HH_
 
-
 #include "eigen/Core"
 #include "eigen/SVD"
+
+#define eigen_size_t long long
 
 namespace brain
 {
@@ -22,7 +23,7 @@ double dev(Vector const& vec)
 double norm(Vector const& vec, double order = 2)
 {
   double norm = 0;
-  for(size_t i = 0; i < vec.size(); i++)
+  for(eigen_size_t i = 0; i < vec.size(); i++)
     norm += std::pow(vec[i], order);
   return std::pow(norm, 1/order);
 }

@@ -99,7 +99,7 @@ public:
         _batchSize = batchSize;
         try
         {
-            for(size_t i = 0; i < size(); i++)
+            for(size_t i = 0; i < _neurons.size(); i++)
             {
                 _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, batchSize, _param.k, generator, _param.useOutput);
             }
@@ -123,7 +123,7 @@ public:
             {
                 //one result per feature (for each neuron)
                 Vector result = _neurons[i].process(inputs);
-                for(size_t j = 0; j < result.size(); j++)
+                for(eigen_size_t j = 0; j < result.size(); j++)
                     output(j, i) = result[j];
             });
         }
@@ -147,7 +147,7 @@ public:
             {
                 //one result per feature (for each neuron)
                 Vector result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
-                for(size_t j = 0; j < result.size(); j++)
+                for(eigen_size_t j = 0; j < result.size(); j++)
                 {
                     output(j, i) = result[j];
                     //dropOut
@@ -216,9 +216,9 @@ public:
             tasks[i] = t.enqueue([this, i, &grad]()->void
             {
                 Matrix neuronGrad = _neurons[i].getGradients();
-                for(size_t j = 0; j < neuronGrad.rows(); j++)
+                for(eigen_size_t j = 0; j < neuronGrad.rows(); j++)
                 {
-                    for(size_t k = 0; k < neuronGrad.cols(); k++)
+                    for(eigen_size_t k = 0; k < neuronGrad.cols(); k++)
                         grad(j, k) += neuronGrad(j, k);
                 }
             });

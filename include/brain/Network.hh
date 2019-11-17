@@ -165,7 +165,7 @@ public:
       _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults.cols(), {0, 1});
     }
 
-    if(_layers[_layers.size()-1]->size() != _trainRealResults.cols())
+    if(static_cast<eigen_size_t>(_layers[_layers.size()-1]->size()) != _trainRealResults.cols())
     {
       throw Exception("The last layer must have as much neurons as outputs.");
     }
@@ -250,9 +250,9 @@ public:
       inputs = softmax(inputs);
     }
     //denormalize outputs
-    for(size_t i = 0; i < inputs.rows(); i++)
+    for(eigen_size_t i = 0; i < inputs.rows(); i++)
     {
-      for(size_t j = 0; j < inputs.cols(); j++)
+      for(eigen_size_t j = 0; j < inputs.cols(); j++)
       {
         inputs(i,j) *= (_outputMinMax[j].second - _outputMinMax[j].first);
         inputs(i,j) += _outputMinMax[j].first;
@@ -295,22 +295,22 @@ public:
         output << _outputLabels[i] << ",";
     }
     output << "\n" << "loss:" << "\n" << loss << "\n";
-    for(size_t i=0; i<_trainLosses.size(); i++)
+    for(eigen_size_t i=0; i<_trainLosses.size(); i++)
     {
         output << _trainLosses[i] << ",";
     }
     output << "\n";
-    for(size_t i=0; i<_validLosses.size(); i++)
+    for(eigen_size_t i=0; i<_validLosses.size(); i++)
     {
         output << _validLosses[i] << ",";
     }
     output << "\n" << "metric:" << "\n" << metric << "\n";
-    for(size_t i=0; i<_testMetric.size(); i++)
+    for(eigen_size_t i=0; i<_testMetric.size(); i++)
     {
         output << _testMetric[i] << ",";
     }
     output << "\n";
-    for(size_t i=0; i<_testSecondMetric.size(); i++)
+    for(eigen_size_t i=0; i<_testSecondMetric.size(); i++)
     {
         output << _testSecondMetric[i] << ",";
     }
@@ -336,12 +336,12 @@ public:
     for(size_t i = 0; i < _outputLabels.size(); i++)
     {
       output << "label: " << _outputLabels[i] << "\n" ;
-      for(size_t j = 0; j < _testRealResults.rows(); j++)
+      for(eigen_size_t j = 0; j < _testRealResults.rows(); j++)
       {
         output << _testRealResults(j,i) << ",";
       }
       output << "\n";
-      for(size_t j = 0; j < testRes.rows(); j++)
+      for(eigen_size_t j = 0; j < testRes.rows(); j++)
       {
         output << testRes(j,i) << ",";
       }
@@ -559,10 +559,10 @@ protected:
       for(size_t j = 0; j < weights[i].size(); j++)
       //for each neuron
       {
-        for(size_t k = 0; k < weights[i][j].first.rows(); k++)
+        for(eigen_size_t k = 0; k < weights[i][j].first.rows(); k++)
         //for each weight set
         {
-          for(size_t l = 0; l < weights[i][j].first.cols(); l++)
+          for(eigen_size_t l = 0; l < weights[i][j].first.cols(); l++)
           //for each weight
           {
             L1 += std::abs(weights[i][j].first(k, l));
@@ -578,7 +578,7 @@ protected:
     //training loss
     Matrix input(_trainData.rows(), _trainData.cols());
     Matrix output(_trainRealResults.rows(), _trainRealResults.cols());
-    for(size_t i = 0; i < _trainData.rows(); i++)
+    for(eigen_size_t i = 0; i < _trainData.rows(); i++)
     {
       input.row(i) = _trainData.row(i);
       output.row(i) = _trainRealResults.row(i);

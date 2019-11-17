@@ -12,7 +12,7 @@ namespace brain
 double averageLoss(Matrix const& loss)
 {
     Vector feature(loss.rows());
-    for(size_t i = 0; i < loss.rows(); i++)
+    for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
         feature[i] = loss.row(i).sum();
     }
@@ -28,9 +28,9 @@ std::pair<double, double> classificationMetrics(Matrix const& real, Matrix const
     double count = 0; // equals real.size() in case of "one label per data"
                       // but is different in case of multi labeled data
 
-    for(size_t i = 0; i < real.rows(); i++)
+    for(eigen_size_t i = 0; i < real.rows(); i++)
     {
-        for(size_t j = 0; j < real.cols(); j++)
+        for(eigen_size_t j = 0; j < real.cols(); j++)
         {
             if(std::abs(real(i, j) - 1) <= std::numeric_limits<double>::epsilon())
             {
@@ -62,9 +62,9 @@ std::pair<double, double> regressionMetrics(Matrix const& real, Matrix const& pr
     Vector mse = Vector::Constant(real.rows(), 0);
 
     //mean absolute error
-    for(size_t i = 0; i < real.rows(); i++)
+    for(eigen_size_t i = 0; i < real.rows(); i++)
     {
-        for(size_t j = 0; j < real.cols(); j++)
+        for(eigen_size_t j = 0; j < real.cols(); j++)
         {
             mae[i] += std::abs(real(i, j) - predicted(i, j));
             mse[i] += std::pow(real(i, j) - predicted(i, j), 2);
