@@ -4,8 +4,8 @@
 
 int main()
 {
-    brain::Data data = brain::loadData("dataset/mnist_train.csv", ',');
-    brain::Data testdata = brain::loadData("dataset/mnist_test.csv", ',');
+    brain::Data data = brain::loadData("dataset/mnist_train.csv", ',', 4);
+    brain::Data testdata = brain::loadData("dataset/mnist_test.csv", ',', 4);
 
     brain::NetworkParam netp;
     netp.threads = 4;

@@ -469,14 +469,14 @@ protected:
       Matrix input(_param.batchSize, _trainData.cols());
       Matrix output(_param.batchSize, _trainRealResults.cols());
 
-      std::vector<std::future<void>> tasks;
+      std::vector<std::future<void>> tasks(_param.batchSize);
       for(size_t i = 0; i < _param.batchSize; i++)
       {
-        tasks.push_back(_pool.enqueue([this, &input, &output, i, batch]()->void
+        tasks[i] = _pool.enqueue([this, &input, &output, i, batch]()->void
         {
           input.row(i) = _trainData.row(batch*_param.batchSize+i);
           output.row(i) = _trainRealResults.row(batch*_param.batchSize+i);
-        }));
+        });
       }
       for(size_t i = 0; i < tasks.size(); i++)
         tasks[i].get();
@@ -486,11 +486,11 @@ protected:
         input = _layers[i]->processToLearn(input, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
       }
 
-      Matrix gradients(computeLossMatrix(output, input).second.transpose());
+      Matrix gradients(computeLossMatrix(output, input).second);
       for(size_t i = 0; i < _layers.size(); i++)
       {
         _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
-        gradients = _layers[_layers.size() - i - 1]->getGradients();
+        gradients = _layers[_layers.size() - i - 1]->getGradients(_pool);
       }
 
       double lr = _param.learningRate;

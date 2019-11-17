@@ -2,7 +2,6 @@
 #define BRAIN_CSV_HH_
 
 #include <fstream>
-#include <algorithm>
 
 #include "Matrix.hh"
 
@@ -46,7 +45,7 @@ struct Data
 //=============================================================================
 
 
-Data loadData(std::string const& path, char separator)
+Data loadData(std::string const& path, char separator, size_t threads = 1)
 {
   std::fstream dataFile(path);
   std::vector<std::string> content;
@@ -85,21 +84,30 @@ Data loadData(std::string const& path, char separator)
   data.inputs  = Matrix(content.size()-1, data.inputLabels.size());
   data.outputs = Matrix(content.size()-1, data.outputLabels.size());
 
+  ThreadPool t(threads);
+  std::vector<std::future<void>> tasks(content.size()-1);
+
   for(size_t j = 0; j < content.size()-1; j++)
   {
-    val = content[j+1]; // do not read the label line
-    for(i = 0; i < data.inputLabels.size(); i++)
+    tasks[j] = t.enqueue([j, &content, &data, separator]()->void
     {
-      data.inputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
+      std::string val = content[j+1]; // do not read the label line
+      for(size_t i = 0; i < data.inputLabels.size(); i++)
+      {
+        data.inputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
+        val.erase(0, val.find(separator) + 1);
+      }
       val.erase(0, val.find(separator) + 1);
-    }
-    val.erase(0, val.find(separator) + 1);
-    for(i = 0; i < data.outputLabels.size(); i++)
-    {
-      data.outputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
-      val.erase(0, val.find(separator) + 1);
-    }
+      for(size_t i = 0; i < data.outputLabels.size(); i++)
+      {
+        data.outputs(j,i) = (std::stod(val.substr(0, val.find(separator))));
+        val.erase(0, val.find(separator) + 1);
+      }
+    });
   }
+  for(i = 0; i < tasks.size(); i++)
+    tasks[i].get();
+
   return data;
 }
 

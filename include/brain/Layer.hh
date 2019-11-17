@@ -57,7 +57,7 @@ public:
     virtual Matrix process(Matrix const& inputs, ThreadPool& t) = 0;
     virtual Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t) = 0;
     virtual void computeGradients(Matrix const& inputGradients, ThreadPool& t) = 0;
-    virtual Matrix getGradients() = 0;
+    virtual Matrix getGradients(ThreadPool& t) = 0;
     virtual size_t size() const = 0;
     virtual void init(size_t nbInputs, size_t nbOutputs, size_t batchSize, std::mt19937& generator) = 0;
     virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t) = 0;
@@ -115,17 +115,17 @@ public:
     {
         //lines are features, columns are neurons
         Matrix output(inputs.rows(), _neurons.size());
-        std::vector<std::future<void>> tasks;
+        std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks.push_back(t.enqueue([this, &inputs, &output, i]()->void
+            tasks[i] = t.enqueue([this, &inputs, &output, i]()->void
             {
                 //one result per feature (for each neuron)
                 Vector result = _neurons[i].process(inputs);
                 for(size_t j = 0; j < result.size(); j++)
                     output(j, i) = result[j];
-            }));
+            });
         }
         for(size_t i = 0; i < tasks.size(); i++)
         {
@@ -139,11 +139,11 @@ public:
     {
         //lines are features, columns are neurons
         Matrix output(_batchSize, _neurons.size());
-        std::vector<std::future<void>> tasks;
+        std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks.push_back(t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
+            tasks[i] = t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
             {
                 //one result per feature (for each neuron)
                 Vector result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
@@ -159,7 +159,7 @@ public:
                             output(j, i) /= (1-dropout);
                     }
                 }
-            }));
+            });
         }
         for(size_t i = 0; i < tasks.size(); i++)
         {
@@ -171,14 +171,14 @@ public:
 
     void computeGradients(Matrix const& inputGradients, ThreadPool& t)
     {
-        std::vector<std::future<void>> tasks;
+        std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks.push_back(t.enqueue([this, &inputGradients, i]()->void
+            tasks[i] = t.enqueue([this, &inputGradients, i]()->void
             {
-                _neurons[i].computeGradients(inputGradients.row(i));
-            }));
+                _neurons[i].computeGradients(inputGradients.col(i));
+            });
         }
         for(size_t i = 0; i < tasks.size(); i++)
         {
@@ -206,34 +206,39 @@ public:
 
 
     //one gradient per input neuron (line) and per feature (col)
-    Matrix getGradients()
+    Matrix getGradients(ThreadPool& t)
     {
-        Matrix grad = Matrix::Constant(_inputSize, _batchSize, 0);
+        Matrix grad = Matrix::Constant(_batchSize, _inputSize, 0);
+        std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            Matrix neuronGrad = _neurons[i].getGradients();
-            for(size_t j = 0; j < neuronGrad.rows(); j++)
+            tasks[i] = t.enqueue([this, i, &grad]()->void
             {
-                for(size_t k = 0; k < neuronGrad.cols(); k++)
-                    grad(k, j) += neuronGrad(j, k);
-            }
+                Matrix neuronGrad = _neurons[i].getGradients();
+                for(size_t j = 0; j < neuronGrad.rows(); j++)
+                {
+                    for(size_t k = 0; k < neuronGrad.cols(); k++)
+                        grad(j, k) += neuronGrad(j, k);
+                }
+            });
         }
-
+        for(size_t i = 0; i < tasks.size(); i++)
+            tasks[i].get();
         return grad;
     }
 
 
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t)
     {
-        std::vector<std::future<void>> tasks;
+        std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks.push_back(t.enqueue([=]()->void
+            tasks[i] = t.enqueue([=]()->void
             {
                 _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window);
-            }));
+            });
         }
         for(size_t i = 0; i < tasks.size(); i++)
         {
@@ -251,14 +256,14 @@ public:
     std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const
     {
         std::vector<std::pair<Matrix, Vector>> weights(size());
-        std::vector<std::future<void>> tasks;
+        std::vector<std::future<void>> tasks(_neurons.size());
 
-        for(size_t i = 0; i < size(); i++)
+        for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks.push_back(t.enqueue([this, &weights, i]()->void
+            tasks[i] = t.enqueue([this, &weights, i]()->void
             {
                 weights[i] = _neurons[i].getWeights();
-            }));
+            });
         }
         for(size_t i = 0; i < tasks.size(); i++)
         {
