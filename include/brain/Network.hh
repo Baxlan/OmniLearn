@@ -15,7 +15,7 @@ namespace brain
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
-enum class Preprocess {Center, Normalize, Standardize, Whiten, PCA};
+enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, PCA};
 enum class Decay {None, Inverse, Exp, Step, Plateau};
 
 //=============================================================================
@@ -123,6 +123,7 @@ public:
   _centerData(),
   _normalizationData(),
   _standardizationData(),
+  _decorrelationData(),
   _whiteningData()
   {
   }
@@ -153,6 +154,8 @@ public:
     shuffleData();
     preprocess();
     initLayers();
+
+    std::cout << _trainData.cols() << "/" << _testRawData.cols()<<"\n";
 
     if(_param.normalizeOutputs)
     {
@@ -230,13 +233,17 @@ public:
       {
         standardize(inputs, _standardizationData);
       }
+      else if(_param.preprocess[i] == Preprocess::Decorrelate)
+      {
+        decorrelate(inputs, _decorrelationData);
+      }
       else if(_param.preprocess[i] == Preprocess::Whiten)
       {
-        whiten(inputs, _whiteningData.first);
+        whiten(inputs, _decorrelationData);
       }
       else if(_param.preprocess[i] == Preprocess::PCA)
       {
-
+        PCA(inputs, _decorrelationData, 0.99);
       }
     }
     //process
@@ -450,13 +457,23 @@ protected:
         standardize(_validationData, _standardizationData);
         standardize(_testData, _standardizationData);
       }
+      else if(_param.preprocess[i] == Preprocess::Decorrelate)
+      {
+        _decorrelationData = decorrelate(_trainData);
+        decorrelate(_validationData, _decorrelationData);
+        decorrelate(_testData, _decorrelationData);
+      }
       else if(_param.preprocess[i] == Preprocess::Whiten)
       {
-
+        whiten(_trainData, _decorrelationData);
+        whiten(_validationData, _decorrelationData);
+        whiten(_testData, _decorrelationData);
       }
       else if(_param.preprocess[i] == Preprocess::PCA)
       {
-
+        PCA(_trainData, _decorrelationData, 0.99);
+        PCA(_validationData, _decorrelationData, 0.99);
+        PCA(_testData, _decorrelationData, 0.99);
       }
     }
   }
@@ -661,6 +678,7 @@ protected:
   Vector _centerData;
   std::vector<std::pair<double, double>> _normalizationData;
   std::vector<std::pair<double, double>> _standardizationData;
+  std::pair<Matrix, Vector> _decorrelationData;
   std::pair<Matrix, Vector> _whiteningData;
 };
 

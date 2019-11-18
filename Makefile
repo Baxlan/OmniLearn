@@ -2,9 +2,10 @@ CXX = g++
 
 RM = rm -rf
 
-CXXFLAGS = -g3 -std=c++17 -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Wfloat-equal -Woverloaded-virtual -Wno-attributes -Wswitch-default -Wl,--no-as-needed -I$(INCDIR)
+CXXFLAGS = -std=c++17 -s -O2 -Os -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Wno-float-equal -Woverloaded-virtual -Wno-attributes -Wswitch-default -Wno-deprecated-declarations -Wl,--no-as-needed -I$(INCDIR)
 
 #-Wconversion -Wsign-conversion -Wold-style-cast
+#-g3 met tous les symbols de débugage
 #-Weffc++
 #-Werror
 #-O2 -Os augmente la vitesse d'execution et la taille de l'exe

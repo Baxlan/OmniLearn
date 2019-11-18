@@ -205,7 +205,7 @@ public:
     }
 
 
-    //one gradient per input neuron (line) and per feature (col)
+    //one gradient per input neuron (col) and per feature (line)
     Matrix getGradients(ThreadPool& t)
     {
         Matrix grad = Matrix::Constant(_batchSize, _inputSize, 0);

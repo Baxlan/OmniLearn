@@ -1,4 +1,6 @@
 
+
+#define BRAIN_ENABLE_SVD
 #include "brain/brain.hh"
 
 
@@ -22,7 +24,7 @@ int main()
     netp.validationRatio = 0.15;
     netp.testRatio = 0.0;
     netp.optimizer = brain::Optimizer::Rmsprop;
-    netp.preprocess = {};
+    netp.preprocess = {brain::Preprocess::Center, brain::Preprocess::Decorrelate, brain::Preprocess::PCA};
     netp.normalizeOutputs = false;
 
     brain::Network net(data, netp);
@@ -30,7 +32,7 @@ int main()
 
     brain::LayerParam lay;
     lay.maxNorm = 5;
-    lay.size = 100;
+    lay.size = 300;
     net.addLayer<brain::Dot, brain::Relu>(lay);
     lay.size = 10;
     net.addLayer<brain::Dot, brain::Linear>(lay);

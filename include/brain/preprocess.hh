@@ -45,10 +45,8 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
     for(eigen_size_t i = 0; i < data.cols(); i++)
     {
       mM[i] = {data.col(i).minCoeff(), data.col(i).maxCoeff()};
-      //if all values of a column are the same, divide by 0.
-      //this in this case, we divide by the data itself to normalize to 1
       if(std::abs(mM[i].second - mM[i].first) < std::numeric_limits<double>::epsilon())
-        mM[i] = {0, data(0, i)};
+        throw Exception("Inputs can't be normalized because some inputs have 0 variance. Try PCA.");
     }
   }
   //normalize
@@ -74,10 +72,8 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     for(eigen_size_t i = 0; i < data.cols(); i++)
     {
       meanDev[i] = {data.col(i).mean(), dev(data.col(i))};
-      //if all values of a column are the same, divide by 0 (dev is 0).
-      //this in this case, we divide by 1
       if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
-        meanDev[i].second = 1;
+        throw Exception("Inputs can't be standardized because some inputs have 0 variance. Try PCA.");
     }
   }
   //standardize
@@ -96,9 +92,57 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 //rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
 //first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<Matrix, Vector> whiten(Matrix& data, Matrix rotation = Matrix(0,0))
+std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> singular = {Matrix(0,0), Vector(0)})
 {
+  if(singular.second.size() == 0)
+  {
+    Matrix cov = (data.transpose() * data) / static_cast<double>(data.rows() - 1);
 
+    //SVD is really time consuming during compilation, so it have to be activated manually
+    #ifndef BRAIN_ENABLE_SVD
+    assert("Whittening or PCA is used but BRAIN_ENABLE_SVD have not been defined.");
+    #else
+    //in U, eigen vectors are columns
+    Eigen::BDCSVD<Matrix> svd(cov, Eigen::ComputeFullU);
+    singular.first = svd.matrixU().transpose();
+    singular.second = svd.singularValues();
+    #endif
+  }
+
+  //apply rotation
+  for(eigen_size_t i = 0; i < data.rows(); i++)
+  {
+    data.row(i) = singular.first * data.row(i).transpose();
+  }
+  return singular;
+}
+
+
+
+void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias = 0)
+{
+  for(eigen_size_t i = 0; i < data.cols(); i++)
+  {
+    data.col(i) = data.col(i) / std::sqrt(singular.second[i]+bias);
+  }
+}
+
+
+
+void PCA(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold)
+{
+  double eigenTot = singular.second.sum();
+  double eigenSum = 0;
+
+  for(eigen_size_t i = 0; i < singular.second.size(); i++)
+  {
+    eigenSum += singular.second[i];
+    if(eigenSum/eigenTot >= threshold)
+    {
+      data = Matrix(data.leftCols(i+1));
+      break;
+    }
+  }
 }
 
 
