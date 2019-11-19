@@ -60,7 +60,7 @@ public:
     virtual Matrix getGradients(ThreadPool& t) = 0;
     virtual size_t size() const = 0;
     virtual void init(size_t nbInputs, size_t nbOutputs, size_t batchSize, std::mt19937& generator) = 0;
-    virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t) = 0;
+    virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const = 0;
@@ -229,7 +229,7 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, ThreadPool& t)
+    void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double optimizerBias, double window, ThreadPool& t)
     {
         std::vector<std::future<void>> tasks(_neurons.size());
 
@@ -237,7 +237,7 @@ public:
         {
             tasks[i] = t.enqueue([=]()->void
             {
-                _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window);
+                _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window, optimizerBias);
             });
         }
         for(size_t i = 0; i < tasks.size(); i++)

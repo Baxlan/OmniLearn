@@ -46,7 +46,7 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
     {
       mM[i] = {data.col(i).minCoeff(), data.col(i).maxCoeff()};
       if(std::abs(mM[i].second - mM[i].first) < std::numeric_limits<double>::epsilon())
-        throw Exception("Inputs can't be normalized because some inputs have 0 variance. Try PCA.");
+        throw Exception("Inputs can't be normalized because some inputs have 0 variance. Try reduction.");
     }
   }
   //normalize
@@ -73,7 +73,7 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     {
       meanDev[i] = {data.col(i).mean(), dev(data.col(i))};
       if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
-        throw Exception("Inputs can't be standardized because some inputs have 0 variance. Try PCA.");
+        throw Exception("Inputs can't be standardized because some inputs have 0 variance. Try reduction.");
     }
   }
   //standardize
@@ -119,8 +119,10 @@ std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> si
 
 
 
-void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias = 0)
+void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias)
 {
+  if(singular.second.size() == 0)
+    throw Exception("Decorrelation must be performed before whitening");
   for(eigen_size_t i = 0; i < data.cols(); i++)
   {
     data.col(i) = data.col(i) / std::sqrt(singular.second[i]+bias);
@@ -129,8 +131,11 @@ void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias
 
 
 
-void PCA(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold)
+void reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold)
 {
+  if(singular.second.size() == 0)
+    throw Exception("Decorrelation must be performed before reduction");
+
   double eigenTot = singular.second.sum();
   double eigenSum = 0;
 

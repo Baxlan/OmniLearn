@@ -15,7 +15,7 @@ namespace brain
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
-enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, PCA};
+enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce};
 enum class Decay {None, Inverse, Exp, Step, Plateau};
 
 //=============================================================================
@@ -52,7 +52,10 @@ struct NetworkParam
     window(0.9),
     plateau(0.99),
     normalizeOutputs(false),
-    preprocess()
+    preprocess(),
+    optimizerBias(1e-4),
+    inputReductionThreshold(0.99),
+    inputWhiteningBias(1e-3)
     {
     }
 
@@ -79,6 +82,9 @@ struct NetworkParam
     double plateau;
     bool normalizeOutputs;
     std::vector<Preprocess> preprocess;
+    double optimizerBias;
+    double inputReductionThreshold;
+    double inputWhiteningBias;
 };
 
 
@@ -239,11 +245,11 @@ public:
       }
       else if(_param.preprocess[i] == Preprocess::Whiten)
       {
-        whiten(inputs, _decorrelationData);
+        whiten(inputs, _decorrelationData, _param.inputWhiteningBias);
       }
-      else if(_param.preprocess[i] == Preprocess::PCA)
+      else if(_param.preprocess[i] == Preprocess::Reduce)
       {
-        PCA(inputs, _decorrelationData, 0.99);
+        reduce(inputs, _decorrelationData, _param.inputReductionThreshold);
       }
     }
     //process
@@ -323,12 +329,23 @@ public:
     }
     if(metric == "classification")
     {
-      output << "\nthreshold:\n";
-      output << _param.classValidity;
+      output << "\nclassification threshold:\n";
+      output << _param.classValidity << "\n";
     }
-    output << "\noptimal epoch:\n";
-    output << _optimalEpoch;
-    output << "\noutput normalization:\n";
+    output << "optimal epoch:\n";
+    output << _optimalEpoch << "\n";
+    output << "input eigenvalues\n";
+    if(_decorrelationData.second.size() == 0)
+    {
+      output << 0;
+    }
+    else
+    {
+      for(eigen_size_t i = 0; i < _decorrelationData.second.size(); i++)
+        output << _decorrelationData.second[i] << ",";
+    }
+    output << "\n" << _param.inputReductionThreshold << "\n";
+    output << "output normalization:\n";
     for(size_t i=0; i<_outputMinMax.size(); i++)
     {
         output << _outputMinMax[i].first << ",";
@@ -465,15 +482,15 @@ protected:
       }
       else if(_param.preprocess[i] == Preprocess::Whiten)
       {
-        whiten(_trainData, _decorrelationData);
-        whiten(_validationData, _decorrelationData);
-        whiten(_testData, _decorrelationData);
+        whiten(_trainData, _decorrelationData, _param.inputWhiteningBias);
+        whiten(_validationData, _decorrelationData, _param.inputWhiteningBias);
+        whiten(_testData, _decorrelationData, _param.inputWhiteningBias);
       }
-      else if(_param.preprocess[i] == Preprocess::PCA)
+      else if(_param.preprocess[i] == Preprocess::Reduce)
       {
-        PCA(_trainData, _decorrelationData, 0.99);
-        PCA(_validationData, _decorrelationData, 0.99);
-        PCA(_testData, _decorrelationData, 0.99);
+        reduce(_trainData, _decorrelationData, _param.inputReductionThreshold);
+        reduce(_validationData, _decorrelationData, _param.inputReductionThreshold);
+        reduce(_testData, _decorrelationData, _param.inputReductionThreshold);
       }
     }
   }
@@ -521,7 +538,7 @@ protected:
 
       for(size_t i = 0; i < _layers.size(); i++)
       {
-        _layers[i]->updateWeights(lr, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _pool);
+        _layers[i]->updateWeights(lr, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _param.optimizerBias, _pool);
       }
     }
   }

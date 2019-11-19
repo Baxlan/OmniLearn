@@ -218,7 +218,7 @@ if metric_t == "regression":
 # CLASSIFICATION PROBLEM
 if metric_t == "classification":
   # get threshold
-  threshold = float(content[content.index("threshold:")+1])
+  threshold = float(content[content.index("classification threshold:")+1])
 
   acc = []
   fp = []

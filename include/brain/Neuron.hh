@@ -173,7 +173,7 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window)
+    void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window, double optimizerBias)
     {
         double averageInputGrad = 0;
         for(eigen_size_t i = 0; i < _inputGradients.size(); i++)
@@ -214,16 +214,16 @@ public:
                     _previousWeightUpdate(i, j) += std::pow(_gradients(i, j), 2);
                     _previousBiasUpdate[i] += std::pow(_biasGradients[i], 2);
 
-                    _weights(i, j) += ((learningRate/std::sqrt(_previousWeightUpdate(i, j) < std::numeric_limits<double>::epsilon() ? 1 : _previousWeightUpdate(i, j)))*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
-                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i] < std::numeric_limits<double>::epsilon() ? 1 : _previousBiasUpdate[i])) * _biasGradients[i];
+                    _weights(i, j) += ((learningRate/(std::sqrt(_previousWeightUpdate(i, j))+ optimizerBias))*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
+                    _bias[i] += (learningRate/(std::sqrt(_previousBiasUpdate[i])+ optimizerBias)) * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Rmsprop)
                 {
                     _previousWeightUpdate(i, j) = window * _previousWeightUpdate(i, j) + (1 - window) * std::pow(_gradients(i, j), 2);
                     _previousBiasUpdate[i] = window * _previousBiasUpdate[i] + (1 - window) * std::pow(_biasGradients[i], 2);
 
-                    _weights(i, j) += ((learningRate/std::sqrt(_previousWeightUpdate(i, j) < std::numeric_limits<double>::epsilon() ? 1 : _previousWeightUpdate(i, j)))*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
-                    _bias[i] += (learningRate/std::sqrt(_previousBiasUpdate[i] < std::numeric_limits<double>::epsilon() ? 1 : _previousBiasUpdate[i])) * _biasGradients[i];
+                    _weights(i, j) += ((learningRate/(std::sqrt(_previousWeightUpdate(i, j))+ optimizerBias))*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
+                    _bias[i] += (learningRate/(std::sqrt(_previousBiasUpdate[i])+ optimizerBias)) * _biasGradients[i];
                 }
                 else if(opti == Optimizer::Adam)
                 {
