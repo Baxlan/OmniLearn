@@ -112,7 +112,7 @@ std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> si
   //apply rotation
   for(eigen_size_t i = 0; i < data.rows(); i++)
   {
-    data.row(i) = singular.first * data.row(i).transpose();
+    data.row(i) = singular.first.transpose() * data.row(i).transpose();
   }
   return singular;
 }

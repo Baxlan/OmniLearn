@@ -52,9 +52,11 @@ struct NetworkParam
     window(0.9),
     plateau(0.99),
     normalizeOutputs(false),
-    preprocess(),
+    preprocessInputs(),
+    preprocessOutputs(),
     optimizerBias(1e-4),
     inputReductionThreshold(0.99),
+    outputReductionThreshold(0.99),
     inputWhiteningBias(1e-3)
     {
     }
@@ -81,9 +83,11 @@ struct NetworkParam
     double window; //window effect on grads
     double plateau;
     bool normalizeOutputs;
-    std::vector<Preprocess> preprocess;
+    std::vector<Preprocess> preprocessInputs;
+    std::vector<Preprocess> preprocessOutputs;
     double optimizerBias;
     double inputReductionThreshold;
+    double outputReductionThreshold;
     double inputWhiteningBias;
 };
 
@@ -116,6 +120,7 @@ public:
   _testData(),
   _testRealResults(),
   _testRawData(),
+  _testRawRealResults(),
   _nbBatch(),
   _epoch(),
   _optimalEpoch(),
@@ -125,7 +130,9 @@ public:
   _testSecondMetric(),
   _inputLabels(data.inputLabels),
   _outputLabels(data.outputLabels),
-  _outputMinMax(),
+  _outputCenter(),
+  _outputNormalization(),
+  _outputDecorrelation(),
   _centerData(),
   _normalizationData(),
   _standardizationData(),
@@ -163,17 +170,6 @@ public:
 
     std::cout << _trainData.cols() << "/" << _testRawData.cols()<<"\n";
 
-    if(_param.normalizeOutputs)
-    {
-      _outputMinMax = normalize(_trainRealResults);
-      normalize(_validationRealResults, _outputMinMax);
-      normalize(_testRealResults, _outputMinMax);
-    }
-    else
-    {
-      _outputMinMax = std::vector<std::pair<double, double>>(_trainRealResults.cols(), {0, 1});
-    }
-
     if(static_cast<eigen_size_t>(_layers[_layers.size()-1]->size()) != _trainRealResults.cols())
     {
       throw Exception("The last layer must have as much neurons as outputs.");
@@ -199,7 +195,7 @@ public:
         if(_epoch - _optimalEpoch > _param.decayDelay)
             _param.learningRate /= _param.decayValue;
 
-      std::cout << "   LR: " << lr << "\n";
+      std::cout << "   LR: " << lr << "   gap from opti: " << 100 * validLoss / lowestLoss << "%   Remain. epochs: " << _optimalEpoch + _param.patience - _epoch + 1<< "\n";
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss) || std::isnan(_testMetric[_epoch]))
         return false;
 
@@ -225,29 +221,29 @@ public:
   Matrix process(Matrix inputs) const
   {
     //preprocess inputs
-    for(size_t i = 0; i < _param.preprocess.size(); i++)
+    for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
     {
-      if(_param.preprocess[i] == Preprocess::Center)
+      if(_param.preprocessInputs[i] == Preprocess::Center)
       {
         center(inputs, _centerData);
       }
-      else if(_param.preprocess[i] == Preprocess::Normalize)
+      else if(_param.preprocessInputs[i] == Preprocess::Normalize)
       {
         normalize(inputs, _normalizationData);
       }
-      else if(_param.preprocess[i] == Preprocess::Standardize)
+      else if(_param.preprocessInputs[i] == Preprocess::Standardize)
       {
         standardize(inputs, _standardizationData);
       }
-      else if(_param.preprocess[i] == Preprocess::Decorrelate)
+      else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
       {
         decorrelate(inputs, _decorrelationData);
       }
-      else if(_param.preprocess[i] == Preprocess::Whiten)
+      else if(_param.preprocessInputs[i] == Preprocess::Whiten)
       {
         whiten(inputs, _decorrelationData, _param.inputWhiteningBias);
       }
-      else if(_param.preprocess[i] == Preprocess::Reduce)
+      else if(_param.preprocessInputs[i] == Preprocess::Reduce)
       {
         reduce(inputs, _decorrelationData, _param.inputReductionThreshold);
       }
@@ -262,13 +258,46 @@ public:
     {
       inputs = softmax(inputs);
     }
-    //denormalize outputs
-    for(eigen_size_t i = 0; i < inputs.rows(); i++)
+    //transform computed outputs into real values
+    for(size_t pre = 0; pre < _param.preprocessOutputs.size(); pre++)
     {
-      for(eigen_size_t j = 0; j < inputs.cols(); j++)
+      if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
       {
-        inputs(i,j) *= (_outputMinMax[j].second - _outputMinMax[j].first);
-        inputs(i,j) += _outputMinMax[j].first;
+        for(eigen_size_t i = 0; i < inputs.rows(); i++)
+        {
+          for(eigen_size_t j = 0; j < inputs.cols(); j++)
+          {
+            inputs(i,j) *= (_outputNormalization[j].second - _outputNormalization[j].first);
+            inputs(i,j) += _outputNormalization[j].first;
+          }
+        }
+      }
+      else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
+      {
+        Matrix newResults(inputs.rows(), _outputDecorrelation.second.size());
+        Vector zero = Vector::Constant(_outputDecorrelation.second.size() - _outputDecorrelation.second.size(), 0);
+        for(eigen_size_t i = 0; i < inputs.rows(); i++)
+        {
+          newResults.row(i) = (Vector(_outputDecorrelation.second.size()) << inputs.row(i), zero).finished();
+        }
+        inputs = newResults;
+      }
+      else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+      {
+        for(eigen_size_t i = 0; i < inputs.rows(); i++)
+        {
+          inputs.row(i) = _outputDecorrelation.first * inputs.row(i).transpose();
+        }
+      }
+      else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Center)
+      {
+        for(eigen_size_t i = 0; i < inputs.rows(); i++)
+        {
+          for(eigen_size_t j = 0; j < inputs.cols(); j++)
+          {
+            inputs(i,j) += _outputCenter[j];
+          }
+        }
       }
     }
     return inputs;
@@ -346,23 +375,23 @@ public:
     }
     output << "\n" << _param.inputReductionThreshold << "\n";
     output << "output normalization:\n";
-    for(size_t i=0; i<_outputMinMax.size(); i++)
+    for(size_t i=0; i<_outputNormalization.size(); i++)
     {
-        output << _outputMinMax[i].first << ",";
+        output << _outputNormalization[i].first << ",";
     }
     output << "\n";
-    for(size_t i=0; i<_outputMinMax.size(); i++)
+    for(size_t i=0; i<_outputNormalization.size(); i++)
     {
-        output << _outputMinMax[i].second << ",";
+        output << _outputNormalization[i].second << ",";
     }
     Matrix testRes(process(_testRawData));
     output << "\nexpected and predicted values:\n";
     for(size_t i = 0; i < _outputLabels.size(); i++)
     {
       output << "label: " << _outputLabels[i] << "\n" ;
-      for(eigen_size_t j = 0; j < _testRealResults.rows(); j++)
+      for(eigen_size_t j = 0; j < _testRawRealResults.rows(); j++)
       {
-        output << _testRealResults(j,i) << ",";
+        output << _testRawRealResults(j,i) << ",";
       }
       output << "\n";
       for(eigen_size_t j = 0; j < testRes.rows(); j++)
@@ -445,6 +474,7 @@ protected:
       _testData.row(i) = _trainData.row(_trainData.rows()-1-i);
       _testRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
       _testRawData.row(i) = _trainData.row(_trainData.rows()-1-i);
+      _testRawRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
     }
     _trainData = Matrix(_trainData.topRows(_trainData.rows() - validation - test));
     _trainRealResults = Matrix(_trainRealResults.topRows(_trainRealResults.rows() - validation - test));
@@ -454,43 +484,70 @@ protected:
 
   void preprocess()
   {
-    for(size_t i = 0; i < _param.preprocess.size(); i++)
+    for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
     {
-      if(_param.preprocess[i] == Preprocess::Center)
+      if(_param.preprocessInputs[i] == Preprocess::Center)
       {
         _centerData = center(_trainData);
         center(_validationData, _centerData);
         center(_testData, _centerData);
       }
-      else if(_param.preprocess[i] == Preprocess::Normalize)
+      else if(_param.preprocessInputs[i] == Preprocess::Normalize)
       {
         _normalizationData = normalize(_trainData);
         normalize(_validationData, _normalizationData);
         normalize(_testData, _normalizationData);
       }
-      else if(_param.preprocess[i] == Preprocess::Standardize)
+      else if(_param.preprocessInputs[i] == Preprocess::Standardize)
       {
         _standardizationData = standardize(_trainData);
         standardize(_validationData, _standardizationData);
         standardize(_testData, _standardizationData);
       }
-      else if(_param.preprocess[i] == Preprocess::Decorrelate)
+      else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
       {
         _decorrelationData = decorrelate(_trainData);
         decorrelate(_validationData, _decorrelationData);
         decorrelate(_testData, _decorrelationData);
       }
-      else if(_param.preprocess[i] == Preprocess::Whiten)
+      else if(_param.preprocessInputs[i] == Preprocess::Whiten)
       {
         whiten(_trainData, _decorrelationData, _param.inputWhiteningBias);
         whiten(_validationData, _decorrelationData, _param.inputWhiteningBias);
         whiten(_testData, _decorrelationData, _param.inputWhiteningBias);
       }
-      else if(_param.preprocess[i] == Preprocess::Reduce)
+      else if(_param.preprocessInputs[i] == Preprocess::Reduce)
       {
         reduce(_trainData, _decorrelationData, _param.inputReductionThreshold);
         reduce(_validationData, _decorrelationData, _param.inputReductionThreshold);
         reduce(_testData, _decorrelationData, _param.inputReductionThreshold);
+      }
+    }
+    for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
+    {
+      if(_param.preprocessOutputs[i] == Preprocess::Center)
+      {
+        _outputCenter = center(_trainRealResults);
+        center(_validationRealResults, _outputCenter);
+        center(_testRealResults, _outputCenter);
+      }
+      else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
+      {
+        _outputDecorrelation = decorrelate(_trainRealResults);
+        decorrelate(_validationRealResults, _outputDecorrelation);
+        decorrelate(_testRealResults, _outputDecorrelation);
+      }
+      else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
+      {
+        reduce(_trainRealResults, _outputDecorrelation, _param.outputReductionThreshold);
+        reduce(_validationRealResults, _outputDecorrelation, _param.outputReductionThreshold);
+        reduce(_testRealResults, _outputDecorrelation, _param.outputReductionThreshold);
+      }
+      else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
+      {
+        _outputNormalization = normalize(_trainRealResults);
+        normalize(_validationRealResults, _outputNormalization);
+        normalize(_testRealResults, _outputNormalization);
       }
     }
   }
@@ -661,17 +718,22 @@ protected:
 
 
 protected:
+  //parameters
   NetworkParam _param;
 
+  //random generators
   size_t _seed;
   std::mt19937 _generator;
   std::bernoulli_distribution _dropoutDist;
   std::bernoulli_distribution _dropconnectDist;
 
+  //layers of neurons
   std::vector<std::shared_ptr<ILayer>> _layers;
 
+  //threadpool for parallelization
   mutable ThreadPool _pool;
 
+  //data
   Matrix _trainData;
   Matrix _trainRealResults;
   Matrix _validationData;
@@ -679,8 +741,10 @@ protected:
   Matrix _testData;
   Matrix _testRealResults;
   Matrix _testRawData;
-  size_t _nbBatch;
+  Matrix _testRawRealResults;
 
+  //learning infos
+  size_t _nbBatch;
   size_t _epoch;
   size_t _optimalEpoch;
   Vector _trainLosses;
@@ -688,10 +752,16 @@ protected:
   Vector _testMetric;
   Vector _testSecondMetric;
 
+  //labels
   std::vector<std::string> _inputLabels;
   std::vector<std::string> _outputLabels;
-  std::vector<std::pair<double, double>> _outputMinMax;
 
+  //output preprocessing
+  Vector _outputCenter;
+  std::vector<std::pair<double, double>> _outputNormalization;
+  std::pair<Matrix, Vector> _outputDecorrelation;
+
+  //input preprocessing
   Vector _centerData;
   std::vector<std::pair<double, double>> _normalizationData;
   std::vector<std::pair<double, double>> _standardizationData;

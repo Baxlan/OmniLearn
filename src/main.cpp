@@ -24,8 +24,8 @@ int main()
     netp.validationRatio = 0.15;
     netp.testRatio = 0.0;
     netp.optimizer = brain::Optimizer::Rmsprop;
-    netp.preprocess = {brain::Preprocess::Center, brain::Preprocess::Decorrelate, brain::Preprocess::Reduce};
-    netp.normalizeOutputs = false;
+    netp.preprocessInputs = {brain::Preprocess::Center, brain::Preprocess::Decorrelate, brain::Preprocess::Reduce};
+    //netp.preprocessOutputs = {brain::Preprocess::Normalize};
     netp.optimizerBias = 1e-5;
 
     brain::Network net(data, netp);
