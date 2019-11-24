@@ -168,14 +168,11 @@ public:
   {
     shuffleData();
     preprocess();
+    _layers[_layers.size()-1]->resize(static_cast<size_t>(_trainRealResults.cols()));
     initLayers();
 
-    std::cout << _trainData.cols() << "/" << _testRawData.cols()<<"\n";
-
-    if(static_cast<eigen_size_t>(_layers[_layers.size()-1]->size()) != _trainRealResults.cols())
-    {
-      throw Exception("The last layer must have as much neurons as outputs.");
-    }
+    std::cout << "inputs: " << _trainData.cols() << "/" << _testRawData.cols()<<"\n";
+    std::cout << "outputs: " << _trainRealResults.cols() << "/" << _testRawRealResults.cols()<<"\n";
 
     double lowestLoss = computeLoss();
     std::cout << "\n";
@@ -277,10 +274,10 @@ public:
       else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
       {
         Matrix newResults(inputs.rows(), _outputDecorrelation.second.size());
-        Vector zero = Vector::Constant(_outputDecorrelation.second.size() - _outputDecorrelation.second.size(), 0);
+        rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - inputs.cols(), 0);
         for(eigen_size_t i = 0; i < inputs.rows(); i++)
         {
-          newResults.row(i) = (Vector(_outputDecorrelation.second.size()) << inputs.row(i), zero).finished();
+          newResults.row(i) = (rowVector(_outputDecorrelation.second.size()) << inputs.row(i), zero).finished();
         }
         inputs = newResults;
       }
@@ -393,11 +390,9 @@ public:
     {
       for(size_t i=0; i<_outputNormalization.size(); i++)
           output << _outputNormalization[i].first << ",";
-    }
-    output << "\n";
-    for(size_t i=0; i<_outputNormalization.size(); i++)
-    {
-        output << _outputNormalization[i].second << ",";
+      output << "\n";
+      for(size_t i=0; i<_outputNormalization.size(); i++)
+          output << _outputNormalization[i].second << ",";
     }
     Matrix testRes(process(_testRawData));
     output << "\nexpected and predicted values:\n";
@@ -405,14 +400,10 @@ public:
     {
       output << "label: " << _outputLabels[i] << "\n" ;
       for(eigen_size_t j = 0; j < _testRawRealResults.rows(); j++)
-      {
         output << _testRawRealResults(j,i) << ",";
-      }
       output << "\n";
       for(eigen_size_t j = 0; j < testRes.rows(); j++)
-      {
         output << testRes(j,i) << ",";
-      }
       output << "\n";
     }
   }
@@ -424,7 +415,7 @@ protected:
     for(size_t i = 0; i < _layers.size(); i++)
     {
         _layers[i]->init((i == 0 ? _trainData.cols() : _layers[i-1]->size()),
-                        (i == _layers.size()-1 ? _trainRealResults.cols() : _layers[i+1]->size()),
+                        (i == _layers.size()-1 ? 0 : _layers[i+1]->size()),
                         _param.batchSize, _generator);
     }
   }
@@ -498,70 +489,115 @@ protected:
 
   void preprocess()
   {
+    bool centered = false;
+    bool normalized = false;
+    bool standardized = false;
+    bool decorrelated = false;
+    bool whitened = false;
+    bool reduced = false;
+
     for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
     {
       if(_param.preprocessInputs[i] == Preprocess::Center)
       {
+        if(centered == true)
+          throw Exception("Inputs are centered multiple times.");
         _centerData = center(_trainData);
         center(_validationData, _centerData);
         center(_testData, _centerData);
+        centered = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Normalize)
       {
+        if(normalized == true)
+          throw Exception("Inputs are normalized multiple times.");
         _normalizationData = normalize(_trainData);
         normalize(_validationData, _normalizationData);
         normalize(_testData, _normalizationData);
+        normalized = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Standardize)
       {
+        if(standardized == true)
+          throw Exception("Inputs are standardized multiple times.");
         _standardizationData = standardize(_trainData);
         standardize(_validationData, _standardizationData);
         standardize(_testData, _standardizationData);
+        standardized = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
       {
+        if(decorrelated == true)
+          throw Exception("Inputs are decorrelated multiple times.");
         _decorrelationData = decorrelate(_trainData);
         decorrelate(_validationData, _decorrelationData);
         decorrelate(_testData, _decorrelationData);
+        decorrelated = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Whiten)
       {
+        if(whitened == true)
+          throw Exception("Inputs are whitened multiple times.");
         whiten(_trainData, _decorrelationData, _param.inputWhiteningBias);
         whiten(_validationData, _decorrelationData, _param.inputWhiteningBias);
         whiten(_testData, _decorrelationData, _param.inputWhiteningBias);
+        whitened = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Reduce)
       {
+        if(reduced == true)
+          throw Exception("Inputs are reduced multiple times.");
         reduce(_trainData, _decorrelationData, _param.inputReductionThreshold);
         reduce(_validationData, _decorrelationData, _param.inputReductionThreshold);
         reduce(_testData, _decorrelationData, _param.inputReductionThreshold);
+        reduced = true;
       }
     }
+
+    centered = false;
+    normalized = false;
+    standardized = false;
+    decorrelated = false;
+    whitened = false;
+    reduced = false;
+
     for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
     {
       if(_param.preprocessOutputs[i] == Preprocess::Center)
       {
+        if(centered == true)
+          throw Exception("Outputs are centered multiple times.");
         _outputCenter = center(_trainRealResults);
         center(_validationRealResults, _outputCenter);
         center(_testRealResults, _outputCenter);
+        centered = true;
       }
       else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
       {
+        if(decorrelated == true)
+          throw Exception("Outputs are decorrelated multiple times.");
         _outputDecorrelation = decorrelate(_trainRealResults);
         decorrelate(_validationRealResults, _outputDecorrelation);
         decorrelate(_testRealResults, _outputDecorrelation);
+        decorrelated = true;
       }
       else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
       {
+        if(reduced == true)
+          throw Exception("Outputs are reduced multiple times.");
         reduce(_trainRealResults, _outputDecorrelation, _param.outputReductionThreshold);
         reduce(_validationRealResults, _outputDecorrelation, _param.outputReductionThreshold);
         reduce(_testRealResults, _outputDecorrelation, _param.outputReductionThreshold);
+        reduced = true;
       }
       else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
       {
+        if(normalized == true)
+          throw Exception("Outputs are normalized multiple times.");
         _outputNormalization = normalize(_trainRealResults);
         normalize(_validationRealResults, _outputNormalization);
         normalize(_testRealResults, _outputNormalization);
+        normalized = true;
       }
     }
   }
@@ -696,9 +732,9 @@ protected:
     //test metric
     std::pair<double, double> testMetric;
     if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-      testMetric = regressionMetrics(_testRealResults, processForLoss(_testData));
+      testMetric = regressionMetrics(_testRawRealResults, process(_testRawData));
     else
-      testMetric = classificationMetrics(_testRealResults, processForLoss(_testData), _param.classValidity);
+      testMetric = classificationMetrics(_testRawRealResults, process(_testRawData), _param.classValidity);
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
     _trainLosses.conservativeResize(_trainLosses.size() + 1);

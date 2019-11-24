@@ -64,6 +64,7 @@ public:
     virtual void save() = 0;
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const = 0;
+    virtual void resize(size_t neurons);
 };
 
 
@@ -272,6 +273,10 @@ public:
          return weights;
     }
 
+    void resize(size_t neurons)
+    {
+        _neurons = std::vector<Neuron<Aggr_t, Act_t>>(neurons);
+    }
 
 protected:
 

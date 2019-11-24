@@ -46,7 +46,7 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
     {
       mM[i] = {data.col(i).minCoeff(), data.col(i).maxCoeff()};
       if(std::abs(mM[i].second - mM[i].first) < std::numeric_limits<double>::epsilon())
-        throw Exception("Inputs can't be normalized because some inputs have 0 variance. Try reduction.");
+        throw Exception("Normalization can't be performed because some values have 0 variance. Try reduction.");
     }
   }
   //normalize
@@ -73,7 +73,7 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
     {
       meanDev[i] = {data.col(i).mean(), dev(data.col(i))};
       if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
-        throw Exception("Inputs can't be standardized because some inputs have 0 variance. Try reduction.");
+        throw Exception("Standardization can't be performed because some inputs have 0 variance. Try reduction.");
     }
   }
   //standardize

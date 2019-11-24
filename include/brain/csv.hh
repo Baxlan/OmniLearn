@@ -63,6 +63,9 @@ Data loadData(std::string const& path, char separator, size_t threads = 1)
 
   //extract inputs labels
   std::string val;
+  if (content[0].find(separator) == std::string::npos)
+    throw Exception("Wrong separator used to read csv.");
+
   for(i = 0; i < elements; i++)
   {
     val = content[0].substr(0, content[0].find(separator));
