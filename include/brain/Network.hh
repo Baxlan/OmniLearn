@@ -158,7 +158,9 @@ public:
   {
     _testData = data.inputs;
     _testRealResults = data.outputs;
-    _testRawData = data.inputs;
+    //_testRawData = data.inputs;
+    //_testRawRealResults = data.outputs;
+    //not needed because they are set un the shuffle function
   }
 
 
@@ -333,29 +335,19 @@ public:
     std::ofstream output(path);
     output << "output labels:\n";
     for(size_t i=0; i<_outputLabels.size(); i++)
-    {
         output << _outputLabels[i] << ",";
-    }
     output << "\n" << "loss:" << "\n" << loss << "\n";
     for(eigen_size_t i=0; i<_trainLosses.size(); i++)
-    {
         output << _trainLosses[i] << ",";
-    }
     output << "\n";
     for(eigen_size_t i=0; i<_validLosses.size(); i++)
-    {
         output << _validLosses[i] << ",";
-    }
     output << "\n" << "metric:" << "\n" << metric << "\n";
     for(eigen_size_t i=0; i<_testMetric.size(); i++)
-    {
         output << _testMetric[i] << ",";
-    }
     output << "\n";
     for(eigen_size_t i=0; i<_testSecondMetric.size(); i++)
-    {
         output << _testSecondMetric[i] << ",";
-    }
     if(metric == "classification")
     {
       output << "\nclassification threshold:\n";
@@ -365,19 +357,42 @@ public:
     output << _optimalEpoch << "\n";
     output << "input eigenvalues\n";
     if(_decorrelationData.second.size() == 0)
-    {
       output << 0;
-    }
     else
-    {
       for(eigen_size_t i = 0; i < _decorrelationData.second.size(); i++)
         output << _decorrelationData.second[i] << ",";
-    }
     output << "\n" << _param.inputReductionThreshold << "\n";
-    output << "output normalization:\n";
-    for(size_t i=0; i<_outputNormalization.size(); i++)
+    output << "output eigenvalues\n";
+    if(_outputDecorrelation.second.size() == 0)
+      output << 0;
+    else
+      for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
+        output << _outputDecorrelation.second[i] << ",";
+    output << "\n" << _param.outputReductionThreshold << "\n";
+
+    output << "output eigenvectors\n";
+    for(eigen_size_t i = 0; i < _outputDecorrelation.first.cols(); i++)
     {
-        output << _outputNormalization[i].first << ",";
+      for(eigen_size_t j = 0; j < _outputDecorrelation.first.rows(); j++)
+        output << _outputDecorrelation.first(j, i) << ",";
+      output << "\n";
+    }
+    output << "output center:\n";
+    if(_outputCenter.size() == 0)
+      output << 0;
+    else
+    {
+      for(size_t i=0; i<_outputCenter.size(); i++)
+          output << _outputCenter[i] << ",";
+    }
+    output << "\n";
+    output << "output normalization:\n";
+    if(_outputNormalization.size() == 0)
+      output << 0;
+    else
+    {
+      for(size_t i=0; i<_outputNormalization.size(); i++)
+          output << _outputNormalization[i].first << ",";
     }
     output << "\n";
     for(size_t i=0; i<_outputNormalization.size(); i++)
@@ -463,19 +478,18 @@ protected:
       _testData = Matrix(static_cast<size_t>(test), _trainData.cols());
       _testRealResults = Matrix(static_cast<size_t>(test), _trainRealResults.cols());
     }
-
     for(size_t i = 0; i < static_cast<size_t>(validation); i++)
     {
       _validationData.row(i) = _trainData.row(_trainData.rows()-1-i);
       _validationRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
     }
-    for(size_t i = validation; i < static_cast<size_t>(test) + static_cast<size_t>(validation); i++)
+    for(size_t i = 0; i < static_cast<size_t>(test); i++)
     {
-      _testData.row(i) = _trainData.row(_trainData.rows()-1-i);
-      _testRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
-      _testRawData.row(i) = _trainData.row(_trainData.rows()-1-i);
-      _testRawRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
+      _testData.row(i) = _trainData.row(_trainData.rows()-1-i-static_cast<size_t>(validation));
+      _testRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i-static_cast<size_t>(validation));
     }
+    _testRawData = _testData;
+    _testRawRealResults = _testRealResults;
     _trainData = Matrix(_trainData.topRows(_trainData.rows() - validation - test));
     _trainRealResults = Matrix(_trainRealResults.topRows(_trainRealResults.rows() - validation - test));
     _nbBatch = static_cast<size_t>(nbBatch);

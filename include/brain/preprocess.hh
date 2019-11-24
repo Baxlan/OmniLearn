@@ -104,7 +104,7 @@ std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> si
     #else
     //in U, eigen vectors are columns
     Eigen::BDCSVD<Matrix> svd(cov, Eigen::ComputeFullU);
-    singular.first = svd.matrixU().transpose();
+    singular.first = svd.matrixU();
     singular.second = svd.singularValues();
     #endif
   }
