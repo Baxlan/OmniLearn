@@ -173,7 +173,7 @@ public:
     //temp has to be temporary
     {
       Matrix temp = _testOutputs;
-      _metricNormalization = normalize(_testOutputs);
+      _metricNormalization = normalize(temp);
     }
 
     std::cout << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
@@ -311,28 +311,14 @@ public:
   void writeInfo(std::string const& path) const
   {
     std::string loss;
-    std::string metric;
-
     if(_param.loss == Loss::BinaryCrossEntropy)
-    {
       loss = "binary cross entropy";
-      metric = "classification";
-    }
     else if(_param.loss == Loss::CrossEntropy)
-    {
       loss = "cross entropy";
-      metric = "classification";
-    }
     else if(_param.loss == Loss::L1)
-    {
       loss = "mae";
-      metric = "regression";
-    }
     else if(_param.loss == Loss::L2)
-    {
       loss = "mse";
-      metric = "regression";
-    }
 
     std::ofstream output(path);
     output << "output labels:\n";
@@ -344,13 +330,13 @@ public:
     output << "\n";
     for(eigen_size_t i=0; i<_validLosses.size(); i++)
         output << _validLosses[i] << ",";
-    output << "\n" << "metric:" << "\n" << metric << "\n";
+    output << "\n" << "metric:" << "\n";
     for(eigen_size_t i=0; i<_testMetric.size(); i++)
         output << _testMetric[i] << ",";
     output << "\n";
     for(eigen_size_t i=0; i<_testSecondMetric.size(); i++)
         output << _testSecondMetric[i] << ",";
-    if(metric == "classification")
+    if(loss == "binary cross entropy" || loss == "cross entropy")
     {
       output << "\nclassification threshold:\n";
       output << _param.classValidity;
@@ -364,15 +350,14 @@ public:
       for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
         output << _inputDecorrelation.second[i] << ",";
     output << "\n" << _param.inputReductionThreshold << "\n";
-    output << "output eigenvalues\n";
+    output << "output eigenvalues:\n";
     if(_outputDecorrelation.second.size() == 0)
       output << 0;
     else
       for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
         output << _outputDecorrelation.second[i] << ",";
     output << "\n" << _param.outputReductionThreshold << "\n";
-
-    output << "output eigenvectors\n";
+    output << "output eigenvectors:\n";
     Matrix vectors = _outputDecorrelation.first.transpose();
     for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
     {
@@ -384,10 +369,8 @@ public:
     if(_outputCenter.size() == 0)
       output << 0;
     else
-    {
       for(eigen_size_t i=0; i<_outputCenter.size(); i++)
           output << _outputCenter[i] << ",";
-    }
     output << "\n";
     output << "output normalization:\n";
     if(_outputNormalization.size() == 0)

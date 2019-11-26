@@ -45,13 +45,13 @@ if metric_t == "classification":
   metricLabel2 = "false prediction rate"
 
 # get metric mae or accuracy
-mae_acc = content[content.index("metric:")+2][:-1].split(',')
+mae_acc = content[content.index("metric:")+1][:-1].split(',')
 for i in range(0, len(mae_acc)):
     mae_acc[i] = float(mae_acc[i])
 lns3 = ax2.plot(range(0, len(mae_acc)), mae_acc, label = metricLabel1, color = "green")
 
 # get mse or false prediction rate
-mse_fp = content[content.index("metric:")+3][:-1].split(',')
+mse_fp = content[content.index("metric:")+2][:-1].split(',')
 for i in range(0, len(mse_fp)):
     mse_fp[i] = float(mse_fp[i])
 lns4 = ax2.plot(range(0, len(mse_fp)), mse_fp, label = metricLabel2, color = "red")
