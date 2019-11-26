@@ -230,7 +230,7 @@ public:
     }
 
 
-    void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double optimizerBias, double window, ThreadPool& t)
+    void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t)
     {
         std::vector<std::future<void>> tasks(_neurons.size());
 

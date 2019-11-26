@@ -25,6 +25,7 @@ for lab in outLabels:
   floats = [float(val) for val in content[content.index("label: " + lab)+2][:-1].split(",")]
   predicted.append(np.array(floats))
 
+"""
 # get min output normalization
 min = content[content.index("output normalization:")+1][:-1].split(",")
 for i in range(0, len(min)):
@@ -39,6 +40,7 @@ for i in range(0, len(max)):
 for lab in range(len(outLabels)):
   expected[lab] = [(expected[lab][i] * (max[lab] - min[lab])) + min[lab] for i in range(0, len(expected[lab]))]
   #predicted[lab] = [(predicted[lab][i] - min[lab]) / (max[lab] - min[lab])  for i in range(0, len(predicted[lab]))]
+"""
 
 # get metric type
 metric_t = content[content.index("metric:")+1]

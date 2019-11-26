@@ -54,10 +54,10 @@ struct NetworkParam
     normalizeOutputs(false),
     preprocessInputs(),
     preprocessOutputs(),
-    optimizerBias(1e-4),
+    optimizerBias(1e-5),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
-    inputWhiteningBias(1e-3)
+    inputWhiteningBias(1e-5)
     {
     }
 
@@ -113,14 +113,14 @@ public:
   _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
   _layers(),
   _pool(param.threads),
-  _trainData(data.inputs),
-  _trainRealResults(data.outputs),
-  _validationData(),
-  _validationRealResults(),
-  _testData(),
-  _testRealResults(),
-  _testRawData(),
-  _testRawRealResults(),
+  _trainInputs(data.inputs),
+  _trainOutputs(data.outputs),
+  _validationInputs(),
+  _validationOutputs(),
+  _testInputs(),
+  _testOutputs(),
+  _testRawInputs(),
+  _testRawOutputs(),
   _nbBatch(),
   _epoch(),
   _optimalEpoch(),
@@ -133,11 +133,10 @@ public:
   _outputCenter(),
   _outputNormalization(),
   _outputDecorrelation(),
-  _centerData(),
-  _normalizationData(),
-  _standardizationData(),
-  _decorrelationData(),
-  _whiteningData()
+  _inputCenter(),
+  _inputNormalization(),
+  _inputStandartization(),
+  _inputDecorrelation()
   {
   }
 
@@ -156,10 +155,10 @@ public:
 
   void setTestData(Data const& data)
   {
-    _testData = data.inputs;
-    _testRealResults = data.outputs;
-    //_testRawData = data.inputs;
-    //_testRawRealResults = data.outputs;
+    _testInputs = data.inputs;
+    _testOutputs = data.outputs;
+    //_testRawInputs = data.inputs;
+    //_testRawOutputs = data.outputs;
     //not needed because they are set un the shuffle function
   }
 
@@ -168,11 +167,17 @@ public:
   {
     shuffleData();
     preprocess();
-    _layers[_layers.size()-1]->resize(static_cast<size_t>(_trainRealResults.cols()));
+    _layers[_layers.size()-1]->resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
 
-    std::cout << "inputs: " << _trainData.cols() << "/" << _testRawData.cols()<<"\n";
-    std::cout << "outputs: " << _trainRealResults.cols() << "/" << _testRawRealResults.cols()<<"\n";
+    //temp has to be temporary
+    {
+      Matrix temp = _testOutputs;
+      _metricNormalization = normalize(_testOutputs);
+    }
+
+    std::cout << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
+    std::cout << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
 
     double lowestLoss = computeLoss();
     std::cout << "\n";
@@ -224,27 +229,27 @@ public:
     {
       if(_param.preprocessInputs[i] == Preprocess::Center)
       {
-        center(inputs, _centerData);
+        center(inputs, _inputCenter);
       }
       else if(_param.preprocessInputs[i] == Preprocess::Normalize)
       {
-        normalize(inputs, _normalizationData);
+        normalize(inputs, _inputNormalization);
       }
       else if(_param.preprocessInputs[i] == Preprocess::Standardize)
       {
-        standardize(inputs, _standardizationData);
+        standardize(inputs, _inputStandartization);
       }
       else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
       {
-        decorrelate(inputs, _decorrelationData);
+        decorrelate(inputs, _inputDecorrelation);
       }
       else if(_param.preprocessInputs[i] == Preprocess::Whiten)
       {
-        whiten(inputs, _decorrelationData, _param.inputWhiteningBias);
+        whiten(inputs, _inputDecorrelation, _param.inputWhiteningBias);
       }
       else if(_param.preprocessInputs[i] == Preprocess::Reduce)
       {
-        reduce(inputs, _decorrelationData, _param.inputReductionThreshold);
+        reduce(inputs, _inputDecorrelation, _param.inputReductionThreshold);
       }
     }
     //process
@@ -348,16 +353,16 @@ public:
     if(metric == "classification")
     {
       output << "\nclassification threshold:\n";
-      output << _param.classValidity << "\n";
+      output << _param.classValidity;
     }
-    output << "optimal epoch:\n";
+    output << "\noptimal epoch:\n";
     output << _optimalEpoch << "\n";
-    output << "input eigenvalues\n";
-    if(_decorrelationData.second.size() == 0)
+    output << "input eigenvalues:\n";
+    if(_inputDecorrelation.second.size() == 0)
       output << 0;
     else
-      for(eigen_size_t i = 0; i < _decorrelationData.second.size(); i++)
-        output << _decorrelationData.second[i] << ",";
+      for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
+        output << _inputDecorrelation.second[i] << ",";
     output << "\n" << _param.inputReductionThreshold << "\n";
     output << "output eigenvalues\n";
     if(_outputDecorrelation.second.size() == 0)
@@ -368,10 +373,11 @@ public:
     output << "\n" << _param.outputReductionThreshold << "\n";
 
     output << "output eigenvectors\n";
-    for(eigen_size_t i = 0; i < _outputDecorrelation.first.cols(); i++)
+    Matrix vectors = _outputDecorrelation.first.transpose();
+    for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
     {
-      for(eigen_size_t j = 0; j < _outputDecorrelation.first.rows(); j++)
-        output << _outputDecorrelation.first(j, i) << ",";
+      for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
+        output << vectors(i, j) << ",";
       output << "\n";
     }
     output << "output center:\n";
@@ -379,7 +385,7 @@ public:
       output << 0;
     else
     {
-      for(size_t i=0; i<_outputCenter.size(); i++)
+      for(eigen_size_t i=0; i<_outputCenter.size(); i++)
           output << _outputCenter[i] << ",";
     }
     output << "\n";
@@ -394,13 +400,13 @@ public:
       for(size_t i=0; i<_outputNormalization.size(); i++)
           output << _outputNormalization[i].second << ",";
     }
-    Matrix testRes(process(_testRawData));
+    Matrix testRes(process(_testRawInputs));
     output << "\nexpected and predicted values:\n";
     for(size_t i = 0; i < _outputLabels.size(); i++)
     {
       output << "label: " << _outputLabels[i] << "\n" ;
-      for(eigen_size_t j = 0; j < _testRawRealResults.rows(); j++)
-        output << _testRawRealResults(j,i) << ",";
+      for(eigen_size_t j = 0; j < _testRawOutputs.rows(); j++)
+        output << _testRawOutputs(j,i) << ",";
       output << "\n";
       for(eigen_size_t j = 0; j < testRes.rows(); j++)
         output << testRes(j,i) << ",";
@@ -414,7 +420,7 @@ protected:
   {
     for(size_t i = 0; i < _layers.size(); i++)
     {
-        _layers[i]->init((i == 0 ? _trainData.cols() : _layers[i-1]->size()),
+        _layers[i]->init((i == 0 ? _trainInputs.cols() : _layers[i-1]->size()),
                         (i == _layers.size()-1 ? 0 : _layers[i+1]->size()),
                         _param.batchSize, _generator);
     }
@@ -424,20 +430,20 @@ protected:
   void shuffleTrainData()
   {
     //shuffle inputs and outputs in the same order
-    std::vector<size_t> indexes(_trainData.rows(), 0);
+    std::vector<size_t> indexes(_trainInputs.rows(), 0);
     for(size_t i = 0; i < indexes.size(); i++)
       indexes[i] = i;
     std::shuffle(indexes.begin(), indexes.end(), _generator);
 
-    Matrix temp = Matrix(_trainData.rows(), _trainData.cols());
+    Matrix temp = Matrix(_trainInputs.rows(), _trainInputs.cols());
     for(size_t i = 0; i < indexes.size(); i++)
-      temp.row(i) = _trainData.row(indexes[i]);
-    std::swap(_trainData, temp);
+      temp.row(i) = _trainInputs.row(indexes[i]);
+    std::swap(_trainInputs, temp);
 
-    temp = Matrix(_trainRealResults.rows(), _trainRealResults.cols());
+    temp = Matrix(_trainOutputs.rows(), _trainOutputs.cols());
     for(size_t i = 0; i < indexes.size(); i++)
-      temp.row(i) = _trainRealResults.row(indexes[i]);
-    std::swap(_trainRealResults, temp);
+      temp.row(i) = _trainOutputs.row(indexes[i]);
+    std::swap(_trainOutputs, temp);
   }
 
 
@@ -445,12 +451,12 @@ protected:
   {
     shuffleTrainData();
 
-    if(_testData.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
+    if(_testInputs.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
       throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
-    double validation = _param.validationRatio * static_cast<double>(_trainData.rows());
-    double test = _param.testRatio * static_cast<double>(_trainData.rows());
-    double nbBatch = std::trunc(static_cast<double>(_trainData.rows()) - validation - test) / static_cast<double>(_param.batchSize);
+    double validation = _param.validationRatio * static_cast<double>(_trainInputs.rows());
+    double test = _param.testRatio * static_cast<double>(_trainInputs.rows());
+    double nbBatch = std::trunc(static_cast<double>(_trainInputs.rows()) - validation - test) / static_cast<double>(_param.batchSize);
     if(_param.batchSize == 0)
       nbBatch = 1; // if batch size == 0, then is batch gradient descend
 
@@ -458,31 +464,31 @@ protected:
     if(nbBatch - std::trunc(nbBatch) >= 0.5)
       nbBatch = std::trunc(nbBatch) + 1;
 
-    size_t noTrain = _trainData.rows() - (static_cast<size_t>(nbBatch)*_param.batchSize);
+    size_t noTrain = _trainInputs.rows() - (static_cast<size_t>(nbBatch)*_param.batchSize);
     validation = std::round(static_cast<double>(noTrain)*_param.validationRatio/(_param.validationRatio + _param.testRatio));
     test = std::round(static_cast<double>(noTrain)*_param.testRatio/(_param.validationRatio + _param.testRatio));
 
-    _validationData = Matrix(static_cast<size_t>(validation), _trainData.cols());
-    _validationRealResults = Matrix(static_cast<size_t>(validation), _trainRealResults.cols());
-    if(_testData.rows() == 0)
+    _validationInputs = Matrix(static_cast<size_t>(validation), _trainInputs.cols());
+    _validationOutputs = Matrix(static_cast<size_t>(validation), _trainOutputs.cols());
+    if(_testInputs.rows() == 0)
     {
-      _testData = Matrix(static_cast<size_t>(test), _trainData.cols());
-      _testRealResults = Matrix(static_cast<size_t>(test), _trainRealResults.cols());
+      _testInputs = Matrix(static_cast<size_t>(test), _trainInputs.cols());
+      _testOutputs = Matrix(static_cast<size_t>(test), _trainOutputs.cols());
     }
     for(size_t i = 0; i < static_cast<size_t>(validation); i++)
     {
-      _validationData.row(i) = _trainData.row(_trainData.rows()-1-i);
-      _validationRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i);
+      _validationInputs.row(i) = _trainInputs.row(_trainInputs.rows()-1-i);
+      _validationOutputs.row(i) = _trainOutputs.row(_trainOutputs.rows()-1-i);
     }
     for(size_t i = 0; i < static_cast<size_t>(test); i++)
     {
-      _testData.row(i) = _trainData.row(_trainData.rows()-1-i-static_cast<size_t>(validation));
-      _testRealResults.row(i) = _trainRealResults.row(_trainRealResults.rows()-1-i-static_cast<size_t>(validation));
+      _testInputs.row(i) = _trainInputs.row(_trainInputs.rows()-1-i-static_cast<size_t>(validation));
+      _testOutputs.row(i) = _trainOutputs.row(_trainOutputs.rows()-1-i-static_cast<size_t>(validation));
     }
-    _testRawData = _testData;
-    _testRawRealResults = _testRealResults;
-    _trainData = Matrix(_trainData.topRows(_trainData.rows() - validation - test));
-    _trainRealResults = Matrix(_trainRealResults.topRows(_trainRealResults.rows() - validation - test));
+    _testRawInputs = _testInputs;
+    _testRawOutputs = _testOutputs;
+    _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - validation - test));
+    _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - validation - test));
     _nbBatch = static_cast<size_t>(nbBatch);
   }
 
@@ -502,54 +508,54 @@ protected:
       {
         if(centered == true)
           throw Exception("Inputs are centered multiple times.");
-        _centerData = center(_trainData);
-        center(_validationData, _centerData);
-        center(_testData, _centerData);
+        _inputCenter = center(_trainInputs);
+        center(_validationInputs, _inputCenter);
+        center(_testInputs, _inputCenter);
         centered = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Normalize)
       {
         if(normalized == true)
           throw Exception("Inputs are normalized multiple times.");
-        _normalizationData = normalize(_trainData);
-        normalize(_validationData, _normalizationData);
-        normalize(_testData, _normalizationData);
+        _inputNormalization = normalize(_trainInputs);
+        normalize(_validationInputs, _inputNormalization);
+        normalize(_testInputs, _inputNormalization);
         normalized = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Standardize)
       {
         if(standardized == true)
           throw Exception("Inputs are standardized multiple times.");
-        _standardizationData = standardize(_trainData);
-        standardize(_validationData, _standardizationData);
-        standardize(_testData, _standardizationData);
+        _inputStandartization = standardize(_trainInputs);
+        standardize(_validationInputs, _inputStandartization);
+        standardize(_testInputs, _inputStandartization);
         standardized = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
       {
         if(decorrelated == true)
           throw Exception("Inputs are decorrelated multiple times.");
-        _decorrelationData = decorrelate(_trainData);
-        decorrelate(_validationData, _decorrelationData);
-        decorrelate(_testData, _decorrelationData);
+        _inputDecorrelation = decorrelate(_trainInputs);
+        decorrelate(_validationInputs, _inputDecorrelation);
+        decorrelate(_testInputs, _inputDecorrelation);
         decorrelated = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Whiten)
       {
         if(whitened == true)
           throw Exception("Inputs are whitened multiple times.");
-        whiten(_trainData, _decorrelationData, _param.inputWhiteningBias);
-        whiten(_validationData, _decorrelationData, _param.inputWhiteningBias);
-        whiten(_testData, _decorrelationData, _param.inputWhiteningBias);
+        whiten(_trainInputs, _inputDecorrelation, _param.inputWhiteningBias);
+        whiten(_validationInputs, _inputDecorrelation, _param.inputWhiteningBias);
+        whiten(_testInputs, _inputDecorrelation, _param.inputWhiteningBias);
         whitened = true;
       }
       else if(_param.preprocessInputs[i] == Preprocess::Reduce)
       {
         if(reduced == true)
           throw Exception("Inputs are reduced multiple times.");
-        reduce(_trainData, _decorrelationData, _param.inputReductionThreshold);
-        reduce(_validationData, _decorrelationData, _param.inputReductionThreshold);
-        reduce(_testData, _decorrelationData, _param.inputReductionThreshold);
+        reduce(_trainInputs, _inputDecorrelation, _param.inputReductionThreshold);
+        reduce(_validationInputs, _inputDecorrelation, _param.inputReductionThreshold);
+        reduce(_testInputs, _inputDecorrelation, _param.inputReductionThreshold);
         reduced = true;
       }
     }
@@ -567,37 +573,45 @@ protected:
       {
         if(centered == true)
           throw Exception("Outputs are centered multiple times.");
-        _outputCenter = center(_trainRealResults);
-        center(_validationRealResults, _outputCenter);
-        center(_testRealResults, _outputCenter);
+        _outputCenter = center(_trainOutputs);
+        center(_validationOutputs, _outputCenter);
+        center(_testOutputs, _outputCenter);
         centered = true;
       }
       else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
       {
         if(decorrelated == true)
           throw Exception("Outputs are decorrelated multiple times.");
-        _outputDecorrelation = decorrelate(_trainRealResults);
-        decorrelate(_validationRealResults, _outputDecorrelation);
-        decorrelate(_testRealResults, _outputDecorrelation);
+        _outputDecorrelation = decorrelate(_trainOutputs);
+        decorrelate(_validationOutputs, _outputDecorrelation);
+        decorrelate(_testOutputs, _outputDecorrelation);
         decorrelated = true;
       }
       else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
       {
         if(reduced == true)
           throw Exception("Outputs are reduced multiple times.");
-        reduce(_trainRealResults, _outputDecorrelation, _param.outputReductionThreshold);
-        reduce(_validationRealResults, _outputDecorrelation, _param.outputReductionThreshold);
-        reduce(_testRealResults, _outputDecorrelation, _param.outputReductionThreshold);
+        reduce(_trainOutputs, _outputDecorrelation, _param.outputReductionThreshold);
+        reduce(_validationOutputs, _outputDecorrelation, _param.outputReductionThreshold);
+        reduce(_testOutputs, _outputDecorrelation, _param.outputReductionThreshold);
         reduced = true;
       }
       else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
       {
         if(normalized == true)
           throw Exception("Outputs are normalized multiple times.");
-        _outputNormalization = normalize(_trainRealResults);
-        normalize(_validationRealResults, _outputNormalization);
-        normalize(_testRealResults, _outputNormalization);
+        _outputNormalization = normalize(_trainOutputs);
+        normalize(_validationOutputs, _outputNormalization);
+        normalize(_testOutputs, _outputNormalization);
         normalized = true;
+      }
+      else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
+      {
+        throw Exception("Outputs can't be whitened.");
+      }
+      else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
+      {
+        throw Exception("Outputs can't be standardized.");
       }
     }
   }
@@ -607,16 +621,16 @@ protected:
   {
     for(size_t batch = 0; batch < _nbBatch; batch++)
     {
-      Matrix input(_param.batchSize, _trainData.cols());
-      Matrix output(_param.batchSize, _trainRealResults.cols());
+      Matrix input(_param.batchSize, _trainInputs.cols());
+      Matrix output(_param.batchSize, _trainOutputs.cols());
 
       std::vector<std::future<void>> tasks(_param.batchSize);
       for(size_t i = 0; i < _param.batchSize; i++)
       {
         tasks[i] = _pool.enqueue([this, &input, &output, i, batch]()->void
         {
-          input.row(i) = _trainData.row(batch*_param.batchSize+i);
-          output.row(i) = _trainRealResults.row(batch*_param.batchSize+i);
+          input.row(i) = _trainInputs.row(batch*_param.batchSize+i);
+          output.row(i) = _trainOutputs.row(batch*_param.batchSize+i);
         });
       }
       for(size_t i = 0; i < tasks.size(); i++)
@@ -717,24 +731,19 @@ protected:
     L2 *= (_param.L2 * 0.5);
 
     //training loss
-    Matrix input(_trainData.rows(), _trainData.cols());
-    Matrix output(_trainRealResults.rows(), _trainRealResults.cols());
-    for(eigen_size_t i = 0; i < _trainData.rows(); i++)
-    {
-      input.row(i) = _trainData.row(i);
-      output.row(i) = _trainRealResults.row(i);
-    }
+    Matrix input = _trainInputs;
+    Matrix output = _trainOutputs;
     double trainLoss = averageLoss(computeLossMatrix(output, processForLoss(input)).first) + L1 + L2;
 
     //validation loss
-    double validationLoss = averageLoss(computeLossMatrix(_validationRealResults, processForLoss(_validationData)).first) + L1 + L2;
+    double validationLoss = averageLoss(computeLossMatrix(_validationOutputs, processForLoss(_validationInputs)).first) + L1 + L2;
 
     //test metric
     std::pair<double, double> testMetric;
     if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-      testMetric = regressionMetrics(_testRawRealResults, process(_testRawData));
+      testMetric = regressionMetrics(_testRawOutputs, process(_testRawInputs), _metricNormalization);
     else
-      testMetric = classificationMetrics(_testRawRealResults, process(_testRawData), _param.classValidity);
+      testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classValidity);
 
     std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
     _trainLosses.conservativeResize(_trainLosses.size() + 1);
@@ -784,14 +793,14 @@ protected:
   mutable ThreadPool _pool;
 
   //data
-  Matrix _trainData;
-  Matrix _trainRealResults;
-  Matrix _validationData;
-  Matrix _validationRealResults;
-  Matrix _testData;
-  Matrix _testRealResults;
-  Matrix _testRawData;
-  Matrix _testRawRealResults;
+  Matrix _trainInputs;
+  Matrix _trainOutputs;
+  Matrix _validationInputs;
+  Matrix _validationOutputs;
+  Matrix _testInputs;
+  Matrix _testOutputs;
+  Matrix _testRawInputs;
+  Matrix _testRawOutputs;
 
   //learning infos
   size_t _nbBatch;
@@ -810,13 +819,13 @@ protected:
   Vector _outputCenter;
   std::vector<std::pair<double, double>> _outputNormalization;
   std::pair<Matrix, Vector> _outputDecorrelation;
+  std::vector<std::pair<double, double>> _metricNormalization;
 
   //input preprocessing
-  Vector _centerData;
-  std::vector<std::pair<double, double>> _normalizationData;
-  std::vector<std::pair<double, double>> _standardizationData;
-  std::pair<Matrix, Vector> _decorrelationData;
-  std::pair<Matrix, Vector> _whiteningData;
+  Vector _inputCenter;
+  std::vector<std::pair<double, double>> _inputNormalization;
+  std::vector<std::pair<double, double>> _inputStandartization;
+  std::pair<Matrix, Vector> _inputDecorrelation;
 };
 
 
