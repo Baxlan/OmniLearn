@@ -37,10 +37,11 @@ for i in range(0, len(validLoss)):
 lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", color="orange")
 
 # get metric type
-metric_t = content[content.index("metric:")+1]
+metric_t = "regression"
 metricLabel1 = "mae test metric"
 metricLabel2 = "mse test metric"
-if metric_t == "classification":
+if loss_t in ["cross entropy", "binary cross entropy"]:
+  metric_t = "classification"
   metricLabel1 = "accuracy"
   metricLabel2 = "false prediction rate"
 
@@ -50,7 +51,7 @@ for i in range(0, len(mae_acc)):
     mae_acc[i] = float(mae_acc[i])
 lns3 = ax2.plot(range(0, len(mae_acc)), mae_acc, label = metricLabel1, color = "green")
 
-# get mse or false prediction rate
+# get metric mse or false prediction rate
 mse_fp = content[content.index("metric:")+2][:-1].split(',')
 for i in range(0, len(mse_fp)):
     mse_fp[i] = float(mse_fp[i])
