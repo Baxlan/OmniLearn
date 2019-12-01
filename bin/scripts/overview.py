@@ -4,6 +4,11 @@ import math
 import sys
 
 
+if len(sys.argv) < 2:
+  print("ERROR: the file to be analyzed has to be specified.")
+  sys.exit()
+
+
 content = open(sys.argv[1]).readlines()
 content = [content[i][:-1] for i in range(len(content))]
 
@@ -16,13 +21,12 @@ content = [content[i][:-1] for i in range(len(content))]
 # ===========================================
 
 
+# create axis
+fig, ax1 = plt.subplots()
+ax2 = ax1.twinx()
 
 # get loss type
 loss_t = content[content.index("loss:")+1]
-
-
-fig, ax1 = plt.subplots()
-ax2 = ax1.twinx()
 
 # get train loss
 trainLoss = content[content.index("loss:")+2][:-1].split(',')
@@ -38,20 +42,20 @@ lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", 
 
 # get metric type
 metric_t = "regression"
-metricLabel1 = "mae test metric"
-metricLabel2 = "mse test metric"
+metricLabel1 = "mae metric (normalized)"
+metricLabel2 = "mse metric (normalized)"
 if loss_t in ["cross entropy", "binary cross entropy"]:
   metric_t = "classification"
   metricLabel1 = "accuracy"
   metricLabel2 = "false prediction rate"
 
-# get metric mae or accuracy
+# get metric mae (or accuracy)
 mae_acc = content[content.index("metric:")+1][:-1].split(',')
 for i in range(0, len(mae_acc)):
     mae_acc[i] = float(mae_acc[i])
 lns3 = ax2.plot(range(0, len(mae_acc)), mae_acc, label = metricLabel1, color = "green")
 
-# get metric mse or false prediction rate
+# get metric mse (or false prediction rate)
 mse_fp = content[content.index("metric:")+2][:-1].split(',')
 for i in range(0, len(mse_fp)):
     mse_fp[i] = float(mse_fp[i])
@@ -61,12 +65,7 @@ lns4 = ax2.plot(range(0, len(mse_fp)), mse_fp, label = metricLabel2, color = "re
 optimal = int(content[content.index("optimal epoch:")+1])
 plt.axvline(optimal, color = "black")
 
-# plot evolution regarding epochs
-title = "Learning process overview"
-if metric_t == "regression":
-  title = "Learning process overview\n(metrics are on normalized outputs)"
-
-plt.title(title, fontsize=18)
+plt.title("Learning process overview", fontsize=18)
 ax1.grid()
 ax1.set_xlabel("epoch", fontsize=16)
 ax1.set_ylabel(loss_t + " loss", fontsize=16)
@@ -87,7 +86,7 @@ plt.show()
 
 # ===========================================
 # ===========================================
-# ========== DETAILED METRICS NORM ==========
+# ===== UNORMALIZED DETAILED METRICS ========
 # ===========================================
 # ===========================================
 
@@ -108,19 +107,9 @@ for lab in outLabels:
 # REGRESSION PROBLEM
 if metric_t == "regression":
 
-# get min output normalization
-  min = content[content.index("output normalization:")+1][:-1].split(",")
-  for i in range(0, len(min)):
-    min[i] = float(min[i])
-
-# get max output normalization
-  max = content[content.index("output normalization:")+2][:-1].split(",")
-  for i in range(0, len(max)):
-    max[i] = float(max[i])
-
-# normalize outputs
-  for lab in range(len(outLabels)):
-    predicted[lab] = [(predicted[lab][i] - min[lab]) / (max[lab] - min[lab]) for i in range(0, len(predicted[lab]))]
+  if len(sys.argv) < 3:
+    print("ERROR: the detailed metric type to plot must be entered (mae or mse).")
+    sys.exit()
 
   metric = []
   dev = []
@@ -145,7 +134,7 @@ if metric_t == "regression":
   rects1 = ax1.bar(ind+0.5*width, metric, width, yerr = err, color='red')
   rects2 = ax1.bar(ind+1.5*width, dev, width, color='orange')
 
-  ax1.set_title("Detailed metrics (on normalized outputs)", fontsize=18)
+  ax1.set_title("Detailed metrics (on unormalized outputs)", fontsize=18)
   ax1.set_ylabel("metric value", fontsize=16)
   ax1.set_yscale("log")
   ax1.set_xlabel("labels", fontsize=16)
@@ -157,20 +146,26 @@ if metric_t == "regression":
   plt.show()
 
 
+
 # ===========================================
 # ===========================================
-# ========== DETAILED METRICS UNORM =========
+# ========= NORMALIZED METRICS ==============
 # ===========================================
 # ===========================================
 
 
-# REGRESSION PROBLEM
+
 if metric_t == "regression":
 
-# denormalize outputs
+# normalize outputs
+  min = []
+  max = []
   for lab in range(len(outLabels)):
-    expected[lab] = np.array([(expected[lab][i] * (max[lab] - min[lab])) + min[lab] for i in range(0, len(expected[lab]))])
-    predicted[lab] = np.array([(predicted[lab][i] * (max[lab] - min[lab])) + min[lab] for i in range(0, len(predicted[lab]))])
+    min.append(np.min(expected[lab]))
+    max.append(np.max(expected[lab]))
+  for lab in range(len(outLabels)):
+    expected[lab] = np.array([(expected[lab][i] - min[lab]) / (max[lab] - min[lab]) for i in range(0, len(expected[lab]))])
+    predicted[lab] = np.array([(predicted[lab][i] - min[lab]) / (max[lab] - min[lab]) for i in range(0, len(predicted[lab]))])
 
   metric = []
   dev = []
