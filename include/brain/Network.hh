@@ -350,7 +350,19 @@ public:
       for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
         output << _inputDecorrelation.second[i] << ",";
     output << "\n" << _param.inputReductionThreshold << "\n";
-    output << "output eigenvalues:\n";
+    output << "output preprocess:\n";
+    for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
+    {
+      if(_param.preprocessOutputs[i] == Preprocess::Center)
+        output << "center,";
+      else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
+        output << "decorrelate,";
+      else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
+        output << "reduce,";
+      else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
+        output << "normalize,";
+    }
+    output << "\noutput eigenvalues:\n";
     if(_outputDecorrelation.second.size() == 0)
       output << 0;
     else
