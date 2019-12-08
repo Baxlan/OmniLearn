@@ -21,24 +21,8 @@ content = [content[i][:-1] for i in range(len(content))]
 # ===========================================
 
 
-# create axis
-fig, ax1 = plt.subplots()
-ax2 = ax1.twinx()
-
 # get loss type
 loss_t = content[content.index("loss:")+1]
-
-# get train loss
-trainLoss = content[content.index("loss:")+2][:-1].split(',')
-for i in range(0, len(trainLoss)):
-    trainLoss[i] = float(trainLoss[i])
-lns1 = ax1.plot(range(0, len(trainLoss)), trainLoss, label = "training loss", color="blue")
-
-# get validation loss
-validLoss = content[content.index("loss:")+3][:-1].split(',')
-for i in range(0, len(validLoss)):
-    validLoss[i] = float(validLoss[i])
-lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", color="orange")
 
 # get metric type
 metric_t = "regression"
@@ -48,40 +32,6 @@ if loss_t in ["cross entropy", "binary cross entropy"]:
   metric_t = "classification"
   metricLabel1 = "accuracy"
   metricLabel2 = "false prediction rate"
-
-# get metric mae (or accuracy)
-mae_acc = content[content.index("metric:")+1][:-1].split(',')
-for i in range(0, len(mae_acc)):
-    mae_acc[i] = float(mae_acc[i])
-lns3 = ax2.plot(range(0, len(mae_acc)), mae_acc, label = metricLabel1, color = "green")
-
-# get metric mse (or false prediction rate)
-mse_fp = content[content.index("metric:")+2][:-1].split(',')
-for i in range(0, len(mse_fp)):
-    mse_fp[i] = float(mse_fp[i])
-lns4 = ax2.plot(range(0, len(mse_fp)), mse_fp, label = metricLabel2, color = "red")
-
-# get optimal epoch
-optimal = int(content[content.index("optimal epoch:")+1])
-plt.axvline(optimal, color = "black")
-
-plt.title("Learning process overview", fontsize=18)
-ax1.grid()
-ax1.set_xlabel("epoch", fontsize=16)
-ax1.set_ylabel(loss_t + " loss", fontsize=16)
-ax1.set_yscale("log")
-ax2.set_ylabel("metrics", fontsize=16)
-ax2.set_yscale("log")
-if metric_t == "classification":
-  ax2.set_yscale("linear")
-  ax2.set_ylim(0, 101)
-
-lns = lns1 + lns2 + lns3 + lns4
-labels = [l.get_label() for l in lns]
-plt.legend(lns, labels, fontsize=14)
-
-plt.show()
-
 
 
 # ===========================================
@@ -94,15 +44,57 @@ plt.show()
 
 outLabels = content[content.index("output labels:")+1][:-1].split(",")
 
-# get outputs
-predicted = []
-expected = []
+# get test outputs
+predicted = ""
+expected = ""
 for lab in outLabels:
-  floats = [float(val) for val in content[content.index("label: " + lab)+1][:-1].split(",")]
-  expected.append(np.array(floats))
-  floats = [float(val) for val in content[content.index("label: " + lab)+2][:-1].split(",")]
-  predicted.append(np.array(floats))
+  expected = expected + content[content.index("label: " + lab)+1][:-1] + ";"
+  predicted = predicted + content[content.index("label: " + lab)+2][:-1] + ";"
+expected = np.matrix(expected[:-1])
+predicted = np.matrix(predicted[:-1])
 
+# turn real data into processed ones
+process = content[content.index("output preprocess:")+1][:-1].split(",")
+
+for proc in process:
+  if proc == "center":
+    center = [float(val) for val in content[content.index("output center:")+1][:-1].split(",")]
+    for i in range(len(outLabels)):
+      expected[i] = expected[i] - center[i]
+      predicted[i] = predicted[i] - center[i]
+
+  if proc == "decorrelate":
+    vectors = ""
+    for i in range(len(outLabels)):
+      vectors = vectors + content[content.index("output eigenvectors:")+1+i][:-1] + ";"
+    Ut = np.matrix(vectors[:-1])
+    for i in range(np.size(expected, 1)):
+      expected[:,i] = Ut * expected[:,i]
+      predicted[:,i] = Ut * predicted[:,i]
+    for i in range(len(outLabels)):
+      outLabels[i] = "eigenvector " + str(i+1)
+
+  if proc == "reduce":
+    eigen = [float(val) for val in content[content.index("output eigenvalues:")+1][:-1].split(",")]
+    threshold = float(content[content.index("output eigenvalues:")+2])
+    tot = np.sum(eigen)
+    rates = [np.sum(eigen[0:i])/tot for i in range(len(eigen))]
+    optimal = 0
+    for i in range(len(eigen)):
+      optimal += eigen[i]/tot
+      if optimal >= threshold:
+        optimal = i
+        break
+    for i in range(len(outLabels)):
+      if(i > optimal):
+        outLabels[i] = outLabels[i] + " (not learned)"
+
+  if proc == "normalize":
+    min = [float(val) for val in content[content.index("output normalization:")+1][:-1].split(",")]
+    max = [float(val) for val in content[content.index("output normalization:")+2][:-1].split(",")]
+    for i in range(len(outLabels)):
+      expected[i] = (expected[i] - min[i]) / (max[i] - min[i])
+      predicted[i] = (predicted[i] - min[i]) / (max[i] - min[i])
 
 # REGRESSION PROBLEM
 if metric_t == "regression":
@@ -123,7 +115,7 @@ if metric_t == "regression":
     elif sys.argv[2] == "mse":
       metric.append(np.mean(np.square(error[i])))
       dev.append(np.std(np.square(error[i])))
-    err.append(dev[i]/math.sqrt(len(predicted[i])))
+    err.append(dev[i]/math.sqrt(len(np.asarray(predicted)[i])))
 
   # plot
   ind = np.arange(len(metric))
@@ -141,7 +133,8 @@ if metric_t == "regression":
   plt.legend((rects1[0], rects2[0]), (sys.argv[2], "fluctuation (65%)"), fontsize=14, bbox_to_anchor=(0.8,-0.025))
   ax1.grid(b=True, which='major', color='grey', linestyle='-', axis="y")
   ax1.set_xticks(ind+width)
-  xtickNames = ax1.set_xticklabels(outLabels)
+  xtickNames = ax1.set_xticklabels(outLabels, rotation=45)
+  plt.subplots_adjust(bottom=0.2)
 
   plt.show()
 
@@ -179,7 +172,7 @@ if metric_t == "regression":
     elif sys.argv[2] == "mse":
       metric.append(np.mean(np.square(error[i])))
       dev.append(np.std(np.square(error[i])))
-    err.append(dev[i]/math.sqrt(len(predicted[i])))
+    err.append(dev[i]/math.sqrt(len(np.asarray(predicted)[i])))
 
   # plot
   ind = np.arange(len(metric))
@@ -197,60 +190,13 @@ if metric_t == "regression":
   plt.legend((rects1[0], rects2[0]), (sys.argv[2], "fluctuation (65%)"), fontsize=14, bbox_to_anchor=(0.8,-0.025))
   ax1.grid(b=True, which='major', color='grey', linestyle='-', axis="y")
   ax1.set_xticks(ind+width)
-  xtickNames = ax1.set_xticklabels(outLabels)
+  xtickNames = ax1.set_xticklabels(outLabels, rotation=45)
+  plt.subplots_adjust(bottom=0.2)
 
   plt.show()
-
-
-
-# ===========================================
-# ===========================================
-# ========== DETAILED ACCURACY ==============
-# ===========================================
-# ===========================================
 
 
 
 # CLASSIFICATION PROBLEM
 if metric_t == "classification":
-  # get threshold
-  threshold = float(content[content.index("classification threshold:")+1])
-
-  acc = []
-  fp = []
-
-  for lab in range(len(outLabels)):
-    count = 0
-    validated = 0
-    fp2 = 0
-    for i in range(len(predicted[0])):
-      if expected[lab][i] == 1:
-        count = count + 1
-        if(predicted[lab][i] >= threshold):
-          validated = validated + 1
-      else:
-        if predicted[lab][i] >= threshold:
-          fp2 = fp2 + 1
-    acc.append(100*validated/count)
-    fp.append(100*fp2/(validated+fp2))
-
-  # plot
-  ind = np.arange(len(acc))
-  fig = plt.figure()
-  ax1 = fig.add_subplot(111)
-
-  width = 0.2
-  rects1 = ax1.bar(ind+0.5*width, acc, width, color='green')
-  rects2 = ax1.bar(ind+1.5*width, fp, width, color='red')
-
-  ax1.set_title("Detailed accuracy on all labels", fontsize=18)
-  ax1.set_ylabel("rate (%)", fontsize=16)
-  ax1.set_xlabel("labels", fontsize=16)
-  ax1.set_yticks(np.arange(0, 101, 5))
-  ax1.set_ylim(0, 100)
-  plt.legend((rects1[0], rects2[0]), ("accuracy", "false prediction rate"), fontsize=14, bbox_to_anchor=(1,-0.025))
-  ax1.grid(b=True, which='major', color='grey', linestyle='-', axis="y")
-  ax1.set_xticks(ind+width)
-  xtickNames = ax1.set_xticklabels(outLabels)
-
-  plt.show()
+  print("ERROR: this script only works for regression models.")

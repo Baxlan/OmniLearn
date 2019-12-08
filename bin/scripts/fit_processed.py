@@ -83,7 +83,9 @@ if metric_t == "regression":
     if wantedLabels != "" and lab != int(wantedLabels)-1:
       continue
 
-    slope, origin, corr, p, err = scipy.stats.linregress(expected[lab], predicted[lab])
+    print((predicted[lab][0]))
+    #np.seterr(invalid='ignore')
+    slope, origin, corr, p, err = scipy.stats.linregress(np.asarray(expected)[lab], np.asarray(predicted)[lab])
 
     # x=y line
     minExpected = np.min(expected[lab])
