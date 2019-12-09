@@ -172,7 +172,7 @@ public:
 
     //temp has to be temporary
     {
-      Matrix temp = _testOutputs;
+      Matrix temp = _testRawOutputs;
       _metricNormalization = normalize(temp);
     }
 

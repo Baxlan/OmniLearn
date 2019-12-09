@@ -25,7 +25,7 @@ int main()
     netp.testRatio = 0.15;
     netp.optimizer = brain::Optimizer::Rmsprop;
     netp.preprocessInputs = {brain::Preprocess::Center, brain::Preprocess::Decorrelate, brain::Preprocess::Whiten};
-    netp.preprocessOutputs = {brain::Preprocess::Center, brain::Preprocess::Decorrelate, brain::Preprocess::Normalize};
+    netp.preprocessOutputs = {brain::Preprocess::Center, brain::Preprocess::Decorrelate, brain::Preprocess::Reduce, brain::Preprocess::Normalize};
     netp.inputReductionThreshold = 0.99;
     netp.outputReductionThreshold = 0.99;
 
