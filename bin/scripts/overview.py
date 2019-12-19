@@ -232,7 +232,10 @@ if metric_t == "classification":
         if predicted[lab][i] >= threshold:
           fp2 = fp2 + 1
     acc.append(100*validated/count)
-    fp.append(100*fp2/(validated+fp2))
+    if validated ==0:
+      fp.append(0)
+    else:
+      fp.append(100*fp2/(validated+fp2))
 
   # plot
   ind = np.arange(len(acc))

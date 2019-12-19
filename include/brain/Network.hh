@@ -35,7 +35,7 @@ struct NetworkParam
     learningRate(0.001),
     L1(0),
     L2(0),
-    epoch(30),
+    epoch(100),
     patience(5),
     dropout(0),
     dropconnect(0),
@@ -417,7 +417,7 @@ protected:
     {
         _layers[i]->init((i == 0 ? _trainInputs.cols() : _layers[i-1]->size()),
                         (i == _layers.size()-1 ? 0 : _layers[i+1]->size()),
-                        _param.batchSize, _generator);
+                        _generator);
     }
   }
 
@@ -616,31 +616,22 @@ protected:
   {
     for(size_t batch = 0; batch < _nbBatch; batch++)
     {
-      Matrix input(_param.batchSize, _trainInputs.cols());
-      Matrix output(_param.batchSize, _trainOutputs.cols());
-
-      std::vector<std::future<void>> tasks(_param.batchSize);
-      for(size_t i = 0; i < _param.batchSize; i++)
+      for(size_t feature = 0; feature < _param.batchSize; feature++)
       {
-        tasks[i] = _pool.enqueue([this, &input, &output, i, batch]()->void
+        Vector featureInput = _trainInputs.row(batch*_param.batchSize + feature);
+        Vector featureOutput = _trainOutputs.row(batch*_param.batchSize + feature);
+
+        for(size_t i = 0; i < _layers.size(); i++)
         {
-          input.row(i) = _trainInputs.row(batch*_param.batchSize+i);
-          output.row(i) = _trainOutputs.row(batch*_param.batchSize+i);
-        });
-      }
-      for(size_t i = 0; i < tasks.size(); i++)
-        tasks[i].get();
+          featureInput = _layers[i]->processToLearn(featureInput, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
+        }
 
-      for(size_t i = 0; i < _layers.size(); i++)
-      {
-        input = _layers[i]->processToLearn(input, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
-      }
-
-      Matrix gradients(computeLossMatrix(output, input).second);
-      for(size_t i = 0; i < _layers.size(); i++)
-      {
-        _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
-        gradients = _layers[_layers.size() - i - 1]->getGradients(_pool);
+        Vector gradients(computeGradVector(featureOutput, featureInput));
+        for(size_t i = 0; i < _layers.size(); i++)
+        {
+          _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
+          gradients = _layers[_layers.size() - i - 1]->getGradients(_pool);
+        }
       }
 
       double lr = _param.learningRate;
@@ -660,7 +651,7 @@ protected:
   }
 
 
-  //process taking already processed inputs and giving normalized outputs
+  //process taking already processed inputs and giving processed outputs
   Matrix processForLoss(Matrix inputs) const
   {
     for(size_t i = 0; i < _layers.size(); i++)
@@ -676,18 +667,30 @@ protected:
   }
 
 
-  std::pair<Matrix, Matrix> computeLossMatrix(Matrix const& realResults, Matrix const& predicted)
+  Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted)
   {
     if(_param.loss == Loss::L1)
-      return L1Loss(realResults, predicted, _pool);
+      return L1Loss(realResult, predicted, _pool);
     else if(_param.loss == Loss::L2)
-      return L2Loss(realResults, predicted, _pool);
+      return L2Loss(realResult, predicted, _pool);
     else if(_param.loss == Loss::BinaryCrossEntropy)
-      return binaryCrossEntropyLoss(realResults, predicted, _pool);
+      return binaryCrossEntropyLoss(realResult, predicted, _pool);
     else //if loss == crossEntropy
-      return crossEntropyLoss(realResults, predicted, _pool);
+      return crossEntropyLoss(realResult, predicted, _pool);
   }
 
+
+  Vector computeGradVector(Vector const& realResult, Vector const& predicted)
+  {
+    if(_param.loss == Loss::L1)
+      return L1Grad(realResult, predicted, _pool);
+    else if(_param.loss == Loss::L2)
+      return L2Grad(realResult, predicted, _pool);
+    else if(_param.loss == Loss::BinaryCrossEntropy)
+      return binaryCrossEntropyGrad(realResult, predicted, _pool);
+    else //if loss == crossEntropy
+      return crossEntropyGrad(realResult, predicted, _pool);
+  }
 
   //return validation loss
   double computeLoss()
@@ -728,10 +731,10 @@ protected:
     //training loss
     Matrix input = _trainInputs;
     Matrix output = _trainOutputs;
-    double trainLoss = averageLoss(computeLossMatrix(output, processForLoss(input)).first) + L1 + L2;
+    double trainLoss = averageLoss(computeLossMatrix(output, processForLoss(input))) + L1 + L2;
 
     //validation loss
-    double validationLoss = averageLoss(computeLossMatrix(_validationOutputs, processForLoss(_validationInputs)).first) + L1 + L2;
+    double validationLoss = averageLoss(computeLossMatrix(_validationOutputs, processForLoss(_validationInputs))) + L1 + L2;
 
     //test metric
     std::pair<double, double> testMetric;

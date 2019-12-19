@@ -55,11 +55,11 @@ class ILayer
 public:
     virtual ~ILayer(){}
     virtual Matrix process(Matrix const& inputs, ThreadPool& t) = 0;
-    virtual Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t) = 0;
-    virtual void computeGradients(Matrix const& inputGradients, ThreadPool& t) = 0;
-    virtual Matrix getGradients(ThreadPool& t) = 0;
+    virtual Vector processToLearn(Vector const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t) = 0;
+    virtual void computeGradients(Vector const& inputGradients, ThreadPool& t) = 0;
+    virtual Vector getGradients(ThreadPool& t) = 0;
     virtual size_t size() const = 0;
-    virtual void init(size_t nbInputs, size_t nbOutputs, size_t batchSize, std::mt19937& generator) = 0;
+    virtual void init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator) = 0;
     virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
@@ -88,26 +88,24 @@ public:
     Layer(LayerParam const& param = LayerParam(), std::vector<Neuron<Aggr_t, Act_t>> const& neurons = std::vector<Neuron<Aggr_t, Act_t>>()):
     _param(param),
     _inputSize(0),
-    _batchSize(0),
     _neurons(neurons.size() == 0 ? std::vector<Neuron<Aggr_t, Act_t>>(param.size) : neurons)
     {
     }
 
 
-    void init(size_t nbInputs, size_t nbOutputs, size_t batchSize, std::mt19937& generator)
+    void init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator)
     {
         _inputSize = nbInputs;
-        _batchSize = batchSize;
         try
         {
             for(size_t i = 0; i < _neurons.size(); i++)
             {
-                _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, batchSize, _param.k, generator, _param.useOutput);
+                _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, _param.k, generator, _param.useOutput);
             }
         }
         catch(std::bad_alloc const& e)
         {
-            throw Exception("std::bad_alloc have been thrown while initializing the model. Try to decrease the batch size or the maxout k. Is your executable 64-bits ?");
+            throw Exception("std::bad_alloc have been thrown while initializing the model. Try to decrease the maxout k. Is your executable 64-bits ?");
         }
     }
 
@@ -136,29 +134,24 @@ public:
     }
 
 
-    Matrix processToLearn(Matrix const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
+    Vector processToLearn(Vector const& input, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
     {
-        //lines are features, columns are neurons
-        Matrix output(_batchSize, _neurons.size());
+        //each element is associated to a neuron
+        Vector output(_neurons.size());
         std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks[i] = t.enqueue([this, &inputs, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
+            tasks[i] = t.enqueue([this, &input, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
             {
-                //one result per feature (for each neuron)
-                Vector result = _neurons[i].processToLearn(inputs, dropconnect, dropconnectDist, dropGen);
-                for(eigen_size_t j = 0; j < result.size(); j++)
+                output(i) = _neurons[i].processToLearn(input, dropconnect, dropconnectDist, dropGen);
+                //dropOut
+                if(dropout > std::numeric_limits<double>::epsilon())
                 {
-                    output(j, i) = result[j];
-                    //dropOut
-                    if(dropout > std::numeric_limits<double>::epsilon())
-                    {
-                        if(dropoutDist(dropGen))
-                            output(j, i) = 0;
-                        else
-                            output(j, i) /= (1-dropout);
-                    }
+                    if(dropoutDist(dropGen))
+                        output[i] = 0;
+                    else
+                        output[i] /= (1-dropout);
                 }
             });
         }
@@ -170,15 +163,15 @@ public:
     }
 
 
-    void computeGradients(Matrix const& inputGradients, ThreadPool& t)
+    void computeGradients(Vector const& inputGradient, ThreadPool& t)
     {
         std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
-            tasks[i] = t.enqueue([this, &inputGradients, i]()->void
+            tasks[i] = t.enqueue([this, &inputGradient, i]()->void
             {
-                _neurons[i].computeGradients(inputGradients.col(i));
+                _neurons[i].computeGradients(inputGradient[i]);
             });
         }
         for(size_t i = 0; i < tasks.size(); i++)
@@ -206,22 +199,19 @@ public:
     }
 
 
-    //one gradient per input neuron (col) and per feature (line)
-    Matrix getGradients(ThreadPool& t)
+    //one gradient per input neuron
+    Vector getGradients(ThreadPool& t)
     {
-        Matrix grad = Matrix::Constant(_batchSize, _inputSize, 0);
+        Vector grad = Vector::Constant(_inputSize, 0);
         std::vector<std::future<void>> tasks(_neurons.size());
 
         for(size_t i = 0; i < _neurons.size(); i++)
         {
             tasks[i] = t.enqueue([this, i, &grad]()->void
             {
-                Matrix neuronGrad = _neurons[i].getGradients();
-                for(eigen_size_t j = 0; j < neuronGrad.rows(); j++)
-                {
-                    for(eigen_size_t k = 0; k < neuronGrad.cols(); k++)
-                        grad(j, k) += neuronGrad(j, k);
-                }
+                Vector neuronGrad = _neurons[i].getGradients();
+                for(eigen_size_t j = 0; j < neuronGrad.size(); j++)
+                    grad(j) += neuronGrad(j);
             });
         }
         for(size_t i = 0; i < tasks.size(); i++)
@@ -282,7 +272,6 @@ protected:
 
     LayerParam _param;
     size_t _inputSize;
-    size_t _batchSize;
     std::vector<Neuron<Aggr_t, Act_t>> _neurons;
 };
 

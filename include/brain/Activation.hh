@@ -415,6 +415,23 @@ protected:
 //=============================================================================
 
 
+Vector singleSoftmax(Vector input)
+{
+    double c = input.maxCoeff();
+    double sum = 0;
+    //subtraction for stability
+    for(eigen_size_t j = 0; j < input.size(); j++)
+    {
+        sum += std::exp(input(j) - c);
+    }
+    for(eigen_size_t j = 0; j < input.size(); j++)
+    {
+        input(j) = std::exp(input(j) - c) / sum;
+    }
+    return input;
+}
+
+
 Matrix softmax(Matrix inputs)
 {
     for(eigen_size_t i = 0; i < inputs.rows(); i++)

@@ -23,27 +23,27 @@ enum class Distrib {Uniform, Normal};
 //=============================================================================
 
 
-template<typename Aggr_t = Dot, typename Act_t = Relu,
-typename = typename std::enable_if<
-std::is_base_of<Activation, Act_t>::value &&
-std::is_base_of<Aggregation, Aggr_t>::value,
-void>::type>
+template<typename Aggr_t = Dot, typename Act_t = Relu>
 class Neuron
 {
+    static_assert(std::is_base_of<Activation, Act_t>::value, "Activation class must inherit from Activation.");
+    static_assert(std::is_base_of<Aggregation, Aggr_t>::value, "Aggregation class must inherit from Aggregation.");
+
 public:
     Neuron(Aggr_t const& aggregation = Aggr_t(), Act_t const& activation = Act_t(), Matrix const& weights = Matrix(0, 0), Vector const& bias = Vector(0)):
     _aggregation(aggregation),
     _activation(activation),
     _weights(weights),
     _bias(bias),
-    _inputs(),
-    _aggregResults(),
-    _actResults(),
-    _inputGradients(),
-    _actGradients(),
+    _input(),
+    _aggregResult(),
+    _actResult(),
+    _inputGradient(),
+    _actGradient(),
     _gradients(),
     _biasGradients(),
-    _gradientsPerFeature(),
+    _featureGradient(),
+    _weightsetCount(),
     _previousWeightUpdate(),
     _previousBiasUpdate(),
     _savedWeights(),
@@ -52,145 +52,104 @@ public:
     }
 
 
-    void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t batchSize, size_t k, std::mt19937& generator, bool useOutput)
+    void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t k, std::mt19937& generator, bool useOutput)
     {
-        _aggregResults = std::vector<std::pair<double, size_t>>(batchSize, {0.0, 0});
-        _actResults = Vector(batchSize);
-        _actGradients = Vector(batchSize);
         if(_weights.rows() == 0)
         {
             _weights = Matrix(k, nbInputs);
             _bias = Vector::Constant(k, 0);
         }
-        _previousBiasUpdate = Vector::Constant(_bias.size(), 0);
-        _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
         if(distrib == Distrib::Normal)
         {
             double deviation = std::sqrt(distVal2 / static_cast<double>(nbInputs + (useOutput ? nbOutputs : 0)));
             std::normal_distribution<double> normalDist(distVal1, deviation);
             for(eigen_size_t i = 0; i < _weights.rows(); i++)
-            {
                 for(eigen_size_t j = 0; j < _weights.cols(); j++)
-                {
                     _weights(i, j) = normalDist(generator);
-                }
-            }
         }
         else if(distrib == Distrib::Uniform)
         {
             double boundary = std::sqrt(distVal2 / static_cast<double>(nbInputs + (useOutput ? nbOutputs : 0)));
             std::uniform_real_distribution<double> uniformDist(-boundary, boundary);
             for(eigen_size_t i = 0; i < _weights.rows(); i++)
-            {
                 for(eigen_size_t j = 0; j < _weights.cols(); j++)
-                {
                     _weights(i, j) = uniformDist(generator);
-                }
-            }
         }
+        _previousBiasUpdate = Vector::Constant(_bias.size(), 0);
+        _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+        _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
+        _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+        _biasGradients = Vector::Constant(_bias.size(), 0);
     }
 
 
-    //each line of the input matrix is a feature of the batch. Returns one result per feature.
+    //each line of the input matrix is a feature. Returns one result per feature.
     Vector process(Matrix const& inputs) const
     {
         Vector results = Vector(inputs.rows());
-
         for(eigen_size_t i = 0; i < inputs.rows(); i++)
-        {
             results[i] = _activation.activate(_aggregation.aggregate(inputs.row(i), _weights, _bias).first);
-        }
         return results;
     }
 
 
-    //each line of the input matrix is a feature of the batch. Returns one result per feature.
-    Vector processToLearn(Matrix const& inputs, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
+    double processToLearn(Vector const& input, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen)
     {
-        _inputs = inputs;
+        _input = input;
 
         //dropConnect
         if(dropconnect > std::numeric_limits<double>::epsilon())
         {
-            for(eigen_size_t i=0; i<_inputs.rows(); i++)
+            for(eigen_size_t i=0; i<_input.size(); i++)
             {
-                for(eigen_size_t j=0; j<_inputs.cols(); j++)
-                {
-                    if(dropconnectDist(dropGen))
-                        _inputs(i, j) = 0;
-                    else
-                        _inputs(i, j) /= (1 - dropconnect);
-                }
+                if(dropconnectDist(dropGen))
+                    _input[i] = 0;
+                else
+                    _input[i] /= (1 - dropconnect);
             }
         }
 
         //processing
-        for(eigen_size_t i = 0; i < inputs.rows(); i++)
-        {
-            _aggregResults[i] = _aggregation.aggregate(inputs.row(i), _weights, _bias);
-            _actResults[i] = _activation.activate(_aggregResults[i].first);
-        }
+        _aggregResult = _aggregation.aggregate(_input, _weights, _bias);
+        _actResult = _activation.activate(_aggregResult.first);
 
-        return _actResults;
+        return _actResult;
     }
 
 
-    //one input gradient per feature
-    void computeGradients(Vector const& inputGradients)
+    //compute gradients for one feature, finally summed for the whole batch
+    void computeGradients(double inputGradient)
     {
-        _inputGradients = inputGradients;
-        _gradientsPerFeature = Matrix::Constant(_inputGradients.size(), _weights.cols(), 0);
-        _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
-        _biasGradients = Vector::Constant(_bias.size(), 0);
+        _inputGradient = inputGradient;
+        _featureGradient = Vector(_weights.cols());
 
-        std::vector<size_t> setCount(_weights.rows(), 0); //store the amount of feature that passed through each weight set
-        for(eigen_size_t feature = 0; feature < _actResults.size(); feature++)
+        _actGradient = _activation.prime(_actResult) * _inputGradient;
+        Vector grad(_aggregation.prime(_input, _weights.row(_aggregResult.second)));
+
+        for(eigen_size_t i = 0; i < grad.size(); i++)
         {
-            _actGradients[feature] = _activation.prime(_actResults[feature]) * _inputGradients[feature];
-            Vector grad(_aggregation.prime(_inputs.row(feature), _weights.row(_aggregResults[feature].second)));
-
-            for(eigen_size_t i = 0; i < grad.size(); i++)
-            {
-                _gradients(_aggregResults[feature].second, i) += (_actGradients[feature]*grad[i]);
-                _biasGradients[_aggregResults[feature].second] += _actGradients[feature];
-                _gradientsPerFeature(feature, i) += (_actGradients[feature]* grad[i] * _weights(_aggregResults[feature].second, i));
-            }
-            setCount[_aggregResults[feature].second]++;
+            _gradients(_aggregResult.second, i) += (_actGradient*grad[i]);
+            _biasGradients[_aggregResult.second] += _actGradient;
+            _featureGradient(i) = (_actGradient * grad[i] * _weights(_aggregResult.second, i));
         }
-
-        //average gradients over features
-        for(eigen_size_t i = 0; i < _gradients.rows(); i++)
-        {
-            if(setCount[i] != 0)
-            {
-                for(eigen_size_t j = 0; j < _gradients.cols(); j++)
-                {
-                    _gradients(i, j) /= static_cast<double>(setCount[i]);
-                }
-                _biasGradients[i] /= static_cast<double>(setCount[i]);
-            }
-        }
+        _weightsetCount[_aggregResult.second]++;
     }
 
 
     void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window, double optimizerBias)
     {
-        double averageInputGrad = 0;
-        for(eigen_size_t i = 0; i < _inputGradients.size(); i++)
+        //average gradients over features
+        for(eigen_size_t i = 0; i < _gradients.rows(); i++)
         {
-            averageInputGrad += _inputGradients[i];
+            if(_weightsetCount[i] != 0)
+            {
+                for(eigen_size_t j = 0; j < _gradients.cols(); j++)
+                {
+                    _gradients(i, j) /= static_cast<double>(_weightsetCount[i]);
+                }
+                _biasGradients[i] /= static_cast<double>(_weightsetCount[i]);
+            }
         }
-        averageInputGrad /= static_cast<double>(_inputGradients.size());
-
-        double averageActGrad = 0;
-        for(eigen_size_t i = 0; i < _actGradients.size(); i++)
-        {
-            averageActGrad += _actGradients[i];
-        }
-        averageActGrad /= static_cast<double>(_actGradients.size());
-
-        _activation.learn(averageInputGrad, learningRate); //TAKE OPTIMIZER INTO ACCOUNT
-        _aggregation.learn(averageActGrad, learningRate); //TAKE OPTIMIZER INTO ACCOUNT
 
         for(eigen_size_t i = 0; i < _weights.rows(); i++)
         {
@@ -260,13 +219,18 @@ public:
                 }
             }
         }
+
+        //reset gradients for the next batch
+        _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
+        _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+        _biasGradients = Vector::Constant(_bias.size(), 0);
     }
 
 
-    //one gradient per feature (line) and per input (column)
-    Matrix getGradients() const
+    //one gradient per input neuron
+    Vector getGradients() const
     {
-        return _gradientsPerFeature;
+        return _featureGradient;
     }
 
 
@@ -298,15 +262,16 @@ protected:
     Matrix _weights;
     Vector _bias;
 
-    Matrix _inputs;
-    std::vector<std::pair<double, size_t>> _aggregResults;
-    Vector _actResults;
+    Vector _input;
+    std::pair<double, size_t> _aggregResult;
+    double _actResult;
 
-    Vector _inputGradients; //gradient from next layer for each feature of the batch
-    Vector _actGradients; //gradient between aggregation and activation
-    Matrix _gradients; //sum (over all features of the batch) of partial gradient for each weight
+    double _inputGradient; //gradient from next layer for each feature of the batch
+    double _actGradient; //gradient between aggregation and activation
+    Matrix _gradients; //sum (over features of the batch) of partial gradient for each weight
     Vector _biasGradients;
-    Matrix _gradientsPerFeature; // store gradients for each feature, summed over weight set
+    Vector _featureGradient; // store gradients for the current feature
+    std::vector<size_t> _weightsetCount; //counts the number of gradients in each weight set
     Matrix _previousWeightUpdate;
     Vector _previousBiasUpdate;
 
