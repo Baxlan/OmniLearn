@@ -15,6 +15,7 @@ public:
     virtual ~Aggregation(){}
     virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, size_t is the index of the weight set used
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
+    virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
     virtual void learn(double gradient, double learningRate) = 0;
 };
 
@@ -44,6 +45,12 @@ public:
     Vector prime(Vector const& inputs, [[maybe_unused]] Vector const& weights) const
     {
         return inputs;
+    }
+
+
+    Vector primeInput(Vector const& inputs, Vector const& weights) const
+    {
+        return weights;
     }
 
 
@@ -78,13 +85,27 @@ public:
     {
         if(weights.rows() > 1)
             throw Exception("Distance aggregation only requires one weight set.");
-        return {norm(inputs - weights.row(0), _order) + bias[0], 0};
+        return {norm(inputs.transpose() - weights.row(0), _order) + bias[0], 0};
     }
 
 
     Vector prime(Vector const& inputs, Vector const& weights) const
     {
-        double a = std::pow(aggregate(inputs, weights, {1, 0}).first, (1-_order));
+        double a = std::pow(aggregate(inputs, weights.transpose(), _bias).first, (1-_order));
+        Vector result(weights.size());
+
+        for(eigen_size_t i = 0; i < weights.size(); i++)
+        {
+          result[i] = (-std::pow((inputs[i] - weights[i]), _order-1) * a);
+        }
+        return result;
+    }
+
+
+    //MAYBE WRONG, TO INVESTIGATE
+    Vector primeInput(Vector const& inputs, Vector const& weights) const
+    {
+        double a = std::pow(aggregate(inputs, weights, _bias).first, (1-_order));
         Vector result(weights.size());
 
         for(eigen_size_t i = 0; i < weights.size(); i++)
@@ -102,9 +123,10 @@ public:
 
 protected:
     size_t const _order;
+    static const Vector _bias;
 };
 
-
+const Vector Distance::_bias = (Vector(1) << 0).finished();
 
 //=============================================================================
 //=============================================================================
@@ -141,6 +163,12 @@ public:
     Vector prime(Vector const& inputs, [[maybe_unused]] Vector const& weights) const
     {
         return inputs;
+    }
+
+
+    Vector primeInput(Vector const& inputs, Vector const& weights) const
+    {
+        return weights;
     }
 
 

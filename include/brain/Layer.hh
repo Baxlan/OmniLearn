@@ -57,6 +57,7 @@ public:
     virtual Matrix process(Matrix const& inputs, ThreadPool& t) = 0;
     virtual Vector processToLearn(Vector const& inputs, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t) = 0;
     virtual void computeGradients(Vector const& inputGradients, ThreadPool& t) = 0;
+    virtual void computeGradientsAccordingToInputs(Vector const& inputGradients, ThreadPool& t) = 0;
     virtual Vector getGradients(ThreadPool& t) = 0;
     virtual size_t size() const = 0;
     virtual void init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator) = 0;
@@ -178,6 +179,12 @@ public:
         {
             tasks[i].get();
         }
+    }
+
+
+    void computeGradientsAccordingToInputs(Vector const& inputGradients, ThreadPool& t)
+    {
+
     }
 
 

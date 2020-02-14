@@ -248,6 +248,17 @@ public:
     }
 
 
+    Vector computeGradientsAccordingToInputs(double inputGradient)
+    {
+
+    }
+
+    void updateInput(double learningRate)
+    {
+
+    }
+
+
     //first is weights, second is bias
     std::pair<Matrix, Vector> getWeights() const
     {

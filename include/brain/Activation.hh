@@ -2,6 +2,7 @@
 #define BRAIN_ACTIVATION_HH_
 
 #include "Matrix.hh"
+#include "Exception.hh"
 
 namespace brain
 {
@@ -16,6 +17,7 @@ public:
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
     virtual void learn(double gradient, double learningRate) = 0;
+    virtual Vector getCoefs() const = 0;
 };
 
 
@@ -33,6 +35,12 @@ public:
 class Linear : public Activation
 {
 public:
+    Linear(Vector const& coefs = Vector())
+    {
+        if(coefs.size() != 0)
+            throw Exception("Linear activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    }
+
     double activate(double val) const
     {
         return val;
@@ -46,6 +54,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return Vector(0);
     }
 };
 
@@ -64,6 +77,12 @@ public:
 class Sigmoid : public Activation
 {
 public:
+    Sigmoid(Vector const& coefs = Vector())
+    {
+        if(coefs.size() != 0)
+            throw Exception("Sigmoid activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    }
+
     double activate(double val) const
     {
         return 1 / (1 + std::exp(-val));
@@ -77,6 +96,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return Vector(0);
     }
 };
 
@@ -95,6 +119,12 @@ public:
 class  Tanh : public Activation
 {
 public:
+    Tanh(Vector const& coefs = Vector())
+    {
+        if(coefs.size() != 0)
+            throw Exception("Tanh activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    }
+
     double activate(double val) const
     {
         return std::tanh(val);
@@ -108,6 +138,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return Vector(0);
     }
 };
 
@@ -126,6 +161,12 @@ public:
 class Softplus : public Activation
 {
 public:
+    Softplus(Vector const& coefs = Vector())
+    {
+        if(coefs.size() != 0)
+            throw Exception("Softplus activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    }
+
     double activate(double val) const
     {
         return std::log(std::exp(val) + 1);
@@ -139,6 +180,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return Vector(0);
     }
 };
 
@@ -157,8 +203,11 @@ public:
 class Relu : public Activation
 {
 public:
-    Relu(double coef = 0.01) : _coef(coef)
+    Relu(Vector const& coefs = (Vector(1) << 0.01).finished())
     {
+        if(coefs.size() != 1)
+            throw Exception("Relu/Prelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _coef = coefs[0];
     }
 
     double activate(double val) const
@@ -174,6 +223,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return (Vector(1) << _coef).finished();
     }
 
 protected:
@@ -192,30 +246,17 @@ protected:
 
 
 
-class Prelu : public Activation
+class Prelu : public Relu
 {
 public:
-    Prelu(double coef = 0) : _coef(coef)
+    Prelu(Vector const& coefs = (Vector(1) << 0.01).finished()) : Relu(coefs)
     {
-    }
-
-    double activate(double val) const
-    {
-        return (val < 0 ? _coef*val : val);
-    }
-
-    double prime(double val) const
-    {
-        return (val < 0 ? _coef : 1);
     }
 
     void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
     }
-
-protected:
-    double _coef;
 };
 
 
@@ -233,8 +274,11 @@ protected:
 class Elu : public Activation
 {
 public:
-    Elu(double coef = 0) : _coef(coef)
+    Elu(Vector const& coefs = (Vector(1) << 0.01).finished())
     {
+        if(coefs.size() != 1)
+            throw Exception("Elu/Pelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _coef = coefs[0];
     }
 
     double activate(double val) const
@@ -250,6 +294,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return (Vector(1) << _coef).finished();
     }
 
 protected:
@@ -268,30 +317,17 @@ protected:
 
 
 
-class Pelu : public Activation
+class Pelu : public Elu
 {
 public:
-    Pelu(double coef = 0) : _coef(coef)
+    Pelu(Vector const& coefs = (Vector(1) << 0.01).finished()) : Elu(coefs)
     {
-    }
-
-    double activate(double val) const
-    {
-        return (val < 0 ? _coef*(std::exp(val)-1) : val);
-    }
-
-    double prime(double val) const
-    {
-        return (val < 0 ? _coef * std::exp(val) : 1);
     }
 
     void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
     }
-
-protected:
-    double _coef;
 };
 
 
@@ -306,17 +342,47 @@ protected:
 
 
 
-// if there are two hinges, then this is S-shaped rectified linear unit (Srelu)
 class Srelu : public Activation
 {
 public:
+    Srelu(Vector const& coefs = (Vector(5) << 1.0, 0.1, 1.0, -1.0, 1.0).finished())
+    {
+        if(coefs.size() != 5)
+            // 3 coefs and 2 hinges
+            throw Exception("Srelu activation function needs 5 coefficients. " + std::to_string(coefs.size()) + " provided.");
+        _coef1 = coefs[0];
+        _coef2 = coefs[1];
+        _coef3 = coefs[2];
+        _hinge1 = coefs[3];
+        _hinge2 = coefs[4];
+    }
+
+    double activate(double val) const
+    {
+
+    }
+
+    double prime(double val) const
+    {
+
+    }
+
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
     }
 
-protected:
+    Vector getCoefs() const
+    {
+        (Vector(5) << _coef1, _coef2, _coef3, _hinge1, _hinge2).finished();
+    }
 
+protected:
+    double _coef1;
+    double _coef2;
+    double _coef3;
+    double _hinge1;
+    double _hinge2;
 };
 
 
@@ -347,6 +413,11 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    Vector getCoefs() const
+    {
+        return Vector(0);
     }
 };
 
@@ -401,6 +472,12 @@ public:
     {
         //TO BE IMPLEMENTED
     }
+
+    Vector getCoefs()
+    {
+        return Vector(0);
+    }
+
 protected:
     double _coef;
 };

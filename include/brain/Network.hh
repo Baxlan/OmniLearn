@@ -157,9 +157,10 @@ public:
   {
     _testInputs = data.inputs;
     _testOutputs = data.outputs;
+
     //_testRawInputs = data.inputs;
     //_testRawOutputs = data.outputs;
-    //not needed because they are set un the shuffle function
+    //not needed because they are set in the shuffle function
   }
 
 
@@ -406,6 +407,33 @@ public:
       for(eigen_size_t j = 0; j < testRes.rows(); j++)
         output << testRes(j,i) << ",";
       output << "\n";
+    }
+  }
+
+
+  Vector generate(NetworkParam param, Vector target, Vector input = Vector(0))
+  {
+    if(input.size() == 0)
+    {
+
+    }
+    for(size_t iteration = 0; iteration < param.epoch; iteration++)
+    {
+      Vector res = input;
+      for(size_t i = 0; i < _layers.size(); i++)
+      {
+        res = _layers[i]->processToLearn(res, param.dropout, param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
+      }
+
+      Vector gradients(computeGradVector(target, res));
+      for(size_t i = 0; i < _layers.size() - 1; i++)
+      {
+        _layers[_layers.size() - i - 1]->computeGradients(gradients, _pool);
+        gradients = _layers[_layers.size() - i - 1]->getGradients(_pool);
+      }
+      _layers[0]->computeGradientsAccordingToInputs(gradients, _pool);
+      gradients = _layers[0]->getGradients(_pool);
+      //_layers[0]->updateInputs(input, gradients, _pool);
     }
   }
 
