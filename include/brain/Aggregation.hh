@@ -17,9 +17,15 @@ public:
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
     virtual void learn(double gradient, double learningRate) = 0;
+    virtual void setCoefs(Vector const& coefs) = 0;
+    virtual rowVector getCoefs() const = 0;
 };
 
-
+/*
+* id 0  : dot
+* id 1  : distance
+* id 2  : maxout
+*/
 
 //=============================================================================
 //=============================================================================
@@ -58,6 +64,21 @@ public:
     {
         //nothing to learn
     }
+
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
+    rowVector getCoefs() const
+    {
+        return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 0;
+    }
 };
 
 
@@ -75,9 +96,11 @@ public:
 class Distance : public Aggregation
 {
 public:
-    Distance(size_t order = 2):
-    _order(order)
+    Distance(Vector const& coefs = (Vector(1) << 2).finished())
     {
+        if(coefs.size() != 1)
+            throw Exception("Distance aggregation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _order = coefs[0];
     }
 
 
@@ -121,8 +144,25 @@ public:
         //nothing to learn
     }
 
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        if(coefs.size() != 1)
+            throw Exception("Distance aggregation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _order = coefs[0];
+    }
+
+    rowVector getCoefs() const
+    {
+        return (Vector(1) << _order).finished();
+    }
+
+    static size_t id()
+    {
+        return 1;
+    }
+
 protected:
-    size_t const _order;
+    size_t _order;
     static const Vector _bias;
 };
 
@@ -175,6 +215,21 @@ public:
     void learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
     {
         //nothing to learn
+    }
+
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
+    rowVector getCoefs() const
+    {
+        return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 2;
     }
 };
 

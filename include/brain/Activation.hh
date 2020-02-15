@@ -17,9 +17,24 @@ public:
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
     virtual void learn(double gradient, double learningRate) = 0;
-    virtual Vector getCoefs() const = 0;
+    virtual void setCoefs(Vector const& coefs) = 0;
+    virtual rowVector getCoefs() const = 0;
 };
 
+
+/*
+* id 0  : linear
+* id 1  : sigmoid
+* id 2  : tanh
+* id 3  : softplus
+* id 4  : relu
+* id 5  : prelu
+* id 6  : elu
+* id 7  : pelu
+* id 8  : srelu
+* id 9  : gaussian
+* id 10 : softexp
+*/
 
 
 //=============================================================================
@@ -56,9 +71,19 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
+    rowVector getCoefs() const
     {
         return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 0;
     }
 };
 
@@ -98,9 +123,19 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
+    rowVector getCoefs() const
     {
         return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 1;
     }
 };
 
@@ -140,9 +175,19 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
+    rowVector getCoefs() const
     {
         return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 2;
     }
 };
 
@@ -182,9 +227,19 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
+    rowVector getCoefs() const
     {
         return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 3;
     }
 };
 
@@ -225,9 +280,21 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs(Vector const& coefs)
+    {
+        if(coefs.size() != 1)
+            throw Exception("Relu/Prelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _coef = coefs[0];
+    }
+
+    rowVector getCoefs() const
     {
         return (Vector(1) << _coef).finished();
+    }
+
+    static size_t id()
+    {
+        return 4;
     }
 
 protected:
@@ -256,6 +323,11 @@ public:
     void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
+    }
+
+    static size_t id()
+    {
+        return 5;
     }
 };
 
@@ -296,9 +368,21 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs(Vector const& coefs)
+    {
+        if(coefs.size() != 1)
+            throw Exception("Elu/Pelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _coef = coefs[0];
+    }
+
+    rowVector getCoefs() const
     {
         return (Vector(1) << _coef).finished();
+    }
+
+    static size_t id()
+    {
+        return 6;
     }
 
 protected:
@@ -327,6 +411,11 @@ public:
     void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
+    }
+
+    static size_t id()
+    {
+        return 7;
     }
 };
 
@@ -372,9 +461,26 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    void setCoefs(Vector const& coefs)
+    {
+        if(coefs.size() != 5)
+            // 3 coefs and 2 hinges
+            throw Exception("Srelu activation function needs 5 coefficients. " + std::to_string(coefs.size()) + " provided.");
+        _coef1 = coefs[0];
+        _coef2 = coefs[1];
+        _coef3 = coefs[2];
+        _hinge1 = coefs[3];
+        _hinge2 = coefs[4];
+    }
+
+    rowVector getCoefs() const
     {
         (Vector(5) << _coef1, _coef2, _coef3, _hinge1, _hinge2).finished();
+    }
+
+    static size_t id()
+    {
+        return 8;
     }
 
 protected:
@@ -415,9 +521,14 @@ public:
         //nothing to learn
     }
 
-    Vector getCoefs() const
+    rowVector getCoefs() const
     {
         return Vector(0);
+    }
+
+    static size_t id()
+    {
+        return 9;
     }
 };
 
@@ -471,6 +582,11 @@ public:
     void learn(double gradient, double learningRate)
     {
         //TO BE IMPLEMENTED
+    }
+
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
     }
 
     Vector getCoefs()

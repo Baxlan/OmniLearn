@@ -33,10 +33,7 @@ void vesta()
     net.addLayer<brain::Dot, brain::Linear>(lay);
 
 
-    if(net.learn())
-    {
-        net.writeInfo("output.out");
-    }
+    net.learn();
 }
 
 
@@ -73,11 +70,7 @@ void mnist()
     net.addLayer<brain::Dot, brain::Relu>(lay);
     net.addLayer<brain::Dot, brain::Linear>(lay);
 
-
-    if(net.learn())
-    {
-        net.writeInfo("output.out");
-    }
+    net.learn();
 }
 
 int main()

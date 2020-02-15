@@ -66,6 +66,7 @@ public:
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const = 0;
     virtual void resize(size_t neurons);
+    virtual std::vector<rowVector> getCoefs();
 };
 
 
@@ -273,6 +274,18 @@ public:
     void resize(size_t neurons)
     {
         _neurons = std::vector<Neuron<Aggr_t, Act_t>>(neurons);
+    }
+
+    //cannot be const, because _weights.data() must return non const double* in Neuron::getCoefs()
+    std::vector<rowVector> getCoefs()
+    {
+        std::vector<rowVector> coefs(_neurons.size() + 1);
+        coefs[0] = (rowVector(2) << Aggr_t::id(), Act_t::id()).finished();
+        for(size_t i = 0; i < _neurons.size(); i++)
+        {
+            coefs[i+1] = _neurons[i].getCoefs();
+        }
+        return coefs;
     }
 
 protected:

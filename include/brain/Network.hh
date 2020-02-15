@@ -57,7 +57,8 @@ struct NetworkParam
     optimizerBias(1e-5),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
-    inputWhiteningBias(1e-5)
+    inputWhiteningBias(1e-5),
+    name("brain_network")
     {
     }
 
@@ -89,6 +90,7 @@ struct NetworkParam
     double inputReductionThreshold;
     double outputReductionThreshold;
     double inputWhiteningBias;
+    std::string name;
 };
 
 
@@ -219,6 +221,8 @@ public:
     }
     loadSaved();
     std::cout << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
+    writeInfo(_param.name + ".out");
+    saveNetInFile(_param.name + ".save");
     return true;
   }
 
@@ -407,6 +411,19 @@ public:
       for(eigen_size_t j = 0; j < testRes.rows(); j++)
         output << testRes(j,i) << ",";
       output << "\n";
+    }
+  }
+
+
+  void saveNetInFile(std::string const& path) const
+  {
+    std::ofstream output(path);
+    for(size_t i = 0; i < _layers.size(); i++)
+    {
+      output << "Layer: " << _layers[i]->size() << "\n";
+      std::vector<rowVector> coefs = _layers[0]->getCoefs();
+      for(size_t j = 0; j < coefs.size(); j++)
+        output << coefs[j] << "\n";
     }
   }
 

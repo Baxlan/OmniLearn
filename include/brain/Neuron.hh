@@ -253,6 +253,7 @@ public:
 
     }
 
+
     void updateInput(double learningRate)
     {
 
@@ -263,6 +264,18 @@ public:
     std::pair<Matrix, Vector> getWeights() const
     {
         return {_weights, _bias};
+    }
+
+
+    //cannot be const, because _weights.data() must return non const double*
+    rowVector getCoefs()
+    {
+        rowVector aggreg(_aggregation.getCoefs());
+        rowVector activ(_activation.getCoefs());
+        rowVector weights(Eigen::Map<rowVector>(_weights.data(), _weights.size()));
+
+        return (rowVector(aggreg.size() + activ.size() + weights.size() + _bias.size() + 4) <<
+                aggreg.size(), aggreg, activ.size(), activ, _bias.size(), _bias, _weights.cols(), weights).finished();
     }
 
 
