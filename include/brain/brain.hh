@@ -3,7 +3,7 @@
 #ifndef BRAIN_BRAIN_HH_
 #define BRAIN_BRAIN_HH_
 
-#include "Network.hh"
+#include "loader.hh"
 
 namespace brain
 {

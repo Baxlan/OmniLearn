@@ -19,6 +19,8 @@ public:
     virtual void learn(double gradient, double learningRate) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
+    virtual void save() = 0;
+    virtual void loadSaved() = 0;
 };
 
 /*
@@ -78,6 +80,16 @@ public:
     static size_t id()
     {
         return 0;
+    }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
     }
 };
 
@@ -161,8 +173,19 @@ public:
         return 1;
     }
 
+    void save()
+    {
+        _savedOrder = _order;
+    }
+
+    void loadSaved()
+    {
+        _order = _savedOrder;
+    }
+
 protected:
     size_t _order;
+    size_t _savedOrder;
     static const Vector _bias;
 };
 
@@ -230,6 +253,16 @@ public:
     static size_t id()
     {
         return 2;
+    }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
     }
 };
 

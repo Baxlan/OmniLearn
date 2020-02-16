@@ -238,6 +238,8 @@ public:
     {
         _savedWeights = _weights;
         _savedBias = _bias;
+        _aggregation.save();
+        _activation.save();
     }
 
 
@@ -245,6 +247,8 @@ public:
     {
         _weights = _savedWeights;
         _bias = _savedBias;
+        _aggregation.loadSaved();
+        _activation.loadSaved();
     }
 
 

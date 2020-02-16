@@ -19,6 +19,8 @@ public:
     virtual void learn(double gradient, double learningRate) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
+    virtual void save() = 0;
+    virtual void loadSaved() = 0;
 };
 
 
@@ -85,6 +87,16 @@ public:
     {
         return 0;
     }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
+    }
 };
 
 
@@ -136,6 +148,16 @@ public:
     static size_t id()
     {
         return 1;
+    }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
     }
 };
 
@@ -189,6 +211,16 @@ public:
     {
         return 2;
     }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
+    }
 };
 
 
@@ -241,6 +273,16 @@ public:
     {
         return 3;
     }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
+    }
 };
 
 
@@ -263,6 +305,7 @@ public:
         if(coefs.size() != 1)
             throw Exception("Relu/Prelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
         _coef = coefs[0];
+        _savedCoef = 0;
     }
 
     double activate(double val) const
@@ -297,8 +340,19 @@ public:
         return 4;
     }
 
+    void save()
+    {
+        _savedCoef = _coef;
+    }
+
+    void loadSaved()
+    {
+        _coef = _savedCoef;
+    }
+
 protected:
     double _coef;
+    double _savedCoef;
 };
 
 
@@ -351,6 +405,7 @@ public:
         if(coefs.size() != 1)
             throw Exception("Elu/Pelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
         _coef = coefs[0];
+        _savedCoef = 0;
     }
 
     double activate(double val) const
@@ -385,8 +440,19 @@ public:
         return 6;
     }
 
+    void save()
+    {
+        _savedCoef = _coef;
+    }
+
+    void loadSaved()
+    {
+        _coef = _savedCoef;
+    }
+
 protected:
     double _coef;
+    double _savedCoef;
 };
 
 
@@ -471,6 +537,12 @@ public:
         _coef3 = coefs[2];
         _hinge1 = coefs[3];
         _hinge2 = coefs[4];
+
+        _savedCoef1 = 0;
+        _savedCoef2 = 0;
+        _savedCoef3 = 0;
+        _savedHinge1 = 0;
+        _savedHinge2 = 0;
     }
 
     rowVector getCoefs() const
@@ -483,12 +555,36 @@ public:
         return 8;
     }
 
+    void save()
+    {
+        _savedCoef1 = _coef1;
+        _savedCoef2 = _coef2;
+        _savedCoef3 = _coef3;
+        _savedHinge1 = _hinge1;
+        _savedHinge2 = _hinge2;
+    }
+
+    void loadSaved()
+    {
+        _coef1 = _savedCoef1;
+        _coef2 = _savedCoef2;
+        _coef3 = _savedCoef3;
+        _hinge1 = _savedHinge1;
+        _hinge2 = _savedHinge2;
+    }
+
 protected:
     double _coef1;
     double _coef2;
     double _coef3;
     double _hinge1;
     double _hinge2;
+
+    double _savedCoef1;
+    double _savedCoef2;
+    double _savedCoef3;
+    double _savedHinge1;
+    double _savedHinge2;
 };
 
 
@@ -529,6 +625,16 @@ public:
     static size_t id()
     {
         return 9;
+    }
+
+    void save()
+    {
+        //nothing to do
+    }
+
+    void loadSaved()
+    {
+        //nothing to do
     }
 };
 
