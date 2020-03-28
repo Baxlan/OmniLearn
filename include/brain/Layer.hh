@@ -4,6 +4,10 @@
 #include "Neuron.hh"
 #include "ThreadPool.hh"
 
+#include <map>
+#include <memory>
+#include <functional>
+
 namespace brain
 {
 
@@ -61,12 +65,14 @@ public:
     virtual Vector getGradients(ThreadPool& t) = 0;
     virtual size_t size() const = 0;
     virtual void init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator) = 0;
+    virtual void init(size_t nbInputs) = 0;
     virtual void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t) = 0;
     virtual void save() = 0;
     virtual void loadSaved() = 0;
     virtual std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const = 0;
     virtual void resize(size_t neurons);
     virtual std::vector<rowVector> getCoefs();
+    virtual void setCoefs(size_t neuron, Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ) = 0;
 };
 
 
@@ -109,6 +115,12 @@ public:
         {
             throw Exception("std::bad_alloc have been thrown while initializing the model. Try to decrease the maxout k. Is your executable 64-bits ?");
         }
+    }
+
+
+    void init(size_t nbInputs)
+    {
+        _inputSize = nbInputs;
     }
 
 
@@ -276,7 +288,7 @@ public:
         _neurons = std::vector<Neuron<Aggr_t, Act_t>>(neurons);
     }
 
-    //cannot be const, because _weights.data() must return non const double* in Neuron::getCoefs()
+    //cannot be const, because _weights.data() must return non-const double* in Neuron::getCoefs()
     std::vector<rowVector> getCoefs()
     {
         std::vector<rowVector> coefs(_neurons.size() + 1);
@@ -288,11 +300,64 @@ public:
         return coefs;
     }
 
+    void setCoefs(size_t neuron, Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ)
+    {
+        _neurons[neuron].setCoefs(weights, bias, aggreg, activ);
+    }
+
 protected:
 
     LayerParam _param;
     size_t _inputSize;
     std::vector<Neuron<Aggr_t, Act_t>> _neurons;
+};
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== LAYER GETTER  ===========================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+static std::map<std::pair<int, int>, std::function<std::shared_ptr<ILayer>()>> layerMap = {
+    {{0, 0}, []{return std::make_shared<Layer<Dot, Linear>>();}},
+    {{0, 1}, []{return std::make_shared<Layer<Dot, Sigmoid>>();}},
+    {{0, 2}, []{return std::make_shared<Layer<Dot, Tanh>>();}},
+    {{0, 3}, []{return std::make_shared<Layer<Dot, Softplus>>();}},
+    {{0, 4}, []{return std::make_shared<Layer<Dot, Relu>>();}},
+    {{0, 5}, []{return std::make_shared<Layer<Dot, Prelu>>();}},
+    {{0, 6}, []{return std::make_shared<Layer<Dot, Elu>>();}},
+    {{0, 7}, []{return std::make_shared<Layer<Dot, Pelu>>();}},
+    {{0, 8}, []{return std::make_shared<Layer<Dot, Srelu>>();}},
+    {{0, 9}, []{return std::make_shared<Layer<Dot, Gauss>>();}},
+    {{0, 10}, []{return std::make_shared<Layer<Dot, Softexp>>();}},
+
+    {{1, 0}, []{return std::make_shared<Layer<Distance, Linear>>();}},
+    {{1, 1}, []{return std::make_shared<Layer<Distance, Sigmoid>>();}},
+    {{1, 2}, []{return std::make_shared<Layer<Distance, Tanh>>();}},
+    {{1, 3}, []{return std::make_shared<Layer<Distance, Softplus>>();}},
+    {{1, 4}, []{return std::make_shared<Layer<Distance, Relu>>();}},
+    {{1, 5}, []{return std::make_shared<Layer<Distance, Prelu>>();}},
+    {{1, 6}, []{return std::make_shared<Layer<Distance, Elu>>();}},
+    {{1, 7}, []{return std::make_shared<Layer<Distance, Pelu>>();}},
+    {{1, 8}, []{return std::make_shared<Layer<Distance, Srelu>>();}},
+    {{1, 9}, []{return std::make_shared<Layer<Distance, Gauss>>();}},
+    {{1, 10}, []{return std::make_shared<Layer<Distance, Softexp>>();}},
+
+    {{2, 0}, []{return std::make_shared<Layer<Maxout, Linear>>();}},
+    {{2, 1}, []{return std::make_shared<Layer<Maxout, Sigmoid>>();}},
+    {{2, 2}, []{return std::make_shared<Layer<Maxout, Tanh>>();}},
+    {{2, 3}, []{return std::make_shared<Layer<Maxout, Softplus>>();}},
+    {{2, 4}, []{return std::make_shared<Layer<Maxout, Relu>>();}},
+    {{2, 5}, []{return std::make_shared<Layer<Maxout, Prelu>>();}},
+    {{2, 6}, []{return std::make_shared<Layer<Maxout, Elu>>();}},
+    {{2, 7}, []{return std::make_shared<Layer<Maxout, Pelu>>();}},
+    {{2, 8}, []{return std::make_shared<Layer<Maxout, Srelu>>();}},
+    {{2, 9}, []{return std::make_shared<Layer<Maxout, Gauss>>();}},
+    {{2, 10}, []{return std::make_shared<Layer<Maxout, Softexp>>();}}
 };
 
 

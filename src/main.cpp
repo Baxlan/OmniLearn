@@ -75,8 +75,8 @@ void mnist()
 
 int main()
 {
-    mnist();
-    //vesta();
+    //mnist();
+    vesta();
 
     return 0;
 }

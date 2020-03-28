@@ -547,7 +547,7 @@ public:
 
     rowVector getCoefs() const
     {
-        (Vector(5) << _coef1, _coef2, _coef3, _hinge1, _hinge2).finished();
+        return (Vector(5) << _coef1, _coef2, _coef3, _hinge1, _hinge2).finished();
     }
 
     static size_t id()
@@ -617,6 +617,11 @@ public:
         //nothing to learn
     }
 
+    void setCoefs([[maybe_unused]] Vector const& coefs)
+    {
+        //nothing to do
+    }
+
     rowVector getCoefs() const
     {
         return Vector(0);
@@ -667,6 +672,14 @@ public:
 class Softexp : public Activation
 {
 public:
+    Softexp(Vector const& coefs = (Vector(1) << 0.01).finished())
+    {
+        if(coefs.size() != 1)
+            throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        _coef = coefs[0];
+        _savedCoef = 0;
+    }
+
     double activate(double val) const
     {
         if(_coef < -std::numeric_limits<double>::epsilon())
@@ -695,13 +708,29 @@ public:
         //nothing to do
     }
 
-    Vector getCoefs()
+    rowVector getCoefs() const
     {
-        return Vector(0);
+        return (Vector(1) << _coef).finished();
+    }
+
+    static size_t id()
+    {
+        return 10;
+    }
+
+    void save()
+    {
+        _savedCoef = _coef;
+    }
+
+    void loadSaved()
+    {
+        _coef = _savedCoef;
     }
 
 protected:
     double _coef;
+    double _savedCoef;
 };
 
 

@@ -283,6 +283,15 @@ public:
     }
 
 
+    void setCoefs(Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ)
+    {
+        _aggregation.setCoefs(aggreg);
+        _activation.setCoefs(activ);
+        _weights = weights;
+        _bias = bias;
+    }
+
+
 protected:
     Aggr_t _aggregation;
     Act_t _activation;

@@ -7,8 +7,11 @@
 #include "decay.hh"
 #include "metric.hh"
 #include "csv.hh"
+#include "fileString.hh"
 
 #include <iostream>
+#include <cstdlib>
+#include <utility>
 
 namespace brain
 {
@@ -143,15 +146,28 @@ public:
   }
 
 
+  Network(NetworkParam const& param): _pool(_param.threads)
+  {
+  }
+
+
   Network(NetworkParam const& param, Data const& data):
   Network(data, param)
   {
   }
 
-  template <typename Aggr_t = Dot, typename Act_t = Relu>
+
+  template <typename Aggr_t, typename Act_t>
   void addLayer(LayerParam const& param = LayerParam())
   {
     _layers.push_back(std::make_shared<Layer<Aggr_t, Act_t>>(param));
+  }
+
+
+  // non-const rvalue reference to only take temporary argument
+  void addLayer(std::shared_ptr<ILayer>&& layer)
+  {
+    _layers.push_back(layer);
   }
 
 
@@ -326,6 +342,12 @@ public:
       loss = "mse";
 
     std::ofstream output(path);
+    if(!output)
+      throw Exception("Cannot open/create file " + path);
+
+    output << "input labels:\n";
+    for(size_t i=0; i<_inputLabels.size(); i++)
+        output << _inputLabels[i] << ",";
     output << "output labels:\n";
     for(size_t i=0; i<_outputLabels.size(); i++)
         output << _outputLabels[i] << ",";
@@ -348,6 +370,8 @@ public:
     }
     output << "\noptimal epoch:\n";
     output << _optimalEpoch << "\n";
+
+    //ADD INPUT PTRPROCESS HERE
     output << "input eigenvalues:\n";
     if(_inputDecorrelation.second.size() == 0)
       output << 0;
@@ -355,6 +379,7 @@ public:
       for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
         output << _inputDecorrelation.second[i] << ",";
     output << "\n" << _param.inputReductionThreshold << "\n";
+
     output << "output preprocess:\n";
     for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
     {
@@ -400,6 +425,7 @@ public:
       for(size_t i=0; i<_outputNormalization.size(); i++)
           output << _outputNormalization[i].second << ",";
     }
+
     Matrix testRes(process(_testRawInputs));
     output << "\nexpected and predicted values:\n";
     for(size_t i = 0; i < _outputLabels.size(); i++)
@@ -418,10 +444,13 @@ public:
   void saveNetInFile(std::string const& path) const
   {
     std::ofstream output(path);
+    if(!output)
+      throw Exception("Cannot open/create file " + path);
+    output << _layers.size() << "\n";
     for(size_t i = 0; i < _layers.size(); i++)
     {
       output << "Layer: " << _layers[i]->size() << "\n";
-      std::vector<rowVector> coefs = _layers[0]->getCoefs();
+      std::vector<rowVector> coefs = _layers[i]->getCoefs();
       for(size_t j = 0; j < coefs.size(); j++)
         output << coefs[j] << "\n";
     }
@@ -801,6 +830,15 @@ protected:
   }
 
 
+  std::pair<double, double> test(Matrix const& inputs, double classValidity)
+  {
+    if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
+      return regressionMetrics(inputs, process(inputs), _metricNormalization);
+    else
+      return classificationMetrics(inputs, process(inputs), classValidity);
+  }
+
+
   void save()
   {
      for(size_t i = 0; i < _layers.size(); i++)
@@ -817,6 +855,107 @@ protected:
           _layers[i]->loadSaved();
       }
   }
+
+static Network&& load(std::string const& name = "brain_network", size_t threads = 1)
+{
+  std::vector<std::string> out = fistr::readCleanLines(name + ".out");
+  std::vector<std::string> save = fistr::readCleanLines(name + ".save");
+  std::string line;
+
+  // read .out to create param
+  NetworkParam param;
+  param.threads = threads;
+
+  for(size_t i = 0; i < out.size(); i++)
+  {
+    line = out[i];
+    if(line == "loss:")
+    {
+      line = out[i+1];
+      if(line == "mae")
+        param.loss = Loss::L1;
+      if(line == "mse")
+        param.loss = Loss::L2;
+      if(line == "binary cross entropy")
+        param.loss = Loss::BinaryCrossEntropy;
+      if(line == "cross entropy")
+        param.loss = Loss::CrossEntropy;
+    }
+  }
+
+  Network net(param);
+
+  size_t inputSize = std::atoi(save[0].data());
+  for(size_t i = 1; i < save.size(); i++)
+  {
+    line = save[i];
+    if(line.substr(0, 6) == "Layer: ")
+    {
+      size_t nbNeurons = std::atoi(line.erase(0, 6).data());
+      i++;
+      line = save[i];
+      size_t aggreg = std::atoi(line.substr(0, line.find_first_of(" ")).data());
+      size_t activ = std::atoi(line.substr(line.find_first_of(" ")+1, line.size()).data());
+      net.addLayer(layerMap[{aggreg, activ}]());
+      if(net._layers.size() == 1)
+        net._layers[net._layers.size()-1]->init(inputSize);
+      else
+        net._layers[net._layers.size()-1]->init(net._layers[net._layers.size()-2]->size());
+      i++;
+      for(size_t j = 0; j < nbNeurons; i++, j++)
+      {
+        std::vector<std::string> vec(fistr::split(save[i], ' '));
+
+        // load aggreg coefs
+        size_t nbAggreg = std::atoi(vec[0].data());
+        Vector aggregation(nbAggreg);
+        for(size_t k = 0; k < nbAggreg; k++)
+        {
+          aggregation[k] = std::atoi(vec[k + 1].data());
+        }
+
+        // load activ coefs
+        size_t nbActiv = std::atoi(vec[nbAggreg + 1].data());
+        Vector activation(nbActiv);
+        for(size_t k = 0; k < nbActiv; k++)
+        {
+          activation[k] = std::atoi(vec[k + nbAggreg + 2].data());
+        }
+
+        // load bias
+        size_t nbBias = std::atoi(vec[nbAggreg + nbActiv + 2].data());
+        Vector bias(nbBias);
+        for(size_t k = 0; k < nbBias; k++)
+        {
+          bias[k] = std::atoi(vec[k + nbAggreg + nbActiv + 3].data());
+        }
+
+        // load weights
+        size_t nbWeights = std::atoi(vec[nbAggreg + nbActiv + nbBias + 3].data());
+        Vector weights(nbWeights);
+        for(size_t k = 0; k < nbWeights; k++)
+        {
+          weights[k] = std::atoi(vec[k + nbAggreg + nbActiv + nbBias + 4].data());
+        }
+
+        // divide weights into wheight sets
+        size_t weightsPerSet = nbWeights/nbBias;
+        Matrix sets(weightsPerSet, nbBias);
+        for(size_t k = 0; k < nbBias; k++)
+        {
+          for(size_t l = 0; l < weightsPerSet; l++)
+          {
+            sets(k, l) = weights[k*weightsPerSet + l];
+          }
+        }
+
+        // put the coefs into the neuron
+        net._layers[net._layers.size()-1]->setCoefs(j, sets, bias, aggregation, activation);
+      }
+    }
+  }
+  return std::move(net);
+}
 
 
 protected:
