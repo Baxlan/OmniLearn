@@ -126,6 +126,7 @@ public:
   _testOutputs(),
   _testRawInputs(),
   _testRawOutputs(),
+  _testNormalizedOutputsForMetric(),
   _nbBatch(),
   _epoch(),
   _optimalEpoch(),
@@ -138,15 +139,11 @@ public:
   _outputCenter(),
   _outputNormalization(),
   _outputDecorrelation(),
+  _metricNormalization(),
   _inputCenter(),
   _inputNormalization(),
   _inputStandartization(),
   _inputDecorrelation()
-  {
-  }
-
-
-  Network(NetworkParam const& param): _pool(_param.threads)
   {
   }
 
@@ -156,6 +153,164 @@ public:
   {
   }
 
+
+  Network(std::string const& path, size_t threads):
+  _param(),
+  _seed(),
+  _generator(),
+  _dropoutDist(),
+  _dropconnectDist(),
+  _layers(),
+  _pool(threads),
+  _trainInputs(),
+  _trainOutputs(),
+  _validationInputs(),
+  _validationOutputs(),
+  _testInputs(),
+  _testOutputs(),
+  _testRawInputs(),
+  _testRawOutputs(),
+  _testNormalizedOutputsForMetric(),
+  _nbBatch(),
+  _epoch(),
+  _optimalEpoch(),
+  _trainLosses(),
+  _validLosses(),
+  _testMetric(),
+  _testSecondMetric(),
+  _inputLabels(),
+  _outputLabels(),
+  _outputCenter(),
+  _outputNormalization(),
+  _outputDecorrelation(),
+  _metricNormalization(),
+  _inputCenter(),
+  _inputNormalization(),
+  _inputStandartization(),
+  _inputDecorrelation()
+  {
+    std::vector<std::string> out = readCleanLines(path + ".out");
+    std::vector<std::string> save = readCleanLines(path + ".save");
+    std::string line;
+    std::vector<std::string> vec;
+
+    // read .out to create param
+    NetworkParam param;
+    param.threads = threads;
+
+    for(size_t i = 0; i < out.size(); i++)
+    {
+      line = out[i];
+      if(line == "loss:")
+      {
+        line = out[i+1];
+        if(line == "mae")
+          param.loss = Loss::L1;
+        if(line == "mse")
+          param.loss = Loss::L2;
+        if(line == "binary cross entropy")
+          param.loss = Loss::BinaryCrossEntropy;
+        if(line == "cross entropy")
+          param.loss = Loss::CrossEntropy;
+      }
+      else if(line == "input preprocess:")
+      {
+        vec = split(out[i+1], ',');
+        for(std::string const& a : vec)
+        {
+          if(a == "center")
+            _param.preprocessInputs.push_back(Preprocess::Center);
+          if(a == "normalize")
+            _param.preprocessInputs.push_back(Preprocess::Normalize);
+          if(a == "standardize")
+            _param.preprocessInputs.push_back(Preprocess::Standardize);
+          if(a == "decorrelate")
+            _param.preprocessInputs.push_back(Preprocess::Decorrelate);
+          if(a == "whiten")
+            _param.preprocessInputs.push_back(Preprocess::Whiten);
+          if(a == "reduce")
+            _param.preprocessInputs.push_back(Preprocess::Reduce);
+        }
+      }
+      else if(line == "input eigenvalues:")
+      {
+        
+      }
+    }
+
+    _param = param;
+
+    // read .save to load all weights / bias / coefs
+    size_t inputSize = std::atoi(save[0].data());
+    for(size_t i = 1; i < save.size(); i++)
+    {
+      line = save[i];
+      if(line.substr(0, 6) == "Layer: ")
+      {
+        size_t nbNeurons = std::atoi(line.erase(0, 6).data());
+        i++;
+        line = save[i];
+        size_t aggreg = std::atoi(line.substr(0, line.find_first_of(" ")).data());
+        size_t activ = std::atoi(line.substr(line.find_first_of(" ")+1, line.size()).data());
+        addLayer(layerMap[{aggreg, activ}]());
+        if(_layers.size() == 1)
+          _layers[_layers.size()-1]->init(inputSize);
+        else
+          _layers[_layers.size()-1]->init(_layers[_layers.size()-2]->size());
+        i++;
+        for(size_t j = 0; j < nbNeurons; i++, j++)
+        {
+          vec = split(save[i], ' ');
+
+          // load aggreg coefs
+          size_t nbAggreg = std::atoi(vec[0].data());
+          Vector aggregation(nbAggreg);
+          for(size_t k = 0; k < nbAggreg; k++)
+          {
+            aggregation[k] = std::atoi(vec[k + 1].data());
+          }
+
+          // load activ coefs
+          size_t nbActiv = std::atoi(vec[nbAggreg + 1].data());
+          Vector activation(nbActiv);
+          for(size_t k = 0; k < nbActiv; k++)
+          {
+            activation[k] = std::atoi(vec[k + nbAggreg + 2].data());
+          }
+
+          // load bias
+          size_t nbBias = std::atoi(vec[nbAggreg + nbActiv + 2].data());
+          Vector bias(nbBias);
+          for(size_t k = 0; k < nbBias; k++)
+          {
+            bias[k] = std::atoi(vec[k + nbAggreg + nbActiv + 3].data());
+          }
+
+          // load weights
+          size_t nbWeights = std::atoi(vec[nbAggreg + nbActiv + nbBias + 3].data());
+          Vector weights(nbWeights);
+          for(size_t k = 0; k < nbWeights; k++)
+          {
+            weights[k] = std::atoi(vec[k + nbAggreg + nbActiv + nbBias + 4].data());
+          }
+
+          // divide weights into wheight sets
+          size_t weightsPerSet = nbWeights/nbBias;
+          Matrix sets(weightsPerSet, nbBias);
+          for(size_t k = 0; k < nbBias; k++)
+          {
+            for(size_t l = 0; l < weightsPerSet; l++)
+            {
+              sets(k, l) = weights[k*weightsPerSet + l];
+            }
+          }
+
+          // put the coefs into the neuron
+          _layers[_layers.size()-1]->setCoefs(j, sets, bias, aggregation, activation);
+        }
+      }
+    }
+  }
 
   template <typename Aggr_t, typename Act_t>
   void addLayer(LayerParam const& param = LayerParam())
@@ -189,11 +344,8 @@ public:
     _layers[_layers.size()-1]->resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
 
-    //temp has to be temporary
-    {
-      Matrix temp = _testRawOutputs;
-      _metricNormalization = normalize(temp);
-    }
+    _testNormalizedOutputsForMetric = _testRawOutputs;
+    _metricNormalization = normalize(_testNormalizedOutputsForMetric);
 
     std::cout << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
     std::cout << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
@@ -283,7 +435,7 @@ public:
     {
       inputs = softmax(inputs);
     }
-    //transform computed outputs into real values
+    //transform computed outputs to real values
     for(size_t pre = 0; pre < _param.preprocessOutputs.size(); pre++)
     {
       if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
@@ -348,7 +500,7 @@ public:
     output << "input labels:\n";
     for(size_t i=0; i<_inputLabels.size(); i++)
         output << _inputLabels[i] << ",";
-    output << "output labels:\n";
+    output << "\noutput labels:\n";
     for(size_t i=0; i<_outputLabels.size(); i++)
         output << _outputLabels[i] << ",";
     output << "\n" << "loss:" << "\n" << loss << "\n";
@@ -371,16 +523,68 @@ public:
     output << "\noptimal epoch:\n";
     output << _optimalEpoch << "\n";
 
-    //ADD INPUT PTRPROCESS HERE
-    output << "input eigenvalues:\n";
+    output << "input preprocess:\n";
+    for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
+    {
+      if(_param.preprocessInputs[i] == Preprocess::Center)
+        output << "center,";
+      else if(_param.preprocessInputs[i] == Preprocess::Normalize)
+        output << "normalize,";
+      else if(_param.preprocessInputs[i] == Preprocess::Standardize)
+        output << "standardize,";
+      else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
+        output << "decorrelate,";
+      else if(_param.preprocessInputs[i] == Preprocess::Whiten)
+        output << "whiten,";
+      else if(_param.preprocessInputs[i] == Preprocess::Reduce)
+        output << "reduce,";
+    }
+    output << "\ninput eigenvalues:\n";
     if(_inputDecorrelation.second.size() == 0)
       output << 0;
     else
       for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
         output << _inputDecorrelation.second[i] << ",";
     output << "\n" << _param.inputReductionThreshold << "\n";
+    output << "input eigenvectors:\n";
+    Matrix vectors = _inputDecorrelation.first.transpose();
+    for(eigen_size_t i = 0; i < _inputDecorrelation.first.rows(); i++)
+    {
+      for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
+        output << vectors(i, j) << ",";
+      output << "\n";
+    }
+    output << "input center:\n";
+    if(_inputCenter.size() == 0)
+      output << 0;
+    else
+      for(eigen_size_t i=0; i<_inputCenter.size(); i++)
+          output << _inputCenter[i] << ",";
+    output << "\n";
+    output << "input normalization:\n";
+    if(_inputNormalization.size() == 0)
+      output << 0;
+    else
+    {
+      for(size_t i=0; i<_inputNormalization.size(); i++)
+          output << _inputNormalization[i].first << ",";
+      output << "\n";
+      for(size_t i=0; i<_inputNormalization.size(); i++)
+          output << _inputNormalization[i].second << ",";
+    }
+    output << "\ninput standardization:\n";
+    if(_inputStandartization.size() == 0)
+      output << 0;
+    else
+    {
+      for(size_t i=0; i<_inputStandartization.size(); i++)
+          output << _inputStandartization[i].first << ",";
+      output << "\n";
+      for(size_t i=0; i<_inputStandartization.size(); i++)
+          output << _inputStandartization[i].second << ",";
+    }
 
-    output << "output preprocess:\n";
+    output << "\noutput preprocess:\n";
     for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
     {
       if(_param.preprocessOutputs[i] == Preprocess::Center)
@@ -400,7 +604,7 @@ public:
         output << _outputDecorrelation.second[i] << ",";
     output << "\n" << _param.outputReductionThreshold << "\n";
     output << "output eigenvectors:\n";
-    Matrix vectors = _outputDecorrelation.first.transpose();
+    vectors = _outputDecorrelation.first.transpose();
     for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
     {
       for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
@@ -813,7 +1017,7 @@ protected:
     //test metric
     std::pair<double, double> testMetric;
     if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-      testMetric = regressionMetrics(_testRawOutputs, process(_testRawInputs), _metricNormalization);
+      testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization);
     else
       testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classValidity);
 
@@ -827,15 +1031,6 @@ protected:
     _testSecondMetric.conservativeResize(_testSecondMetric.size() + 1);
     _testSecondMetric[_testSecondMetric.size()-1] = testMetric.second;
     return validationLoss;
-  }
-
-
-  std::pair<double, double> test(Matrix const& inputs, double classValidity)
-  {
-    if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-      return regressionMetrics(inputs, process(inputs), _metricNormalization);
-    else
-      return classificationMetrics(inputs, process(inputs), classValidity);
   }
 
 
@@ -855,107 +1050,6 @@ protected:
           _layers[i]->loadSaved();
       }
   }
-
-static Network&& load(std::string const& name = "brain_network", size_t threads = 1)
-{
-  std::vector<std::string> out = fistr::readCleanLines(name + ".out");
-  std::vector<std::string> save = fistr::readCleanLines(name + ".save");
-  std::string line;
-
-  // read .out to create param
-  NetworkParam param;
-  param.threads = threads;
-
-  for(size_t i = 0; i < out.size(); i++)
-  {
-    line = out[i];
-    if(line == "loss:")
-    {
-      line = out[i+1];
-      if(line == "mae")
-        param.loss = Loss::L1;
-      if(line == "mse")
-        param.loss = Loss::L2;
-      if(line == "binary cross entropy")
-        param.loss = Loss::BinaryCrossEntropy;
-      if(line == "cross entropy")
-        param.loss = Loss::CrossEntropy;
-    }
-  }
-
-  Network net(param);
-
-  size_t inputSize = std::atoi(save[0].data());
-  for(size_t i = 1; i < save.size(); i++)
-  {
-    line = save[i];
-    if(line.substr(0, 6) == "Layer: ")
-    {
-      size_t nbNeurons = std::atoi(line.erase(0, 6).data());
-      i++;
-      line = save[i];
-      size_t aggreg = std::atoi(line.substr(0, line.find_first_of(" ")).data());
-      size_t activ = std::atoi(line.substr(line.find_first_of(" ")+1, line.size()).data());
-      net.addLayer(layerMap[{aggreg, activ}]());
-      if(net._layers.size() == 1)
-        net._layers[net._layers.size()-1]->init(inputSize);
-      else
-        net._layers[net._layers.size()-1]->init(net._layers[net._layers.size()-2]->size());
-      i++;
-      for(size_t j = 0; j < nbNeurons; i++, j++)
-      {
-        std::vector<std::string> vec(fistr::split(save[i], ' '));
-
-        // load aggreg coefs
-        size_t nbAggreg = std::atoi(vec[0].data());
-        Vector aggregation(nbAggreg);
-        for(size_t k = 0; k < nbAggreg; k++)
-        {
-          aggregation[k] = std::atoi(vec[k + 1].data());
-        }
-
-        // load activ coefs
-        size_t nbActiv = std::atoi(vec[nbAggreg + 1].data());
-        Vector activation(nbActiv);
-        for(size_t k = 0; k < nbActiv; k++)
-        {
-          activation[k] = std::atoi(vec[k + nbAggreg + 2].data());
-        }
-
-        // load bias
-        size_t nbBias = std::atoi(vec[nbAggreg + nbActiv + 2].data());
-        Vector bias(nbBias);
-        for(size_t k = 0; k < nbBias; k++)
-        {
-          bias[k] = std::atoi(vec[k + nbAggreg + nbActiv + 3].data());
-        }
-
-        // load weights
-        size_t nbWeights = std::atoi(vec[nbAggreg + nbActiv + nbBias + 3].data());
-        Vector weights(nbWeights);
-        for(size_t k = 0; k < nbWeights; k++)
-        {
-          weights[k] = std::atoi(vec[k + nbAggreg + nbActiv + nbBias + 4].data());
-        }
-
-        // divide weights into wheight sets
-        size_t weightsPerSet = nbWeights/nbBias;
-        Matrix sets(weightsPerSet, nbBias);
-        for(size_t k = 0; k < nbBias; k++)
-        {
-          for(size_t l = 0; l < weightsPerSet; l++)
-          {
-            sets(k, l) = weights[k*weightsPerSet + l];
-          }
-        }
-
-        // put the coefs into the neuron
-        net._layers[net._layers.size()-1]->setCoefs(j, sets, bias, aggregation, activation);
-      }
-    }
-  }
-  return std::move(net);
-}
 
 
 protected:
@@ -983,6 +1077,7 @@ protected:
   Matrix _testOutputs;
   Matrix _testRawInputs;
   Matrix _testRawOutputs;
+  Matrix _testNormalizedOutputsForMetric;
 
   //learning infos
   size_t _nbBatch;

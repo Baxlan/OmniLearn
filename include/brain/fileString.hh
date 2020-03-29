@@ -3,14 +3,14 @@
 * to perform operations on strings
 */
 
-#ifndef FS_FILESTRING_HH_
-#define FS_FILESTRING_HH_
+#ifndef BRAIN_FILESTRING_HH_
+#define BRAIN_FILESTRING_HH_
 
 #include <string>
 #include <fstream>
 #include <iterator>
 
-namespace fistr // fileString
+namespace brain
 {
 
 //=============================================================================
@@ -110,6 +110,6 @@ std::vector<std::string> readCleanLines(std::string path)
   return content;
 }
 
-} // namespace fistr
+} // namespace brain
 
-#endif // FS_FILESTRING_HH_
+#endif // BRAIN_FILESTRING_HH_

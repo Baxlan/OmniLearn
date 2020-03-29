@@ -73,10 +73,20 @@ void mnist()
     net.learn();
 }
 
+
+void generate(std::string const& name, size_t threads)
+{
+    brain::Network net(name, threads);
+    brain::NetworkParam genParam;
+    net.generate(genParam, (brain::Vector(10) << 1,0,0,0,0,0,0,0,0,0).finished(), brain::Vector::Random(784));
+}
+
+
 int main()
 {
-    //mnist();
-    vesta();
+    mnist();
+    //vesta();
+    generate("brain_network", 4);
 
     return 0;
 }

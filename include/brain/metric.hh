@@ -58,7 +58,7 @@ std::pair<double, double> classificationMetrics(Matrix const& real, Matrix const
 //first is L1, second is L2, with normalized outputs
 std::pair<double, double> regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization)
 {
-    normalize(real, normalization);
+    //"real" are already normalized
     normalize(predicted, normalization);
 
     Vector mae = Vector::Constant(real.rows(), 0);
