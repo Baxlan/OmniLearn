@@ -10,7 +10,6 @@
 #include "fileString.hh"
 
 #include <iostream>
-#include <cstdlib>
 #include <utility>
 
 namespace brain
@@ -54,7 +53,6 @@ struct NetworkParam
     momentum(0.9),
     window(0.9),
     plateau(0.99),
-    normalizeOutputs(false),
     preprocessInputs(),
     preprocessOutputs(),
     optimizerBias(1e-5),
@@ -86,7 +84,6 @@ struct NetworkParam
     double momentum; //momentum
     double window; //window effect on grads
     double plateau;
-    bool normalizeOutputs;
     std::vector<Preprocess> preprocessInputs;
     std::vector<Preprocess> preprocessOutputs;
     double optimizerBias;
@@ -193,10 +190,10 @@ public:
     std::vector<std::string> save = readCleanLines(path + ".save");
     std::string line;
     std::vector<std::string> vec;
+    std::vector<std::string> vec2;
 
     // read .out to create param
-    NetworkParam param;
-    param.threads = threads;
+    _param.threads = threads;
 
     for(size_t i = 0; i < out.size(); i++)
     {
@@ -205,13 +202,13 @@ public:
       {
         line = out[i+1];
         if(line == "mae")
-          param.loss = Loss::L1;
+          _param.loss = Loss::L1;
         if(line == "mse")
-          param.loss = Loss::L2;
+          _param.loss = Loss::L2;
         if(line == "binary cross entropy")
-          param.loss = Loss::BinaryCrossEntropy;
+          _param.loss = Loss::BinaryCrossEntropy;
         if(line == "cross entropy")
-          param.loss = Loss::CrossEntropy;
+          _param.loss = Loss::CrossEntropy;
       }
       else if(line == "input preprocess:")
       {
@@ -234,24 +231,51 @@ public:
       }
       else if(line == "input eigenvalues:")
       {
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          Vector eigenvalues(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            eigenvalues[j] = std::stod(vec[j]);
+          }
+          _inputDecorrelation.second = eigenvalues;
+          _param.inputReductionThreshold = std::stod(out[i+2]);
+          _param.inputWhiteningBias = std::stod(out[i+3]);
+        }
+      }
+      else if(line == "input eigenvectors:")
+      {
+
+      }
+      else if(line == "input center:")
+      {
+        
+      }
+      else if(line == "input normalization:")
+      {
+        
+      }
+      else if(line == "input standardization:")
+      {
         
       }
     }
 
-    _param = param;
 
     // read .save to load all weights / bias / coefs
-    size_t inputSize = std::atoi(save[0].data());
+    size_t inputSize = std::stoi(save[0]);
     for(size_t i = 1; i < save.size(); i++)
     {
       line = save[i];
       if(line.substr(0, 6) == "Layer: ")
       {
-        size_t nbNeurons = std::atoi(line.erase(0, 6).data());
+        size_t nbNeurons = std::stoi(line.erase(0, 6));
         i++;
         line = save[i];
-        size_t aggreg = std::atoi(line.substr(0, line.find_first_of(" ")).data());
-        size_t activ = std::atoi(line.substr(line.find_first_of(" ")+1, line.size()).data());
+        size_t aggreg = std::stoi(line.substr(0, line.find_first_of(" ")));
+        size_t activ = std::stoi(line.substr(line.find_first_of(" ")+1, line.size()));
         addLayer(layerMap[{aggreg, activ}]());
         if(_layers.size() == 1)
           _layers[_layers.size()-1]->init(inputSize);
@@ -263,35 +287,35 @@ public:
           vec = split(save[i], ' ');
 
           // load aggreg coefs
-          size_t nbAggreg = std::atoi(vec[0].data());
+          size_t nbAggreg = std::stoi(vec[0]);
           Vector aggregation(nbAggreg);
           for(size_t k = 0; k < nbAggreg; k++)
           {
-            aggregation[k] = std::atoi(vec[k + 1].data());
+            aggregation[k] = std::stod(vec[k + 1]);
           }
 
           // load activ coefs
-          size_t nbActiv = std::atoi(vec[nbAggreg + 1].data());
+          size_t nbActiv = std::stoi(vec[nbAggreg + 1]);
           Vector activation(nbActiv);
           for(size_t k = 0; k < nbActiv; k++)
           {
-            activation[k] = std::atoi(vec[k + nbAggreg + 2].data());
+            activation[k] = std::stod(vec[k + nbAggreg + 2]);
           }
 
           // load bias
-          size_t nbBias = std::atoi(vec[nbAggreg + nbActiv + 2].data());
+          size_t nbBias = std::stoi(vec[nbAggreg + nbActiv + 2]);
           Vector bias(nbBias);
           for(size_t k = 0; k < nbBias; k++)
           {
-            bias[k] = std::atoi(vec[k + nbAggreg + nbActiv + 3].data());
+            bias[k] = std::stod(vec[k + nbAggreg + nbActiv + 3]);
           }
 
           // load weights
-          size_t nbWeights = std::atoi(vec[nbAggreg + nbActiv + nbBias + 3].data());
+          size_t nbWeights = std::stoi(vec[nbAggreg + nbActiv + nbBias + 3]);
           Vector weights(nbWeights);
           for(size_t k = 0; k < nbWeights; k++)
           {
-            weights[k] = std::atoi(vec[k + nbAggreg + nbActiv + nbBias + 4].data());
+            weights[k] = std::stod(vec[k + nbAggreg + nbActiv + nbBias + 4]);
           }
 
           // divide weights into wheight sets
@@ -310,7 +334,7 @@ public:
         }
       }
     }
-  }
+  } // end of the loading constructor
 
   template <typename Aggr_t, typename Act_t>
   void addLayer(LayerParam const& param = LayerParam())
@@ -543,18 +567,25 @@ public:
     if(_inputDecorrelation.second.size() == 0)
       output << 0;
     else
+    {
       for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
         output << _inputDecorrelation.second[i] << ",";
-    output << "\n" << _param.inputReductionThreshold << "\n";
-    output << "input eigenvectors:\n";
-    Matrix vectors = _inputDecorrelation.first.transpose();
-    for(eigen_size_t i = 0; i < _inputDecorrelation.first.rows(); i++)
-    {
-      for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
-        output << vectors(i, j) << ",";
-      output << "\n";
+      output << "\n" << _param.inputReductionThreshold << "\n";
+      output << _param.inputWhiteningBias << "\n";
     }
-    output << "input center:\n";
+    output << "input eigenvectors:\n";
+    if(_inputDecorrelation.second.size() == 0)
+      output << 0;
+    else
+    {
+      Matrix vectors = _inputDecorrelation.first.transpose();
+      for(eigen_size_t i = 0; i < _inputDecorrelation.first.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
+          output << vectors(i, j) << ",";
+      }
+    }
+    output << "\ninput center:\n";
     if(_inputCenter.size() == 0)
       output << 0;
     else
@@ -600,18 +631,24 @@ public:
     if(_outputDecorrelation.second.size() == 0)
       output << 0;
     else
+    {
       for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
         output << _outputDecorrelation.second[i] << ",";
-    output << "\n" << _param.outputReductionThreshold << "\n";
-    output << "output eigenvectors:\n";
-    vectors = _outputDecorrelation.first.transpose();
-    for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
-    {
-      for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
-        output << vectors(i, j) << ",";
-      output << "\n";
+      output << "\n" << _param.outputReductionThreshold << "\n";
     }
-    output << "output center:\n";
+    output << "output eigenvectors:\n";
+    if(_outputDecorrelation.second.size() == 0)
+      output << 0;
+    else
+    {
+      Matrix vectors = _outputDecorrelation.first.transpose();
+      for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
+          output << vectors(i, j) << ",";
+      }
+    }
+    output << "\noutput center:\n";
     if(_outputCenter.size() == 0)
       output << 0;
     else

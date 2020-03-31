@@ -84,9 +84,9 @@ void generate(std::string const& name, size_t threads)
 
 int main()
 {
-    mnist();
-    //vesta();
-    generate("brain_network", 4);
+    //mnist();
+    vesta();
+    //generate("brain_network", 4);
 
     return 0;
 }
