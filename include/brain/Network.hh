@@ -235,34 +235,148 @@ public:
         if(line != "0")
         {
           vec = split(line, ',');
-          Vector eigenvalues(vec.size());
+          _inputDecorrelation.second = Vector(vec.size());
           for(size_t j = 0; j < vec.size(); j++)
           {
-            eigenvalues[j] = std::stod(vec[j]);
+            _inputDecorrelation.second[j] = std::stod(vec[j]);
           }
-          _inputDecorrelation.second = eigenvalues;
           _param.inputReductionThreshold = std::stod(out[i+2]);
           _param.inputWhiteningBias = std::stod(out[i+3]);
         }
       }
       else if(line == "input eigenvectors:")
       {
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
 
+          // the following statement in the loop implies that
+          // input eigenvalues is loaded before the input eigenvectors
+          _inputDecorrelation.first = Matrix(_inputDecorrelation.second.size(), vec.size());
+
+          for(eigen_size_t j = 0; j < _inputDecorrelation.second.size(); j++)
+          {
+            line = out[i+1+j];
+            vec = split(line, ',');
+            for(size_t k = 0; k < vec.size(); k++)
+            {
+               _inputDecorrelation.first(j, k) = std::stod(vec[j]);
+            }
+          }
+          _inputDecorrelation.first = _inputDecorrelation.first.transpose();
+        }
       }
       else if(line == "input center:")
       {
-        
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          _inputCenter = Vector(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            _inputCenter[j] = std::stod(vec[j]);
+          }
+        }
       }
       else if(line == "input normalization:")
       {
-        
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          vec2 = split(out[i+2], ',');
+          _inputNormalization = std::vector<std::pair<double, double>>(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            _inputNormalization[j].first = std::stod(vec[j]);
+            _inputNormalization[j].second = std::stod(vec2[j]);
+          }
+        }
       }
       else if(line == "input standardization:")
       {
-        
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          vec2 = split(out[i+2], ',');
+          _inputStandartization = std::vector<std::pair<double, double>>(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            _inputStandartization[j].first = std::stod(vec[j]);
+            _inputStandartization[j].second = std::stod(vec2[j]);
+          }
+        }
+      }
+      else if(line == "output eigenvalues:")
+      {
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          _outputDecorrelation.second = Vector(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            _outputDecorrelation.second[j] = std::stod(vec[j]);
+          }
+          _param.outputReductionThreshold = std::stod(out[i+2]);
+          //_param.outputWhiteningBias = std::stod(out[i+3]);
+        }
+      }
+      else if(line == "output eigenvectors:")
+      {
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+
+          // the following statement in the loop implies that
+          // output eigenvalues is loaded before the output eigenvectors
+          _outputDecorrelation.first = Matrix(_outputDecorrelation.second.size(), vec.size());
+
+          for(eigen_size_t j = 0; j < _outputDecorrelation.second.size(); j++)
+          {
+            line = out[i+1+j];
+            vec = split(line, ',');
+            for(size_t k = 0; k < vec.size(); k++)
+            {
+               _outputDecorrelation.first(j, k) = std::stod(vec[j]);
+            }
+          }
+          _outputDecorrelation.first = _outputDecorrelation.first.transpose();
+        }
+      }
+      else if(line == "output center:")
+      {
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          _outputCenter = Vector(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            _outputCenter[j] = std::stod(vec[j]);
+          }
+        }
+      }
+      else if(line == "output normalization:")
+      {
+        line = out[i+1];
+        if(line != "0")
+        {
+          vec = split(line, ',');
+          vec2 = split(out[i+2], ',');
+          _outputNormalization = std::vector<std::pair<double, double>>(vec.size());
+          for(size_t j = 0; j < vec.size(); j++)
+          {
+            _outputNormalization[j].first = std::stod(vec[j]);
+            _outputNormalization[j].second = std::stod(vec2[j]);
+          }
+        }
       }
     }
-
 
     // read .save to load all weights / bias / coefs
     size_t inputSize = std::stoi(save[0]);
@@ -563,19 +677,21 @@ public:
       else if(_param.preprocessInputs[i] == Preprocess::Reduce)
         output << "reduce,";
     }
-    output << "\ninput eigenvalues:\n";
+    output << "\n";
+    output << "input eigenvalues:\n";
     if(_inputDecorrelation.second.size() == 0)
-      output << 0;
+      output << 0 << "\n";
     else
     {
       for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
         output << _inputDecorrelation.second[i] << ",";
-      output << "\n" << _param.inputReductionThreshold << "\n";
+      output << "\n";
+      output << _param.inputReductionThreshold << "\n";
       output << _param.inputWhiteningBias << "\n";
     }
     output << "input eigenvectors:\n";
     if(_inputDecorrelation.second.size() == 0)
-      output << 0;
+      output << 0 << "\n";
     else
     {
       Matrix vectors = _inputDecorrelation.first.transpose();
@@ -583,9 +699,10 @@ public:
       {
         for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
           output << vectors(i, j) << ",";
+        output << "\n";
       }
     }
-    output << "\ninput center:\n";
+    output << "input center:\n";
     if(_inputCenter.size() == 0)
       output << 0;
     else
@@ -594,7 +711,7 @@ public:
     output << "\n";
     output << "input normalization:\n";
     if(_inputNormalization.size() == 0)
-      output << 0;
+      output << 0 << "\n";
     else
     {
       for(size_t i=0; i<_inputNormalization.size(); i++)
@@ -602,10 +719,11 @@ public:
       output << "\n";
       for(size_t i=0; i<_inputNormalization.size(); i++)
           output << _inputNormalization[i].second << ",";
+      output << "\n";
     }
-    output << "\ninput standardization:\n";
+    output << "input standardization:\n";
     if(_inputStandartization.size() == 0)
-      output << 0;
+      output << 0 << "\n";
     else
     {
       for(size_t i=0; i<_inputStandartization.size(); i++)
@@ -613,9 +731,10 @@ public:
       output << "\n";
       for(size_t i=0; i<_inputStandartization.size(); i++)
           output << _inputStandartization[i].second << ",";
+      output << "\n";
     }
 
-    output << "\noutput preprocess:\n";
+    output << "output preprocess:\n";
     for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
     {
       if(_param.preprocessOutputs[i] == Preprocess::Center)
@@ -627,18 +746,20 @@ public:
       else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
         output << "normalize,";
     }
-    output << "\noutput eigenvalues:\n";
+    output << "\n";
+    output << "output eigenvalues:\n";
     if(_outputDecorrelation.second.size() == 0)
-      output << 0;
+      output << 0 << "\n";
     else
     {
       for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
         output << _outputDecorrelation.second[i] << ",";
-      output << "\n" << _param.outputReductionThreshold << "\n";
+      output << "\n";
+      output << _param.outputReductionThreshold << "\n";
     }
     output << "output eigenvectors:\n";
     if(_outputDecorrelation.second.size() == 0)
-      output << 0;
+      output << 0 << "\n";
     else
     {
       Matrix vectors = _outputDecorrelation.first.transpose();
@@ -646,9 +767,10 @@ public:
       {
         for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
           output << vectors(i, j) << ",";
+        output << "\n";
       }
     }
-    output << "\noutput center:\n";
+    output << "output center:\n";
     if(_outputCenter.size() == 0)
       output << 0;
     else
@@ -665,10 +787,11 @@ public:
       output << "\n";
       for(size_t i=0; i<_outputNormalization.size(); i++)
           output << _outputNormalization[i].second << ",";
+      output << "\n";
     }
 
     Matrix testRes(process(_testRawInputs));
-    output << "\nexpected and predicted values:\n";
+    output << "expected and predicted values:\n";
     for(size_t i = 0; i < _outputLabels.size(); i++)
     {
       output << "label: " << _outputLabels[i] << "\n" ;
