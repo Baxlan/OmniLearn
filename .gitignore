@@ -34,8 +34,14 @@
 ehthumbs.db
 Thumbs.db
 
+# project related files #
+#########################
+
 .vscode
 .vscode/*
-
 mnist_test.csv
 mnist_train.csv
+*.listing
+*.learn
+*.save
+*.out

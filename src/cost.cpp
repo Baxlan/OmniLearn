@@ -1,17 +1,10 @@
-#ifndef BRAIN_COST_HH_
-#define BRAIN_COST_HH_
+// cost.cpp
 
-#include "Activation.hh"
-
-namespace brain
-{
+#include "omnilearn/cost.hh"
 
 
 
-// one line = one feature, one colums = one class
-// first are loss, second are gradients
-// use linear activation at the last layer
-Matrix L1Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
+omnilearn::Matrix omnilearn::L1Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
     Matrix loss(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
@@ -31,7 +24,7 @@ Matrix L1Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 }
 
 
-Vector L1Grad(Vector const& real, Vector const& predicted, ThreadPool& t)
+omnilearn::Vector omnilearn::L1Grad(Vector const& real, Vector const& predicted, ThreadPool& t)
 {
     Vector gradients(real.size());
     std::vector<std::future<void>> tasks(real.size());
@@ -53,10 +46,7 @@ Vector L1Grad(Vector const& real, Vector const& predicted, ThreadPool& t)
 }
 
 
-// one line = one feature, one colums = one class
-// first are loss, second are gradients
-// use linear activation at the last layer
-Matrix L2Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
+omnilearn::Matrix omnilearn::L2Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
     Matrix loss(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
@@ -76,7 +66,7 @@ Matrix L2Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 }
 
 
-Vector L2Grad(Vector const& real, Vector const& predicted, ThreadPool& t)
+omnilearn::Vector omnilearn::L2Grad(Vector const& real, Vector const& predicted, ThreadPool& t)
 {
     Vector gradients(real.size());
     std::vector<std::future<void>> tasks(real.size());
@@ -93,10 +83,7 @@ Vector L2Grad(Vector const& real, Vector const& predicted, ThreadPool& t)
 }
 
 
-// one line = one feature, one colums = one class
-// first are loss, second are gradients
-// use linear activation at the last layer
-Matrix crossEntropyLoss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
+omnilearn::Matrix omnilearn::crossEntropyLoss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
     Matrix softMax = softmax(predicted);
     Matrix loss(real.rows(), real.cols());
@@ -117,7 +104,7 @@ Matrix crossEntropyLoss(Matrix const& real, Matrix const& predicted, ThreadPool&
 }
 
 
-Vector crossEntropyGrad(Vector const& real, Vector const& predicted, ThreadPool& t)
+omnilearn::Vector omnilearn::crossEntropyGrad(Vector const& real, Vector const& predicted, ThreadPool& t)
 {
     Vector softMax = singleSoftmax(predicted);
     Vector gradients(real.size());
@@ -135,10 +122,7 @@ Vector crossEntropyGrad(Vector const& real, Vector const& predicted, ThreadPool&
 }
 
 
-// one line = one feature, one colums = one class
-// first are loss, second are gradients
-// use sigmoid activation at last layer (all outputs must be [0, 1])
-Matrix binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
+omnilearn::Matrix omnilearn::binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, ThreadPool& t)
 {
     Matrix loss(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
@@ -158,7 +142,7 @@ Matrix binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, Threa
 }
 
 
-Vector binaryCrossEntropyGrad(Vector const& real, Vector const& predicted, ThreadPool& t)
+omnilearn::Vector omnilearn::binaryCrossEntropyGrad(Vector const& real, Vector const& predicted, ThreadPool& t)
 {
     Vector gradients(real.size());
     std::vector<std::future<void>> tasks(real.size());
@@ -173,8 +157,3 @@ Vector binaryCrossEntropyGrad(Vector const& real, Vector const& predicted, Threa
         tasks[i].get();
     return gradients;
 }
-
-
-} // namespace brain
-
-#endif // BRAIN_COST_HH_

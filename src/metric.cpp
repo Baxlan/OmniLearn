@@ -1,15 +1,11 @@
-#ifndef BRAIN_TEST_HH_
-#define BRAIN_TEST_HH_
+//metric.cpp
 
-#include "Matrix.hh"
-
-namespace brain
-{
+#include "omnilearn/metric.hh"
 
 
 
 // the inputs are loss, the output is average loss
-double averageLoss(Matrix const& loss)
+double omnilearn::averageLoss(Matrix const& loss)
 {
     Vector feature(loss.rows());
     for(eigen_size_t i = 0; i < loss.rows(); i++)
@@ -21,7 +17,7 @@ double averageLoss(Matrix const& loss)
 
 
 //first is "accuracy", second is "false prediction"
-std::pair<double, double> classificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
+std::pair<double, double> omnilearn::classificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
 {
     double validated = 0;
     double fp = 0; //false prediction
@@ -56,7 +52,7 @@ std::pair<double, double> classificationMetrics(Matrix const& real, Matrix const
 
 
 //first is L1, second is L2, with normalized outputs
-std::pair<double, double> regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization)
+std::pair<double, double> omnilearn::regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization)
 {
     //"real" are already normalized
     normalize(predicted, normalization);
@@ -75,9 +71,3 @@ std::pair<double, double> regressionMetrics(Matrix real, Matrix predicted, std::
     }
     return {mae.mean(), mse.mean()};
 }
-
-
-
-} // namespace brain
-
-#endif // BRAIN_TEST_HH_

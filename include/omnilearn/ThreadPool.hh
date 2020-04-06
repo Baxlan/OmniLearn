@@ -1,7 +1,7 @@
 // progschj/ThreadPool
 
-#ifndef BRAIN_THREAD_POOL_HH_
-#define BRAIN_THREAD_POOL_HH_
+#ifndef OMNILEARN_THREAD_POOL_HH_
+#define OMNILEARN_THREAD_POOL_HH_
 
 #include <vector>
 #include <queue>
@@ -14,7 +14,8 @@
 #include <stdexcept>
 
 
-namespace brain
+
+namespace omnilearn
 {
 
 
@@ -27,7 +28,6 @@ public:
   auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type>;
   size_t size() const;
   ~ThreadPool();
-
 
 private:
   // need to keep track of threads so we can join them
@@ -93,7 +93,7 @@ auto ThreadPool::enqueue(F&& f, Args&&... args) -> std::future<typename std::res
 }
 
 
-size_t ThreadPool::size() const
+inline size_t ThreadPool::size() const
 {
   return workers.size();
 }
@@ -113,8 +113,8 @@ inline ThreadPool::~ThreadPool()
 
 
 
-} // namespace brain
+} // namespace omnilearn
 
 
 
-#endif // BRAIN_THREAD_POOL_HH_
+#endif // OMNILEARN_THREAD_POOL_HH_

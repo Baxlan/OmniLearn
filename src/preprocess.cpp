@@ -1,16 +1,12 @@
+//preprocess.cpp
 
-#ifndef BRAIN_PREPROCESS_HH_
-#define BRAIN_PREPROCESS_HH_
+#include "omnilearn/preprocess.hh"
 
-#include "Matrix.hh"
-
-namespace brain
-{
 
 
 //subtract the mean of each comumn to each elements of these columns
 //returns the mean of each column
-Vector center(Matrix& data, Vector mean = Vector(0))
+omnilearn::Vector omnilearn::center(Matrix& data, Vector mean)
 {
   if(mean.size() == 0)
   {
@@ -36,7 +32,7 @@ Vector center(Matrix& data, Vector mean = Vector(0))
 
 //set the elements of each columns between a range [0, 1]
 //returns vector of min and max respectively
-std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::pair<double, double>> mM = {})
+std::vector<std::pair<double, double>> omnilearn::normalize(Matrix& data, std::vector<std::pair<double, double>> mM)
 {
   if(mM.size() == 0)
   {
@@ -63,7 +59,7 @@ std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::
 
 //set the mean and the std deviation of each column to 0 and 1
 //returns vector of mean and deviation respectively
-std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std::pair<double, double>> meanDev = {})
+std::vector<std::pair<double, double>> omnilearn::standardize(Matrix& data, std::vector<std::pair<double, double>> meanDev)
 {
   if(meanDev.size() == 0)
   {
@@ -92,21 +88,16 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 //rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
 //first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> singular = {Matrix(0,0), Vector(0)})
+std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::decorrelate(Matrix& data, std::pair<Matrix, Vector> singular)
 {
   if(singular.second.size() == 0)
   {
     Matrix cov = (data.transpose() * data) / static_cast<double>(data.rows() - 1);
 
-    //SVD is really time consuming during compilation, so it have to be activated manually
-    #ifndef BRAIN_ENABLE_SVD
-    assert("Whittening or PCA is used but BRAIN_ENABLE_SVD have not been defined.");
-    #else
     //in U, eigen vectors are columns
     Eigen::BDCSVD<Matrix> svd(cov, Eigen::ComputeFullU);
     singular.first = svd.matrixU();
     singular.second = svd.singularValues();
-    #endif
   }
 
   //apply rotation
@@ -118,8 +109,7 @@ std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> si
 }
 
 
-
-void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias)
+void omnilearn::whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias)
 {
   if(singular.second.size() == 0)
     throw Exception("Decorrelation must be performed before whitening");
@@ -130,8 +120,7 @@ void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias
 }
 
 
-
-void reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold)
+void omnilearn::reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold)
 {
   if(singular.second.size() == 0)
     throw Exception("Decorrelation must be performed before reduction");
@@ -149,9 +138,3 @@ void reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double thre
     }
   }
 }
-
-
-
-} //namespace brain
-
-#endif // BRAIN_PREPROCESS_HH_
