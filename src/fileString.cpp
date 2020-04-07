@@ -27,10 +27,10 @@ std::string omnilearn::strip(std::string str, char c)
 std::vector<std::string> omnilearn::split(std::string str, char c)
 {
   std::vector<std::string> vec(std::count(str.begin(), str.end(), c));
-  for(size_t i = 0; i < str.size()-1; i++)
+  for(size_t i = 0; i < vec.size(); i++)
   {
     vec[i] = str.substr(0, str.find_first_of(c));
-    str.erase(0, str.find_first_of(c));
+    str.erase(0, str.find_first_of(c)+1);
   }
   return vec;
 }
@@ -44,8 +44,10 @@ std::string omnilearn::removeRepetition(std::string const& str, char c)
   {
     if(pos < str.size()-1 && str[pos] == str[pos+1] && str[pos] == c)
       ;
-    else
+    else if(pos < str.size())
       output += str[pos];
+    else
+      break;
     pos++;
   }
   return output;
@@ -57,19 +59,19 @@ std::vector<std::string> omnilearn::readLines(std::string path)
   std::ifstream file(path);
   if(!file)
     throw std::runtime_error("Cannot open " + path);
-  std::istream_iterator<std::string> start(file), end;
-  std::vector<std::string> content(start, end);
+  std::vector<std::string> content;
+  while(file.good())
+  {
+    content.push_back("");
+    std::getline(file, content[content.size() - 1]);
+  }
   return content;
 }
 
 
 std::vector<std::string> omnilearn::readCleanLines(std::string path)
 {
-  std::ifstream file(path);
-  if(!file)
-    throw std::runtime_error("Cannot open " + path);
-  std::istream_iterator<std::string> start(file), end;
-  std::vector<std::string> content(start, end);
+  std::vector<std::string> content(readLines(path));
   for(size_t i = 0; i < content.size(); i++)
   {
     content[i] = strip(content[i], ' ');

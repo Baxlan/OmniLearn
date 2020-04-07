@@ -161,7 +161,7 @@ _inputDecorrelation()
               _inputDecorrelation.first(j, k) = std::stod(vec[j]);
           }
         }
-        _inputDecorrelation.first = _inputDecorrelation.first.transpose();
+        _inputDecorrelation.first.transposeInPlace();
       }
     }
     else if(line == "input center:")
@@ -242,7 +242,7 @@ _inputDecorrelation()
               _outputDecorrelation.first(j, k) = std::stod(vec[j]);
           }
         }
-        _outputDecorrelation.first = _outputDecorrelation.first.transpose();
+        _outputDecorrelation.first.transposeInPlace();
       }
     }
     else if(line == "output center:")

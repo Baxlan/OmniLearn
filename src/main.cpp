@@ -75,8 +75,8 @@ void mnist()
 int main()
 {
     //mnist();
-    vesta();
-    //omnilearn::Network getNet("omnilearn_network", 4);
+    //vesta();
+    omnilearn::Network getNet("omnilearn_network", 4);
 
     return 0;
 }
