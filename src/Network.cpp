@@ -89,6 +89,9 @@ _inputDecorrelation()
   std::vector<std::string> vec;
   std::vector<std::string> vec2;
 
+  for(size_t i = 0; i < out.size(); i++)
+    out[i] = strip(out[i], ',');
+
   // read .out to create param
   _param.threads = threads;
 
@@ -158,7 +161,7 @@ _inputDecorrelation()
           vec = split(line, ',');
           for(size_t k = 0; k < vec.size(); k++)
           {
-              _inputDecorrelation.first(j, k) = std::stod(vec[j]);
+            _inputDecorrelation.first(j, k) = std::stod(vec[k]);
           }
         }
         _inputDecorrelation.first.transposeInPlace();
@@ -207,6 +210,25 @@ _inputDecorrelation()
         }
       }
     }
+    else if(line == "output preprocess:")
+    {
+      vec = split(out[i+1], ',');
+      for(std::string const& a : vec)
+      {
+        if(a == "center")
+          _param.preprocessOutputs.push_back(Preprocess::Center);
+        if(a == "normalize")
+          _param.preprocessOutputs.push_back(Preprocess::Normalize);
+        //if(a == "standardize")
+        //  _param.preprocessOutputs.push_back(Preprocess::Standardize);
+        if(a == "decorrelate")
+          _param.preprocessOutputs.push_back(Preprocess::Decorrelate);
+        //if(a == "whiten")
+        //  _param.preprocessOutputs.push_back(Preprocess::Whiten);
+        if(a == "reduce")
+          _param.preprocessOutputs.push_back(Preprocess::Reduce);
+      }
+    }
     else if(line == "output eigenvalues:")
     {
       line = out[i+1];
@@ -239,7 +261,7 @@ _inputDecorrelation()
           vec = split(line, ',');
           for(size_t k = 0; k < vec.size(); k++)
           {
-              _outputDecorrelation.first(j, k) = std::stod(vec[j]);
+              _outputDecorrelation.first(j, k) = std::stod(vec[k]);
           }
         }
         _outputDecorrelation.first.transposeInPlace();
@@ -276,22 +298,20 @@ _inputDecorrelation()
   }
 
   // read .save to load all weights / bias / coefs
-  size_t inputSize = std::stoi(save[0]);
-  for(size_t i = 1; i < save.size(); i++)
+  for(size_t i = 0; i < save.size(); i++)
   {
     line = save[i];
-    if(line.substr(0, 6) == "Layer: ")
+    if(line.substr(0, 7) == "Layer: ")
     {
-      size_t nbNeurons = std::stoi(line.erase(0, 6));
+      size_t nbNeurons = std::stoi(line.erase(0, 7));
       i++;
       line = save[i];
       size_t aggreg = std::stoi(line.substr(0, line.find_first_of(" ")));
       size_t activ = std::stoi(line.substr(line.find_first_of(" ")+1, line.size()));
-      addLayer(LayerParam(), aggreg, activ);
-      if(_layers.size() == 1)
-        _layers[_layers.size()-1].init(inputSize);
-      else
-        _layers[_layers.size()-1].init(_layers[_layers.size()-2].size());
+      LayerParam param;
+      param.size = nbNeurons;
+      addLayer(param, aggreg, activ);
+      size_t weightsPerSet = 0; //used to init the layer at the end
       i++;
       for(size_t j = 0; j < nbNeurons; i++, j++)
       {
@@ -330,8 +350,8 @@ _inputDecorrelation()
         }
 
         // divide weights into wheight sets
-        size_t weightsPerSet = nbWeights/nbBias;
-        Matrix sets(weightsPerSet, nbBias);
+        weightsPerSet = nbWeights/nbBias;
+        Matrix sets(nbBias, weightsPerSet);
         for(size_t k = 0; k < nbBias; k++)
         {
           for(size_t l = 0; l < weightsPerSet; l++)
@@ -343,6 +363,12 @@ _inputDecorrelation()
         // put the coefs into the neuron
         _layers[_layers.size()-1].setCoefs(j, sets, bias, aggregation, activation);
       }
+
+      if(_layers.size() == 1)
+        _layers[_layers.size()-1].init(weightsPerSet);
+      else
+        _layers[_layers.size()-1].init(_layers[_layers.size()-2].size());
+      i--;
     }
   }
 } // end of the loading constructor
@@ -669,7 +695,7 @@ void omnilearn::Network::writeInfo(std::string const& path) const
   output << "\n";
   output << "output normalization:\n";
   if(_outputNormalization.size() == 0)
-    output << 0;
+    output << 0 << "\n";
   else
   {
     for(size_t i=0; i<_outputNormalization.size(); i++)
@@ -700,7 +726,6 @@ void omnilearn::Network::saveNetInFile(std::string const& path) const
   std::ofstream output(path);
   if(!output)
     throw Exception("Cannot open/create file " + path);
-  output << _layers.size() << "\n";
   for(size_t i = 0; i < _layers.size(); i++)
   {
     output << "Layer: " << _layers[i].size() << "\n";

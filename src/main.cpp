@@ -72,11 +72,20 @@ void mnist()
 }
 
 
+void testLoader()
+{
+    omnilearn::Network genNet("omnilearn_network", 4);
+    omnilearn::Data data = omnilearn::loadData("dataset/mnist_test.csv", ',', 4);
+    std::pair<double, double> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.8);
+    std::cout << metric.first << " " << metric.second << "\n";
+}
+
+
 int main()
 {
     //mnist();
     //vesta();
-    omnilearn::Network getNet("omnilearn_network", 4);
+    testLoader();
 
     return 0;
 }

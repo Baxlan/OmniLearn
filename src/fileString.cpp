@@ -9,14 +9,14 @@ std::string omnilearn::strip(std::string str, char c)
   while(true)
   {
     if(str[0]==c)
-      str.erase(0);
+      str.erase(0, 1);
     else
       break;
   }
   while(true)
   {
     if(str[str.size()-1]==c)
-      str.erase(str.size()-1);
+      str.erase(str.size()-1, 1);
     else
       break;
   }
@@ -26,12 +26,13 @@ std::string omnilearn::strip(std::string str, char c)
 
 std::vector<std::string> omnilearn::split(std::string str, char c)
 {
-  std::vector<std::string> vec(std::count(str.begin(), str.end(), c));
+  std::vector<std::string> vec(std::count(str.begin(), str.end(), c)+1);
   for(size_t i = 0; i < vec.size(); i++)
   {
     vec[i] = str.substr(0, str.find_first_of(c));
     str.erase(0, str.find_first_of(c)+1);
   }
+  vec[vec.size()-1] = str.substr(0);
   return vec;
 }
 

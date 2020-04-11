@@ -2,7 +2,8 @@ CXX = g++
 
 RM = rm -rf
 
-CXXFLAGS = -std=c++17 -g3 -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Wno-float-equal -Woverloaded-virtual -Wno-attributes -Wswitch-default -Wno-deprecated-declarations -Wl,--no-as-needed -Wa,-mbig-obj -I$(INCDIR)
+CXXFLAGS = -std=c++17 -O3 -Os -s -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Wno-float-equal -Woverloaded-virtual -Wno-attributes -Wswitch-default -Wno-deprecated-declarations -Wl,--no-as-needed -I$(INCDIR)
+#CXXFLAGS = -std=c++17 -g3 -Wa,-mbig-obj -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Wno-float-equal -Woverloaded-virtual -Wno-attributes -Wswitch-default -Wno-deprecated-declarations -Wl,--no-as-needed -I$(INCDIR)
 
 #-Wconversion -Wsign-conversion -Wold-style-cast
 #-g3 met tous les symbols de débugage
