@@ -1,0 +1,47 @@
+# Compiled source #
+###################
+*.com
+*.class
+*.exe
+*.lib
+*.so
+*.o
+*.obj
+*.dll
+
+# Packages #
+############
+*.7z
+*.gz
+*.rar
+*.tar
+*.zip
+
+# Logs and temp #
+#################
+*.log
+*.tlog
+*~
+*#
+
+# OS generated files #
+######################
+.DS_Store
+.DSStore?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# project related files #
+#########################
+
+.vscode
+.vscode/*
+mnist_test.csv
+mnist_train.csv
+*.listing
+*.learn
+*.save
+*.out
