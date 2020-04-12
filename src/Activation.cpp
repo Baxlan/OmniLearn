@@ -492,12 +492,14 @@ omnilearn::Srelu::Srelu(Vector const& coefs)
 double omnilearn::Srelu::activate(double val) const
 {
     // TO BE IMPLEMENTED
+    return 0;
 }
 
 
 double omnilearn::Srelu::prime(double val) const
 {
     // TO BE IMPLEMENTED
+    return 0;
 }
 
 

@@ -3,10 +3,17 @@
 #ifndef OMNILEARN_PREPROCESS_HH_
 #define OMNILEARN_PREPROCESS_HH_
 
+#include "disable_eigen_warnings.hh"
 #include "Exception.hh"
 #include "Matrix.hh"
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_ALL
+DISABLE_WARNING_EXTRA
+DISABLE_WARNING_OLD_STYLE_CAST
+DISABLE_WARNING_CONVERSION
 #include "eigen/SVD"
+DISABLE_WARNING_POP
 
 
 

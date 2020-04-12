@@ -760,6 +760,7 @@ omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target
     gradients = _layers[0].getGradients(_pool);
     //_layers[0].updateInputs(input, gradients, _pool);
   }
+  return Vector();
 }
 
 
@@ -834,8 +835,8 @@ void omnilearn::Network::shuffleData()
   }
   _testRawInputs = _testInputs;
   _testRawOutputs = _testOutputs;
-  _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - validation - test));
-  _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - validation - test));
+  _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
+  _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _nbBatch = static_cast<size_t>(nbBatch);
 }
 

@@ -198,7 +198,7 @@ void omnilearn::Layer::resize(size_t neurons)
 std::vector<omnilearn::rowVector> omnilearn::Layer::getCoefs() const
 {
     std::vector<rowVector> coefs(_neurons.size() + 1);
-    coefs[0] = (rowVector(2) << aggregationMap[_aggrAct.first]()->id(), activationMap[_aggrAct.second]()->id()).finished();
+    coefs[0] = (rowVector(2) << static_cast<double>(aggregationMap[_aggrAct.first]()->id()), static_cast<double>(activationMap[_aggrAct.second]()->id())).finished();
     for(size_t i = 0; i < _neurons.size(); i++)
     {
         coefs[i+1] = _neurons[i].getCoefs();

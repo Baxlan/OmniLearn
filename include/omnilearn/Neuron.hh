@@ -45,7 +45,7 @@ public:
 
 
 protected:
-    std::shared_ptr<AggregationFct> _aggregation;
+    std::shared_ptr<AggregationFunc> _aggregation;
     std::shared_ptr<ActivationFct> _activation;
 
     Matrix _weights;

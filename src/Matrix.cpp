@@ -8,7 +8,7 @@
 
 double omnilearn::dev(Vector const& vec)
 {
-  return std::sqrt((vec.array() - vec.mean()).square().sum()/(vec.size()-1));
+  return std::sqrt((vec.array() - vec.mean()).square().sum()/(static_cast<double>(vec.size())-1));
 }
 
 

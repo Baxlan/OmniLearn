@@ -228,7 +228,7 @@ void omnilearn::Neuron::loadSaved()
 
 omnilearn::Vector omnilearn::Neuron::computeGradientsAccordingToInputs(double inputGradient)
 {
-
+    return Vector();
 }
 
 
@@ -253,7 +253,7 @@ omnilearn::rowVector omnilearn::Neuron::getCoefs() const
     rowVector weights(Eigen::Map<rowVector>(const_cast<double*>(_weights.data()), _weights.size()));
 
     return (rowVector(aggreg.size() + activ.size() + weights.size() + _bias.size() + 4) <<
-            aggreg.size(), aggreg, activ.size(), activ, _bias.size(), _bias, _weights.cols(), weights).finished();
+            static_cast<double>(aggreg.size()), aggreg, static_cast<double>(activ.size()), activ, static_cast<double>(_bias.size()), _bias, static_cast<double>(_weights.cols()), weights).finished();
 }
 
 

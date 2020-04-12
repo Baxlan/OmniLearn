@@ -3,7 +3,15 @@
 #ifndef OMNILEARN_MATRIX_HH_
 #define OMNILEARN_MATRIX_HH_
 
+#include "disable_eigen_warnings.hh"
+
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_ALL
+DISABLE_WARNING_EXTRA
+DISABLE_WARNING_OLD_STYLE_CAST
+DISABLE_WARNING_CONVERSION
 #include "eigen/Core"
+DISABLE_WARNING_POP
 
 #define eigen_size_t long long
 

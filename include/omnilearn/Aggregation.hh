@@ -26,10 +26,10 @@ static const size_t Maxout = 2;
 
 
 // interface
-class AggregationFct
+class AggregationFunc
 {
 public:
-    virtual ~AggregationFct(){}
+    virtual ~AggregationFunc(){}
     virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, size_t is the index of the weight set used
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
@@ -51,7 +51,7 @@ public:
 
 
 
-class Dot : public AggregationFct
+class Dot : public AggregationFunc
 {
 public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
@@ -67,7 +67,7 @@ public:
 
 
 
-class Distance : public AggregationFct
+class Distance : public AggregationFunc
 {
 public:
     Distance(Vector const& coefs = (Vector(1) << 2).finished());
@@ -82,14 +82,14 @@ public:
     void loadSaved();
 
 protected:
-    size_t _order;
-    size_t _savedOrder;
+    double _order;
+    double _savedOrder;
     static const Vector _bias;
 };
 
 
 
-class Maxout : public AggregationFct
+class Maxout : public AggregationFunc
 {
 public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
@@ -105,7 +105,7 @@ public:
 
 
 
-static std::map<size_t, std::function<std::shared_ptr<AggregationFct>()>> aggregationMap = {
+static std::map<size_t, std::function<std::shared_ptr<AggregationFunc>()>> aggregationMap = {
     {0, []{return std::make_shared<Dot>();}},
     {1, []{return std::make_shared<Distance>();}},
     {2, []{return std::make_shared<Maxout>();}},
