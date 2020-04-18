@@ -24,7 +24,9 @@ $(SRCDIR)/Layer.cpp \
 $(SRCDIR)/Matrix.cpp \
 $(SRCDIR)/metric.cpp \
 $(SRCDIR)/Network.cpp \
+$(SRCDIR)/NetworkIO.cpp \
 $(SRCDIR)/Neuron.cpp \
+$(SRCDIR)/Parser.cpp \
 $(SRCDIR)/preprocess.cpp \
 $(SRCDIR)/main.cpp \
 

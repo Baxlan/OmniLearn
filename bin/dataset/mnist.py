@@ -1,6 +1,6 @@
 """
 This script modifies the mnist_*.csv internal arrangement
-to be compatible with the Brain neural network csv reader
+to be compatible with the OmniLearn csv reader
 """
 content = open("mnist_test.csv", "r").readlines()
 

@@ -113,7 +113,6 @@ omnilearn::Vector omnilearn::Distance::prime(Vector const& inputs, Vector const&
 }
 
 
-//MAYBE WRONG, TO INVESTIGATE
 omnilearn::Vector omnilearn::Distance::primeInput(Vector const& inputs, Vector const& weights) const
 {
     double a = std::pow(aggregate(inputs, weights, _bias).first, (1-_order));
@@ -121,7 +120,7 @@ omnilearn::Vector omnilearn::Distance::primeInput(Vector const& inputs, Vector c
 
     for(eigen_size_t i = 0; i < weights.size(); i++)
     {
-        result[i] = (-std::pow((inputs[i] - weights[i]), _order-1) * a);
+        result[i] = (std::pow((inputs[i] - weights[i]), _order-1) * a);
     }
     return result;
 }

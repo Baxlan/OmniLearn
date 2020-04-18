@@ -115,7 +115,7 @@ void omnilearn::whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, 
     throw Exception("Decorrelation must be performed before whitening");
   for(eigen_size_t i = 0; i < data.cols(); i++)
   {
-    data.col(i) = data.col(i) / (std::sqrt(singular.second[i])+bias);
+    data.col(i) /= (std::sqrt(singular.second[i])+bias);
   }
 }
 

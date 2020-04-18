@@ -216,17 +216,17 @@ _inputDecorrelation()
       for(std::string const& a : vec)
       {
         if(a == "center")
-          _param.preprocessOutputs.push_back(Preprocess::Center);
+          _param.postprocessOutputs.push_back(Preprocess::Center);
         if(a == "normalize")
-          _param.preprocessOutputs.push_back(Preprocess::Normalize);
+          _param.postprocessOutputs.push_back(Preprocess::Normalize);
         //if(a == "standardize")
-        //  _param.preprocessOutputs.push_back(Preprocess::Standardize);
+        //  _param.postprocessOutputs.push_back(Preprocess::Standardize);
         if(a == "decorrelate")
-          _param.preprocessOutputs.push_back(Preprocess::Decorrelate);
+          _param.postprocessOutputs.push_back(Preprocess::Decorrelate);
         //if(a == "whiten")
-        //  _param.preprocessOutputs.push_back(Preprocess::Whiten);
+        //  _param.postprocessOutputs.push_back(Preprocess::Whiten);
         if(a == "reduce")
-          _param.preprocessOutputs.push_back(Preprocess::Reduce);
+          _param.postprocessOutputs.push_back(Preprocess::Reduce);
       }
     }
     else if(line == "output eigenvalues:")
@@ -394,7 +394,7 @@ void omnilearn::Network::setTestData(Data const& data)
 bool omnilearn::Network::learn()
 {
   shuffleData();
-  preprocess();
+  initPreprocess();
   _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
   initLayers();
 
@@ -449,9 +449,83 @@ bool omnilearn::Network::learn()
 }
 
 
+omnilearn::Vector omnilearn::Network::process(Vector inputs) const
+{
+  return process(Matrix(inputs.transpose())).row(0);
+}
+
+
 omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
 {
-  //preprocess inputs
+  inputs = preprocess(inputs);
+  for(size_t i = 0; i < _layers.size(); i++)
+  {
+    inputs = _layers[i].process(inputs, _pool);
+  }
+  // if cross-entropy loss is used, then score must be softmax
+  if(_param.loss == Loss::CrossEntropy)
+  {
+    inputs = softmax(inputs);
+  }
+  inputs = postprocess(inputs);
+  return inputs;
+}
+
+
+omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target, Vector input)
+{
+  if(input.size() == 0)
+    input = Vector::Random(_layers[0].nbWeights());
+  else
+    input = preprocess(input);
+  target = depostprocess(target);
+  for(size_t iteration = 0; iteration < param.epoch; iteration++)
+  {
+    Vector res = input;
+    for(size_t i = 0; i < _layers.size(); i++)
+    {
+      res = _layers[i].processToGenerate(res, _pool);
+    }
+    Vector gradients(computeGradVector(target, res));
+    for(size_t i = 0; i < _layers.size() - 1; i++)
+    {
+      _layers[_layers.size() - i - 1].computeGradients(gradients, _pool);
+      gradients = _layers[_layers.size() - i - 1].getGradients(_pool);
+    }
+    _layers[0].computeGradientsAccordingToInputs(gradients, _pool);
+    _layers[0].updateInput(input, param.learningRate);
+  }
+  input = depreprocess(input);
+  return input;
+}
+
+
+omnilearn::Vector omnilearn::Network::preprocess(Vector inputs) const
+{
+  return preprocess(Matrix(inputs.transpose())).row(0);
+}
+
+
+omnilearn::Vector omnilearn::Network::postprocess(Vector outputs) const
+{
+  return postprocess(Matrix(outputs.transpose())).row(0);
+}
+
+
+omnilearn::Vector omnilearn::Network::depreprocess(Vector inputs) const
+{
+  return depreprocess(Matrix(inputs.transpose())).row(0);
+}
+
+
+omnilearn::Vector omnilearn::Network::depostprocess(Vector outputs) const
+{
+  return depostprocess(Matrix(outputs.transpose())).row(0);
+}
+
+
+omnilearn::Matrix omnilearn::Network::preprocess(Matrix inputs) const
+{
   for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
   {
     if(_param.preprocessInputs[i] == Preprocess::Center)
@@ -479,55 +553,115 @@ omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
       reduce(inputs, _inputDecorrelation, _param.inputReductionThreshold);
     }
   }
-  //process
-  for(size_t i = 0; i < _layers.size(); i++)
+  return inputs;
+}
+
+
+omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
+{
+  for(size_t pre = 0; pre < _param.postprocessOutputs.size(); pre++)
   {
-    inputs = _layers[i].process(inputs, _pool);
+    if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
+    {
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < outputs.cols(); j++)
+        {
+          outputs(i,j) *= (_outputNormalization[j].second - _outputNormalization[j].first);
+          outputs(i,j) += _outputNormalization[j].first;
+        }
+      }
+    }
+    else if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
+    {
+      Matrix newResults(outputs.rows(), _outputDecorrelation.second.size());
+      rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - outputs.cols(), 0);
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        newResults.row(i) = (rowVector(_outputDecorrelation.second.size()) << outputs.row(i), zero).finished();
+      }
+      outputs = newResults;
+    }
+    else if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+    {
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        outputs.row(i) = _outputDecorrelation.first * outputs.row(i).transpose();
+      }
+    }
+    else if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Center)
+    {
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < outputs.cols(); j++)
+        {
+          outputs(i,j) += _outputCenter[j];
+        }
+      }
+    }
   }
-  // if cross-entropy loss is used, then score must be softmax
-  if(_param.loss == Loss::CrossEntropy)
+  return outputs;
+}
+
+
+omnilearn::Matrix omnilearn::Network::depreprocess(Matrix inputs) const
+{
+  for(size_t pre = 0; pre < _param.preprocessInputs.size(); pre++)
   {
-    inputs = softmax(inputs);
-  }
-  //transform computed outputs to real values
-  for(size_t pre = 0; pre < _param.preprocessOutputs.size(); pre++)
-  {
-    if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
+    if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Normalize)
     {
       for(eigen_size_t i = 0; i < inputs.rows(); i++)
       {
         for(eigen_size_t j = 0; j < inputs.cols(); j++)
         {
-          inputs(i,j) *= (_outputNormalization[j].second - _outputNormalization[j].first);
-          inputs(i,j) += _outputNormalization[j].first;
+          inputs(i,j) *= (_inputNormalization[j].second - _inputNormalization[j].first);
+          inputs(i,j) += _inputNormalization[j].first;
         }
       }
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Reduce)
     {
-      Matrix newResults(inputs.rows(), _outputDecorrelation.second.size());
-      rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - inputs.cols(), 0);
+      Matrix newResults(inputs.rows(), _inputDecorrelation.second.size());
+      rowVector zero = rowVector::Constant(_inputDecorrelation.second.size() - inputs.cols(), 0);
       for(eigen_size_t i = 0; i < inputs.rows(); i++)
       {
-        newResults.row(i) = (rowVector(_outputDecorrelation.second.size()) << inputs.row(i), zero).finished();
+        newResults.row(i) = (rowVector(_inputDecorrelation.second.size()) << inputs.row(i), zero).finished();
       }
       inputs = newResults;
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Decorrelate)
     {
       for(eigen_size_t i = 0; i < inputs.rows(); i++)
       {
-        inputs.row(i) = _outputDecorrelation.first * inputs.row(i).transpose();
+        inputs.row(i) = _inputDecorrelation.first * inputs.row(i).transpose();
       }
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Center)
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Center)
     {
       for(eigen_size_t i = 0; i < inputs.rows(); i++)
       {
         for(eigen_size_t j = 0; j < inputs.cols(); j++)
         {
-          inputs(i,j) += _outputCenter[j];
+          inputs(i,j) += _inputCenter[j];
         }
+      }
+    }
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Standardize)
+    {
+      for(eigen_size_t i = 0; i < inputs.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < inputs.cols(); j++)
+        {
+          inputs(i,j) *= _inputStandartization[j].second;
+          inputs(i,j) += _inputStandartization[j].first;
+        }
+      }
+    }
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Whiten)
+    {
+      for(eigen_size_t i = 0; i < inputs.cols(); i++)
+      {
+        inputs.col(i) *= (std::sqrt(_inputDecorrelation.second[i])+_param.inputWhiteningBias);
       }
     }
   }
@@ -535,232 +669,28 @@ omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
 }
 
 
-void omnilearn::Network::writeInfo(std::string const& path) const
+omnilearn::Matrix omnilearn::Network::depostprocess(Matrix outputs) const
 {
-  std::string loss;
-  if(_param.loss == Loss::BinaryCrossEntropy)
-    loss = "binary cross entropy";
-  else if(_param.loss == Loss::CrossEntropy)
-    loss = "cross entropy";
-  else if(_param.loss == Loss::L1)
-    loss = "mae";
-  else if(_param.loss == Loss::L2)
-    loss = "mse";
-
-  std::ofstream output(path);
-  if(!output)
-    throw Exception("Cannot open/create file " + path);
-
-  output << "input labels:\n";
-  for(size_t i=0; i<_inputLabels.size(); i++)
-      output << _inputLabels[i] << ",";
-  output << "\noutput labels:\n";
-  for(size_t i=0; i<_outputLabels.size(); i++)
-      output << _outputLabels[i] << ",";
-  output << "\n" << "loss:" << "\n" << loss << "\n";
-  for(eigen_size_t i=0; i<_trainLosses.size(); i++)
-      output << _trainLosses[i] << ",";
-  output << "\n";
-  for(eigen_size_t i=0; i<_validLosses.size(); i++)
-      output << _validLosses[i] << ",";
-  output << "\n" << "metric:" << "\n";
-  for(eigen_size_t i=0; i<_testMetric.size(); i++)
-      output << _testMetric[i] << ",";
-  output << "\n";
-  for(eigen_size_t i=0; i<_testSecondMetric.size(); i++)
-      output << _testSecondMetric[i] << ",";
-  if(loss == "binary cross entropy" || loss == "cross entropy")
+  for(size_t i = 0; i < _param.postprocessOutputs.size(); i++)
   {
-    output << "\nclassification threshold:\n";
-    output << _param.classValidity;
-  }
-  output << "\noptimal epoch:\n";
-  output << _optimalEpoch << "\n";
-
-  output << "input preprocess:\n";
-  for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
-  {
-    if(_param.preprocessInputs[i] == Preprocess::Center)
-      output << "center,";
-    else if(_param.preprocessInputs[i] == Preprocess::Normalize)
-      output << "normalize,";
-    else if(_param.preprocessInputs[i] == Preprocess::Standardize)
-      output << "standardize,";
-    else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
-      output << "decorrelate,";
-    else if(_param.preprocessInputs[i] == Preprocess::Whiten)
-      output << "whiten,";
-    else if(_param.preprocessInputs[i] == Preprocess::Reduce)
-      output << "reduce,";
-  }
-  output << "\n";
-  output << "input eigenvalues:\n";
-  if(_inputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
-      output << _inputDecorrelation.second[i] << ",";
-    output << "\n";
-    output << _param.inputReductionThreshold << "\n";
-    output << _param.inputWhiteningBias << "\n";
-  }
-  output << "input eigenvectors:\n";
-  if(_inputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    Matrix vectors = _inputDecorrelation.first.transpose();
-    for(eigen_size_t i = 0; i < _inputDecorrelation.first.rows(); i++)
+    if(_param.postprocessOutputs[i] == Preprocess::Center)
     {
-      for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
-        output << vectors(i, j) << ",";
-      output << "\n";
+      center(outputs, _outputCenter);
+    }
+    else if(_param.postprocessOutputs[i] == Preprocess::Normalize)
+    {
+      normalize(outputs, _outputNormalization);
+    }
+    else if(_param.postprocessOutputs[i] == Preprocess::Decorrelate)
+    {
+      decorrelate(outputs, _outputDecorrelation);
+    }
+    else if(_param.postprocessOutputs[i] == Preprocess::Reduce)
+    {
+      reduce(outputs, _outputDecorrelation, _param.outputReductionThreshold);
     }
   }
-  output << "input center:\n";
-  if(_inputCenter.size() == 0)
-    output << 0;
-  else
-    for(eigen_size_t i=0; i<_inputCenter.size(); i++)
-        output << _inputCenter[i] << ",";
-  output << "\n";
-  output << "input normalization:\n";
-  if(_inputNormalization.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(size_t i=0; i<_inputNormalization.size(); i++)
-        output << _inputNormalization[i].first << ",";
-    output << "\n";
-    for(size_t i=0; i<_inputNormalization.size(); i++)
-        output << _inputNormalization[i].second << ",";
-    output << "\n";
-  }
-  output << "input standardization:\n";
-  if(_inputStandartization.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(size_t i=0; i<_inputStandartization.size(); i++)
-        output << _inputStandartization[i].first << ",";
-    output << "\n";
-    for(size_t i=0; i<_inputStandartization.size(); i++)
-        output << _inputStandartization[i].second << ",";
-    output << "\n";
-  }
-
-  output << "output preprocess:\n";
-  for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
-  {
-    if(_param.preprocessOutputs[i] == Preprocess::Center)
-      output << "center,";
-    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
-      output << "decorrelate,";
-    else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
-      output << "reduce,";
-    else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
-      output << "normalize,";
-  }
-  output << "\n";
-  output << "output eigenvalues:\n";
-  if(_outputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
-      output << _outputDecorrelation.second[i] << ",";
-    output << "\n";
-    output << _param.outputReductionThreshold << "\n";
-  }
-  output << "output eigenvectors:\n";
-  if(_outputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    Matrix vectors = _outputDecorrelation.first.transpose();
-    for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
-    {
-      for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
-        output << vectors(i, j) << ",";
-      output << "\n";
-    }
-  }
-  output << "output center:\n";
-  if(_outputCenter.size() == 0)
-    output << 0;
-  else
-    for(eigen_size_t i=0; i<_outputCenter.size(); i++)
-        output << _outputCenter[i] << ",";
-  output << "\n";
-  output << "output normalization:\n";
-  if(_outputNormalization.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(size_t i=0; i<_outputNormalization.size(); i++)
-        output << _outputNormalization[i].first << ",";
-    output << "\n";
-    for(size_t i=0; i<_outputNormalization.size(); i++)
-        output << _outputNormalization[i].second << ",";
-    output << "\n";
-  }
-
-  Matrix testRes(process(_testRawInputs));
-  output << "expected and predicted values:\n";
-  for(size_t i = 0; i < _outputLabels.size(); i++)
-  {
-    output << "label: " << _outputLabels[i] << "\n" ;
-    for(eigen_size_t j = 0; j < _testRawOutputs.rows(); j++)
-      output << _testRawOutputs(j,i) << ",";
-    output << "\n";
-    for(eigen_size_t j = 0; j < testRes.rows(); j++)
-      output << testRes(j,i) << ",";
-    output << "\n";
-  }
-}
-
-
-void omnilearn::Network::saveNetInFile(std::string const& path) const
-{
-  std::ofstream output(path);
-  if(!output)
-    throw Exception("Cannot open/create file " + path);
-  for(size_t i = 0; i < _layers.size(); i++)
-  {
-    output << "Layer: " << _layers[i].size() << "\n";
-    std::vector<rowVector> coefs = _layers[i].getCoefs();
-    for(size_t j = 0; j < coefs.size(); j++)
-      output << coefs[j] << "\n";
-  }
-}
-
-
-omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target, Vector input)
-{
-  if(input.size() == 0)
-  {
-
-  }
-  for(size_t iteration = 0; iteration < param.epoch; iteration++)
-  {
-    Vector res = input;
-    for(size_t i = 0; i < _layers.size(); i++)
-    {
-      res = _layers[i].processToLearn(res, param.dropout, param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
-    }
-
-    Vector gradients(computeGradVector(target, res));
-    for(size_t i = 0; i < _layers.size() - 1; i++)
-    {
-      _layers[_layers.size() - i - 1].computeGradients(gradients, _pool);
-      gradients = _layers[_layers.size() - i - 1].getGradients(_pool);
-    }
-    _layers[0].computeGradientsAccordingToInputs(gradients, _pool);
-    gradients = _layers[0].getGradients(_pool);
-    //_layers[0].updateInputs(input, gradients, _pool);
-  }
-  return Vector();
+  return outputs;
 }
 
 
@@ -841,7 +771,7 @@ void omnilearn::Network::shuffleData()
 }
 
 
-void omnilearn::Network::preprocess()
+void omnilearn::Network::initPreprocess()
 {
   bool centered = false;
   bool normalized = false;
@@ -915,9 +845,9 @@ void omnilearn::Network::preprocess()
   whitened = false;
   reduced = false;
 
-  for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
+  for(size_t i = 0; i < _param.postprocessOutputs.size(); i++)
   {
-    if(_param.preprocessOutputs[i] == Preprocess::Center)
+    if(_param.postprocessOutputs[i] == Preprocess::Center)
     {
       if(centered == true)
         throw Exception("Outputs are centered multiple times.");
@@ -926,7 +856,7 @@ void omnilearn::Network::preprocess()
       center(_testOutputs, _outputCenter);
       centered = true;
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
+    else if(_param.postprocessOutputs[i] == Preprocess::Decorrelate)
     {
       if(decorrelated == true)
         throw Exception("Outputs are decorrelated multiple times.");
@@ -935,7 +865,7 @@ void omnilearn::Network::preprocess()
       decorrelate(_testOutputs, _outputDecorrelation);
       decorrelated = true;
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
+    else if(_param.postprocessOutputs[i] == Preprocess::Reduce)
     {
       if(reduced == true)
         throw Exception("Outputs are reduced multiple times.");
@@ -944,7 +874,7 @@ void omnilearn::Network::preprocess()
       reduce(_testOutputs, _outputDecorrelation, _param.outputReductionThreshold);
       reduced = true;
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
+    else if(_param.postprocessOutputs[i] == Preprocess::Normalize)
     {
       if(normalized == true)
         throw Exception("Outputs are normalized multiple times.");
@@ -953,11 +883,11 @@ void omnilearn::Network::preprocess()
       normalize(_testOutputs, _outputNormalization);
       normalized = true;
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
+    else if(_param.postprocessOutputs[i] == Preprocess::Whiten)
     {
       throw Exception("Outputs can't be whitened.");
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
+    else if(_param.postprocessOutputs[i] == Preprocess::Standardize)
     {
       throw Exception("Outputs can't be standardized.");
     }
@@ -1125,4 +1055,205 @@ void omnilearn::Network::loadSaved()
     {
         _layers[i].loadSaved();
     }
+}
+
+
+void omnilearn::Network::writeInfo(std::string const& path) const
+{
+  std::string loss;
+  if(_param.loss == Loss::BinaryCrossEntropy)
+    loss = "binary cross entropy";
+  else if(_param.loss == Loss::CrossEntropy)
+    loss = "cross entropy";
+  else if(_param.loss == Loss::L1)
+    loss = "mae";
+  else if(_param.loss == Loss::L2)
+    loss = "mse";
+
+  std::ofstream output(path);
+  if(!output)
+    throw Exception("Cannot open/create file " + path);
+
+  output << "input labels:\n";
+  for(size_t i=0; i<_inputLabels.size(); i++)
+      output << _inputLabels[i] << ",";
+  output << "\noutput labels:\n";
+  for(size_t i=0; i<_outputLabels.size(); i++)
+      output << _outputLabels[i] << ",";
+  output << "\n" << "loss:" << "\n" << loss << "\n";
+  for(eigen_size_t i=0; i<_trainLosses.size(); i++)
+      output << _trainLosses[i] << ",";
+  output << "\n";
+  for(eigen_size_t i=0; i<_validLosses.size(); i++)
+      output << _validLosses[i] << ",";
+  output << "\n" << "metric:" << "\n";
+  for(eigen_size_t i=0; i<_testMetric.size(); i++)
+      output << _testMetric[i] << ",";
+  output << "\n";
+  for(eigen_size_t i=0; i<_testSecondMetric.size(); i++)
+      output << _testSecondMetric[i] << ",";
+  if(loss == "binary cross entropy" || loss == "cross entropy")
+  {
+    output << "\nclassification threshold:\n";
+    output << _param.classValidity;
+  }
+  output << "\noptimal epoch:\n";
+  output << _optimalEpoch << "\n";
+
+  output << "input preprocess:\n";
+  for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
+  {
+    if(_param.preprocessInputs[i] == Preprocess::Center)
+      output << "center,";
+    else if(_param.preprocessInputs[i] == Preprocess::Normalize)
+      output << "normalize,";
+    else if(_param.preprocessInputs[i] == Preprocess::Standardize)
+      output << "standardize,";
+    else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
+      output << "decorrelate,";
+    else if(_param.preprocessInputs[i] == Preprocess::Whiten)
+      output << "whiten,";
+    else if(_param.preprocessInputs[i] == Preprocess::Reduce)
+      output << "reduce,";
+  }
+  output << "\n";
+  output << "input eigenvalues:\n";
+  if(_inputDecorrelation.second.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
+      output << _inputDecorrelation.second[i] << ",";
+    output << "\n";
+    output << _param.inputReductionThreshold << "\n";
+    output << _param.inputWhiteningBias << "\n";
+  }
+  output << "input eigenvectors:\n";
+  if(_inputDecorrelation.second.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    Matrix vectors = _inputDecorrelation.first.transpose();
+    for(eigen_size_t i = 0; i < _inputDecorrelation.first.rows(); i++)
+    {
+      for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
+        output << vectors(i, j) << ",";
+      output << "\n";
+    }
+  }
+  output << "input center:\n";
+  if(_inputCenter.size() == 0)
+    output << 0;
+  else
+    for(eigen_size_t i=0; i<_inputCenter.size(); i++)
+        output << _inputCenter[i] << ",";
+  output << "\n";
+  output << "input normalization:\n";
+  if(_inputNormalization.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    for(size_t i=0; i<_inputNormalization.size(); i++)
+        output << _inputNormalization[i].first << ",";
+    output << "\n";
+    for(size_t i=0; i<_inputNormalization.size(); i++)
+        output << _inputNormalization[i].second << ",";
+    output << "\n";
+  }
+  output << "input standardization:\n";
+  if(_inputStandartization.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    for(size_t i=0; i<_inputStandartization.size(); i++)
+        output << _inputStandartization[i].first << ",";
+    output << "\n";
+    for(size_t i=0; i<_inputStandartization.size(); i++)
+        output << _inputStandartization[i].second << ",";
+    output << "\n";
+  }
+
+  output << "output preprocess:\n";
+  for(size_t i = 0; i < _param.postprocessOutputs.size(); i++)
+  {
+    if(_param.postprocessOutputs[i] == Preprocess::Center)
+      output << "center,";
+    else if(_param.postprocessOutputs[i] == Preprocess::Decorrelate)
+      output << "decorrelate,";
+    else if(_param.postprocessOutputs[i] == Preprocess::Reduce)
+      output << "reduce,";
+    else if(_param.postprocessOutputs[i] == Preprocess::Normalize)
+      output << "normalize,";
+  }
+  output << "\n";
+  output << "output eigenvalues:\n";
+  if(_outputDecorrelation.second.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
+      output << _outputDecorrelation.second[i] << ",";
+    output << "\n";
+    output << _param.outputReductionThreshold << "\n";
+  }
+  output << "output eigenvectors:\n";
+  if(_outputDecorrelation.second.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    Matrix vectors = _outputDecorrelation.first.transpose();
+    for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
+    {
+      for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
+        output << vectors(i, j) << ",";
+      output << "\n";
+    }
+  }
+  output << "output center:\n";
+  if(_outputCenter.size() == 0)
+    output << 0;
+  else
+    for(eigen_size_t i=0; i<_outputCenter.size(); i++)
+        output << _outputCenter[i] << ",";
+  output << "\n";
+  output << "output normalization:\n";
+  if(_outputNormalization.size() == 0)
+    output << 0 << "\n";
+  else
+  {
+    for(size_t i=0; i<_outputNormalization.size(); i++)
+        output << _outputNormalization[i].first << ",";
+    output << "\n";
+    for(size_t i=0; i<_outputNormalization.size(); i++)
+        output << _outputNormalization[i].second << ",";
+    output << "\n";
+  }
+
+  Matrix testRes(process(_testRawInputs));
+  output << "expected and predicted values:\n";
+  for(size_t i = 0; i < _outputLabels.size(); i++)
+  {
+    output << "label: " << _outputLabels[i] << "\n" ;
+    for(eigen_size_t j = 0; j < _testRawOutputs.rows(); j++)
+      output << _testRawOutputs(j,i) << ",";
+    output << "\n";
+    for(eigen_size_t j = 0; j < testRes.rows(); j++)
+      output << testRes(j,i) << ",";
+    output << "\n";
+  }
+}
+
+
+void omnilearn::Network::saveNetInFile(std::string const& path) const
+{
+  std::ofstream output(path);
+  if(!output)
+    throw Exception("Cannot open/create file " + path);
+  for(size_t i = 0; i < _layers.size(); i++)
+  {
+    output << "Layer: " << _layers[i].size() << "\n";
+    std::vector<rowVector> coefs = _layers[i].getCoefs();
+    for(size_t j = 0; j < coefs.size(); j++)
+      output << coefs[j] << "\n";
+  }
 }

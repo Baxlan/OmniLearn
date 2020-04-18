@@ -49,17 +49,20 @@ public:
     void init(size_t nbInputs);
     Matrix process(Matrix const& inputs, ThreadPool& t) const;
     Vector processToLearn(Vector const& input, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t);
+    Vector processToGenerate(Vector const& input, ThreadPool& t);
     void computeGradients(Vector const& inputGradient, ThreadPool& t);
-    void computeGradientsAccordingToInputs(Vector const& inputGradients, ThreadPool& t);
+    void computeGradientsAccordingToInputs(Vector const& inputGradient, ThreadPool& t);
     void save();
     void loadSaved();
     Vector getGradients(ThreadPool& t); //one gradient per input neuron
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t);
+    void updateInput(Vector& input, double learningRate);
     size_t size() const;
     std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const;
     void resize(size_t neurons);
     std::vector<rowVector> getCoefs() const;
     void setCoefs(size_t neuron, Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ);
+    size_t nbWeights() const;
 
 protected:
     LayerParam _param;

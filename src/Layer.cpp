@@ -82,6 +82,27 @@ omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, double d
 }
 
 
+omnilearn::Vector omnilearn::Layer::processToGenerate(Vector const& input, ThreadPool& t)
+{
+    //each element is associated to a neuron
+    Vector output(_neurons.size());
+    std::vector<std::future<void>> tasks(_neurons.size());
+
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        tasks[i] = t.enqueue([this, &input, &output, i]()->void
+        {
+            output(i) = _neurons[i].processToGenerate(input);
+        });
+    }
+    for(size_t i = 0; i < tasks.size(); i++)
+    {
+        tasks[i].get();
+    }
+    return output;
+}
+
+
 void omnilearn::Layer::computeGradients(Vector const& inputGradient, ThreadPool& t)
 {
     std::vector<std::future<void>> tasks(_neurons.size());
@@ -100,9 +121,21 @@ void omnilearn::Layer::computeGradients(Vector const& inputGradient, ThreadPool&
 }
 
 
-void omnilearn::Layer::computeGradientsAccordingToInputs(Vector const& inputGradients, ThreadPool& t)
+void omnilearn::Layer::computeGradientsAccordingToInputs(Vector const& inputGradient, ThreadPool& t)
 {
+    std::vector<std::future<void>> tasks(_neurons.size());
 
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        tasks[i] = t.enqueue([this, &inputGradient, i]()->void
+        {
+            _neurons[i].computeGradientsAccordingToInputs(inputGradient[i]);
+        });
+    }
+    for(size_t i = 0; i < tasks.size(); i++)
+    {
+        tasks[i].get();
+    }
 }
 
 
@@ -163,6 +196,16 @@ void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, 
 }
 
 
+void omnilearn::Layer::updateInput(Vector& input, double learningRate)
+{
+    // no parallelization here because editing the same input by multiple neurons at the same time would cause errors
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        _neurons[i].updateInput(input, learningRate);
+    }
+}
+
+
 size_t omnilearn::Layer::size() const
 {
     return _neurons.size();
@@ -210,4 +253,10 @@ std::vector<omnilearn::rowVector> omnilearn::Layer::getCoefs() const
 void omnilearn::Layer::setCoefs(size_t neuron, Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ)
 {
     _neurons[neuron].setCoefs(weights, bias, aggreg, activ);
+}
+
+
+size_t omnilearn::Layer::nbWeights() const
+{
+    return _neurons[0].nbWeights();
 }

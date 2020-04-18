@@ -29,6 +29,7 @@ public:
     //each line of the input matrix is a feature. Returns one result per feature.
     Vector process(Matrix const& inputs) const;
     double processToLearn(Vector const& input, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen);
+    double processToGenerate(Vector const& input);
     //compute gradients for one feature, finally summed for the whole batch
     void computeGradients(double inputGradient);
     void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window, double optimizerBias);
@@ -36,11 +37,12 @@ public:
     Vector getGradients() const;
     void save();
     void loadSaved();
-    Vector computeGradientsAccordingToInputs(double inputGradient);
-    void updateInput(double learningRate);
+    void computeGradientsAccordingToInputs(double inputGradient);
+    void updateInput(Vector& input, double learningRate);
     //first is weights, second is bias
     std::pair<Matrix, Vector> getWeights() const;
     rowVector getCoefs() const;
+    size_t nbWeights() const;
     void setCoefs(Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ);
 
 
@@ -55,7 +57,6 @@ protected:
     std::pair<double, size_t> _aggregResult;
     double _actResult;
 
-    double _inputGradient; //gradient from next layer for each feature of the batch
     double _actGradient; //gradient between aggregation and activation
     Matrix _gradients; //sum (over features of the batch) of partial gradient for each weight
     Vector _biasGradients;
@@ -66,6 +67,8 @@ protected:
 
     Matrix _savedWeights;
     Vector _savedBias;
+
+    Vector _generativeGradients; // partial gradient for each input to tweak
 };
 
 

@@ -12,7 +12,6 @@ _bias(Vector(0)),
 _input(),
 _aggregResult(),
 _actResult(),
-_inputGradient(),
 _actGradient(),
 _gradients(),
 _biasGradients(),
@@ -54,6 +53,8 @@ void omnilearn::Neuron::init(Distrib distrib, double distVal1, double distVal2, 
     _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
     _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
     _biasGradients = Vector::Constant(_bias.size(), 0);
+    _generativeGradients = Vector::Constant(_weights.cols(), 0);
+
 }
 
 
@@ -91,13 +92,24 @@ double omnilearn::Neuron::processToLearn(Vector const& input, double dropconnect
 }
 
 
+double omnilearn::Neuron::processToGenerate(Vector const& input)
+{
+    _input = input;
+
+    //processing
+    _aggregResult = _aggregation->aggregate(_input, _weights, _bias);
+    _actResult = _activation->activate(_aggregResult.first);
+
+    return _actResult;
+}
+
+
 //compute gradients for one feature, finally summed for the whole batch
 void omnilearn::Neuron::computeGradients(double inputGradient)
 {
-    _inputGradient = inputGradient;
     _featureGradient = Vector(_weights.cols());
 
-    _actGradient = _activation->prime(_actResult) * _inputGradient;
+    _actGradient = _activation->prime(_actResult) * inputGradient;
     Vector grad(_aggregation->prime(_input, _weights.row(_aggregResult.second)));
 
     for(eigen_size_t i = 0; i < grad.size(); i++)
@@ -226,15 +238,27 @@ void omnilearn::Neuron::loadSaved()
 }
 
 
-omnilearn::Vector omnilearn::Neuron::computeGradientsAccordingToInputs(double inputGradient)
+void omnilearn::Neuron::computeGradientsAccordingToInputs(double inputGradient)
 {
-    return Vector();
+    _actGradient = _activation->prime(_actResult) * inputGradient;
+    Vector grad(_aggregation->primeInput(_input, _weights.row(_aggregResult.second)));
+
+    for(eigen_size_t i = 0; i < grad.size(); i++)
+    {
+        _generativeGradients(i) += (_actGradient*grad[i]);
+    }
 }
 
 
-void omnilearn::Neuron::updateInput(double learningRate)
+void omnilearn::Neuron::updateInput(Vector& input, double learningRate)
 {
-
+    for(eigen_size_t i = 0; i < input.size(); i++)
+    {
+        input[i] += (_generativeGradients[i] * learningRate);
+    }
+    //reset gradients for the next iteration
+    _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+    _generativeGradients = Vector::Constant(_weights.cols(), 0);
 }
 
 
@@ -257,10 +281,23 @@ omnilearn::rowVector omnilearn::Neuron::getCoefs() const
 }
 
 
+size_t omnilearn::Neuron::nbWeights() const
+{
+    return _weights.cols();
+}
+
+
 void omnilearn::Neuron::setCoefs(Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ)
 {
     _aggregation->setCoefs(aggreg);
     _activation->setCoefs(activ);
     _weights = weights;
     _bias = bias;
+
+    _previousBiasUpdate = Vector::Constant(_bias.size(), 0);
+    _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+    _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
+    _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+    _biasGradients = Vector::Constant(_bias.size(), 0);
+    _generativeGradients = Vector::Constant(_weights.cols(), 0);
 }

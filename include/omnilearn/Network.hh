@@ -60,7 +60,7 @@ struct NetworkParam
     window(0.9),
     plateau(0.99),
     preprocessInputs(),
-    preprocessOutputs(),
+    postprocessOutputs(),
     optimizerBias(1e-5),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
@@ -91,7 +91,7 @@ struct NetworkParam
     double window; //window effect on grads
     double plateau;
     std::vector<Preprocess> preprocessInputs;
-    std::vector<Preprocess> preprocessOutputs;
+    std::vector<Preprocess> postprocessOutputs;
     double optimizerBias;
     double inputReductionThreshold;
     double outputReductionThreshold;
@@ -120,25 +120,32 @@ public:
   void addLayer(LayerParam const& param, size_t aggregation, size_t activation);
   void setTestData(Data const& data);
   bool learn();
+  Vector process(Vector inputs) const;
   Matrix process(Matrix inputs) const;
-  void writeInfo(std::string const& path) const;
-  void saveNetInFile(std::string const& path) const;
   Vector generate(NetworkParam param, Vector target, Vector input = Vector(0));
+  Vector preprocess(Vector inputs) const; //transforms real inputs to processed inputs
+  Vector postprocess(Vector inputs) const; //transforms learned outputs to real outputs
+  Vector depreprocess(Vector inputs) const; //transforms processed inputs to real inputs
+  Vector depostprocess(Vector inputs) const; //transforms real outputs to learned outputs
+  Matrix preprocess(Matrix inputs) const;
+  Matrix postprocess(Matrix inputs) const;
+  Matrix depreprocess(Matrix inputs) const;
+  Matrix depostprocess(Matrix inputs) const;
 
 protected:
   void initLayers();
   void shuffleTrainData();
   void shuffleData();
-  void preprocess();
+  void initPreprocess();
   void performeOneEpoch();
-  //process taking already processed inputs and giving processed outputs
-  Matrix processForLoss(Matrix inputs) const;
+  Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted);
   Vector computeGradVector(Vector const& realResult, Vector const& predicted);
-  //return validation loss
-  double computeLoss();
+  double computeLoss(); //return validation loss
   void save();
   void loadSaved();
+  void writeInfo(std::string const& path) const;
+  void saveNetInFile(std::string const& path) const;
 
 protected:
   //parameters
