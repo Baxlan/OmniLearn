@@ -2,6 +2,8 @@
 
 #include "omnilearn/Aggregation.hh"
 
+#include "omnilearn/Exception.hh"
+
 
 
 //=============================================================================
@@ -14,10 +16,17 @@
 
 
 
+omnilearn::Dot::Dot(Vector const& coefs)
+{
+    if(coefs.size() != 0)
+        throw Exception("Dot aggregation function needs 0 coefficient. " + std::to_string(coefs.size()) + " provided.");
+}
+
+
 std::pair<double, size_t> omnilearn::Dot::aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
 {
     if(weights.rows() > 1)
-        throw Exception("Dot aggregation only requires one weight set.");
+        throw Exception("Dot aggregation only requires one weight set. " + std::to_string(weights.rows()) + " provided.");
     return {inputs.dot(weights.row(0)) + bias[0], 0};
 }
 
@@ -40,9 +49,10 @@ void omnilearn::Dot::learn([[maybe_unused]] double gradient, [[maybe_unused]] do
 }
 
 
-void omnilearn::Dot::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Dot::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Dot aggregation function needs 0 coefficient. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -52,19 +62,19 @@ omnilearn::rowVector omnilearn::Dot::getCoefs() const
 }
 
 
-size_t omnilearn::Dot::id() const
+omnilearn::Aggregation omnilearn::Dot::signature() const
 {
-    return 0;
+    return Aggregation::Dot;
 }
 
 
-void omnilearn::Dot::save()
+void omnilearn::Dot::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Dot::loadSaved()
+void omnilearn::Dot::release()
 {
     //nothing to do
 }
@@ -95,7 +105,7 @@ omnilearn::Distance::Distance(Vector const& coefs)
 std::pair<double, size_t> omnilearn::Distance::aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
 {
     if(weights.rows() > 1)
-        throw Exception("Distance aggregation only requires one weight set.");
+        throw Exception("Distance aggregation only requires one weight set. " + std::to_string(weights.rows()) + " provided.");
     return {norm(inputs.transpose() - weights.row(0), _order) + bias[0], 0};
 }
 
@@ -146,21 +156,47 @@ omnilearn::rowVector omnilearn::Distance::getCoefs() const
 }
 
 
-size_t omnilearn::Distance::id() const
+omnilearn::Aggregation omnilearn::Distance::signature() const
 {
-    return 1;
+    return Aggregation::Distance;
 }
 
 
-void omnilearn::Distance::save()
+void omnilearn::Distance::keep()
 {
     _savedOrder = _order;
 }
 
 
-void omnilearn::Distance::loadSaved()
+void omnilearn::Distance::release()
 {
     _order = _savedOrder;
+}
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== PARAMETRIC DISTANCE AGGREGATION =========================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+omnilearn::Pdistance::Pdistance(Vector const& coefs):
+Distance(coefs)
+{
+}
+
+
+void omnilearn::Pdistance::learn(double gradient, double learningRate)
+{
+
+}
+
+
+omnilearn::Aggregation omnilearn::Pdistance::signature() const
+{
+    return Aggregation::Pdistance;
 }
 
 
@@ -173,6 +209,13 @@ void omnilearn::Distance::loadSaved()
 //=============================================================================
 //=============================================================================
 
+
+
+omnilearn::Maxout::Maxout(Vector const& coefs)
+{
+    if(coefs.size() != 0)
+        throw Exception("Maxout aggregation function needs 0 coefficient. " + std::to_string(coefs.size()) + " provided.");
+}
 
 
 std::pair<double, size_t> omnilearn::Maxout::aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
@@ -214,7 +257,8 @@ void omnilearn::Maxout::learn([[maybe_unused]] double gradient, [[maybe_unused]]
 
 void omnilearn::Maxout::setCoefs([[maybe_unused]] Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Maxout aggregation function needs 0 coefficient. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -224,19 +268,19 @@ omnilearn::rowVector omnilearn::Maxout::getCoefs() const
 }
 
 
-size_t omnilearn::Maxout::id() const
+omnilearn::Aggregation omnilearn::Maxout::signature() const
 {
-    return 2;
+    return Aggregation::Maxout;
 }
 
 
-void omnilearn::Maxout::save()
+void omnilearn::Maxout::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Maxout::loadSaved()
+void omnilearn::Maxout::release()
 {
     //nothing to do
 }

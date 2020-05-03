@@ -37,7 +37,8 @@ _metricNormalization(),
 _inputCenter(),
 _inputNormalization(),
 _inputStandartization(),
-_inputDecorrelation()
+_inputDecorrelation(),
+_io(param.name)
 {
 }
 
@@ -81,302 +82,17 @@ _metricNormalization(),
 _inputCenter(),
 _inputNormalization(),
 _inputStandartization(),
-_inputDecorrelation()
+_inputDecorrelation(),
+_io(path)
 {
-  std::vector<std::string> out = readCleanLines(path + ".out");
-  std::vector<std::string> save = readCleanLines(path + ".save");
-  std::string line;
-  std::vector<std::string> vec;
-  std::vector<std::string> vec2;
-
-  for(size_t i = 0; i < out.size(); i++)
-    out[i] = strip(out[i], ',');
-
-  // read .out to create param
   _param.threads = threads;
-
-  for(size_t i = 0; i < out.size(); i++)
-  {
-    line = out[i];
-    if(line == "loss:")
-    {
-      line = out[i+1];
-      if(line == "mae")
-        _param.loss = Loss::L1;
-      if(line == "mse")
-        _param.loss = Loss::L2;
-      if(line == "binary cross entropy")
-        _param.loss = Loss::BinaryCrossEntropy;
-      if(line == "cross entropy")
-        _param.loss = Loss::CrossEntropy;
-    }
-    else if(line == "input preprocess:")
-    {
-      vec = split(out[i+1], ',');
-      for(std::string const& a : vec)
-      {
-        if(a == "center")
-          _param.preprocessInputs.push_back(Preprocess::Center);
-        if(a == "normalize")
-          _param.preprocessInputs.push_back(Preprocess::Normalize);
-        if(a == "standardize")
-          _param.preprocessInputs.push_back(Preprocess::Standardize);
-        if(a == "decorrelate")
-          _param.preprocessInputs.push_back(Preprocess::Decorrelate);
-        if(a == "whiten")
-          _param.preprocessInputs.push_back(Preprocess::Whiten);
-        if(a == "reduce")
-          _param.preprocessInputs.push_back(Preprocess::Reduce);
-      }
-    }
-    else if(line == "input eigenvalues:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        _inputDecorrelation.second = Vector(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _inputDecorrelation.second[j] = std::stod(vec[j]);
-        }
-        _param.inputReductionThreshold = std::stod(out[i+2]);
-        _param.inputWhiteningBias = std::stod(out[i+3]);
-      }
-    }
-    else if(line == "input eigenvectors:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-
-        // the following statement in the loop implies that
-        // input eigenvalues is loaded before the input eigenvectors
-        _inputDecorrelation.first = Matrix(_inputDecorrelation.second.size(), vec.size());
-
-        for(eigen_size_t j = 0; j < _inputDecorrelation.second.size(); j++)
-        {
-          line = out[i+1+j];
-          vec = split(line, ',');
-          for(size_t k = 0; k < vec.size(); k++)
-          {
-            _inputDecorrelation.first(j, k) = std::stod(vec[k]);
-          }
-        }
-        _inputDecorrelation.first.transposeInPlace();
-      }
-    }
-    else if(line == "input center:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        _inputCenter = Vector(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _inputCenter[j] = std::stod(vec[j]);
-        }
-      }
-    }
-    else if(line == "input normalization:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        vec2 = split(out[i+2], ',');
-        _inputNormalization = std::vector<std::pair<double, double>>(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _inputNormalization[j].first = std::stod(vec[j]);
-          _inputNormalization[j].second = std::stod(vec2[j]);
-        }
-      }
-    }
-    else if(line == "input standardization:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        vec2 = split(out[i+2], ',');
-        _inputStandartization = std::vector<std::pair<double, double>>(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _inputStandartization[j].first = std::stod(vec[j]);
-          _inputStandartization[j].second = std::stod(vec2[j]);
-        }
-      }
-    }
-    else if(line == "output preprocess:")
-    {
-      vec = split(out[i+1], ',');
-      for(std::string const& a : vec)
-      {
-        if(a == "center")
-          _param.postprocessOutputs.push_back(Preprocess::Center);
-        if(a == "normalize")
-          _param.postprocessOutputs.push_back(Preprocess::Normalize);
-        //if(a == "standardize")
-        //  _param.postprocessOutputs.push_back(Preprocess::Standardize);
-        if(a == "decorrelate")
-          _param.postprocessOutputs.push_back(Preprocess::Decorrelate);
-        //if(a == "whiten")
-        //  _param.postprocessOutputs.push_back(Preprocess::Whiten);
-        if(a == "reduce")
-          _param.postprocessOutputs.push_back(Preprocess::Reduce);
-      }
-    }
-    else if(line == "output eigenvalues:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        _outputDecorrelation.second = Vector(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _outputDecorrelation.second[j] = std::stod(vec[j]);
-        }
-        _param.outputReductionThreshold = std::stod(out[i+2]);
-        //_param.outputWhiteningBias = std::stod(out[i+3]);
-      }
-    }
-    else if(line == "output eigenvectors:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-
-        // the following statement in the loop implies that
-        // output eigenvalues is loaded before the output eigenvectors
-        _outputDecorrelation.first = Matrix(_outputDecorrelation.second.size(), vec.size());
-
-        for(eigen_size_t j = 0; j < _outputDecorrelation.second.size(); j++)
-        {
-          line = out[i+1+j];
-          vec = split(line, ',');
-          for(size_t k = 0; k < vec.size(); k++)
-          {
-              _outputDecorrelation.first(j, k) = std::stod(vec[k]);
-          }
-        }
-        _outputDecorrelation.first.transposeInPlace();
-      }
-    }
-    else if(line == "output center:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        _outputCenter = Vector(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _outputCenter[j] = std::stod(vec[j]);
-        }
-      }
-    }
-    else if(line == "output normalization:")
-    {
-      line = out[i+1];
-      if(line != "0")
-      {
-        vec = split(line, ',');
-        vec2 = split(out[i+2], ',');
-        _outputNormalization = std::vector<std::pair<double, double>>(vec.size());
-        for(size_t j = 0; j < vec.size(); j++)
-        {
-          _outputNormalization[j].first = std::stod(vec[j]);
-          _outputNormalization[j].second = std::stod(vec2[j]);
-        }
-      }
-    }
-  }
-
-  // read .save to load all weights / bias / coefs
-  for(size_t i = 0; i < save.size(); i++)
-  {
-    line = save[i];
-    if(line.substr(0, 7) == "Layer: ")
-    {
-      size_t nbNeurons = std::stoi(line.erase(0, 7));
-      i++;
-      line = save[i];
-      size_t aggreg = std::stoi(line.substr(0, line.find_first_of(" ")));
-      size_t activ = std::stoi(line.substr(line.find_first_of(" ")+1, line.size()));
-      LayerParam param;
-      param.size = nbNeurons;
-      addLayer(param, aggreg, activ);
-      size_t weightsPerSet = 0; //used to init the layer at the end
-      i++;
-      for(size_t j = 0; j < nbNeurons; i++, j++)
-      {
-        vec = split(save[i], ' ');
-
-        // load aggreg coefs
-        size_t nbAggreg = std::stoi(vec[0]);
-        Vector aggregation(nbAggreg);
-        for(size_t k = 0; k < nbAggreg; k++)
-        {
-          aggregation[k] = std::stod(vec[k + 1]);
-        }
-
-        // load activ coefs
-        size_t nbActiv = std::stoi(vec[nbAggreg + 1]);
-        Vector activation(nbActiv);
-        for(size_t k = 0; k < nbActiv; k++)
-        {
-          activation[k] = std::stod(vec[k + nbAggreg + 2]);
-        }
-
-        // load bias
-        size_t nbBias = std::stoi(vec[nbAggreg + nbActiv + 2]);
-        Vector bias(nbBias);
-        for(size_t k = 0; k < nbBias; k++)
-        {
-          bias[k] = std::stod(vec[k + nbAggreg + nbActiv + 3]);
-        }
-
-        // load weights
-        size_t nbWeights = std::stoi(vec[nbAggreg + nbActiv + nbBias + 3]);
-        Vector weights(nbWeights);
-        for(size_t k = 0; k < nbWeights; k++)
-        {
-          weights[k] = std::stod(vec[k + nbAggreg + nbActiv + nbBias + 4]);
-        }
-
-        // divide weights into wheight sets
-        weightsPerSet = nbWeights/nbBias;
-        Matrix sets(nbBias, weightsPerSet);
-        for(size_t k = 0; k < nbBias; k++)
-        {
-          for(size_t l = 0; l < weightsPerSet; l++)
-          {
-            sets(k, l) = weights[k*weightsPerSet + l];
-          }
-        }
-
-        // put the coefs into the neuron
-        _layers[_layers.size()-1].setCoefs(j, sets, bias, aggregation, activation);
-      }
-
-      if(_layers.size() == 1)
-        _layers[_layers.size()-1].init(weightsPerSet);
-      else
-        _layers[_layers.size()-1].init(_layers[_layers.size()-2].size());
-      i--;
-    }
-  }
-} // end of the loading constructor
+  _io.load(*this);
+}
 
 
-void omnilearn::Network::addLayer(LayerParam const& param, size_t aggregation, size_t activation)
+void omnilearn::Network::addLayer(LayerParam const& param)
 {
-  _layers.push_back(Layer(param, aggregation, activation));
+  _layers.push_back(Layer(param));
 }
 
 
@@ -431,7 +147,7 @@ bool omnilearn::Network::learn()
     //EARLY STOPPING
     if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than _param.plateau percent in _param.patience epochs, stop learning
     {
-      save();
+      keep();
       lowestLoss = validLoss;
       _optimalEpoch = _epoch;
     }
@@ -441,10 +157,10 @@ bool omnilearn::Network::learn()
     //shuffle train data between each epoch
     shuffleTrainData();
   }
-  loadSaved();
+  release();
   std::cout << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
-  writeInfo(_param.name + ".out");
-  saveNetInFile(_param.name + ".save");
+  _io.saveTest(*this);
+  _io.saveNet(*this);
   return true;
 }
 
@@ -559,9 +275,9 @@ omnilearn::Matrix omnilearn::Network::preprocess(Matrix inputs) const
 
 omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
 {
-  for(size_t pre = 0; pre < _param.postprocessOutputs.size(); pre++)
+  for(size_t pre = 0; pre < _param.preprocessOutputs.size(); pre++)
   {
-    if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
+    if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
     {
       for(eigen_size_t i = 0; i < outputs.rows(); i++)
       {
@@ -572,7 +288,7 @@ omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
         }
       }
     }
-    else if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
     {
       Matrix newResults(outputs.rows(), _outputDecorrelation.second.size());
       rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - outputs.cols(), 0);
@@ -582,14 +298,14 @@ omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
       }
       outputs = newResults;
     }
-    else if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
     {
       for(eigen_size_t i = 0; i < outputs.rows(); i++)
       {
         outputs.row(i) = _outputDecorrelation.first * outputs.row(i).transpose();
       }
     }
-    else if(_param.postprocessOutputs[_param.postprocessOutputs.size() - pre - 1] == Preprocess::Center)
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Center)
     {
       for(eigen_size_t i = 0; i < outputs.rows(); i++)
       {
@@ -671,27 +387,38 @@ omnilearn::Matrix omnilearn::Network::depreprocess(Matrix inputs) const
 
 omnilearn::Matrix omnilearn::Network::depostprocess(Matrix outputs) const
 {
-  for(size_t i = 0; i < _param.postprocessOutputs.size(); i++)
+  for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
-    if(_param.postprocessOutputs[i] == Preprocess::Center)
+    if(_param.preprocessOutputs[i] == Preprocess::Center)
     {
       center(outputs, _outputCenter);
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Normalize)
+    else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
     {
       normalize(outputs, _outputNormalization);
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Decorrelate)
+    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
     {
       decorrelate(outputs, _outputDecorrelation);
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Reduce)
+    else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
     {
       reduce(outputs, _outputDecorrelation, _param.outputReductionThreshold);
     }
   }
   return outputs;
 }
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== PRIVATE PART ============================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
 
 
 void omnilearn::Network::initLayers()
@@ -702,26 +429,6 @@ void omnilearn::Network::initLayers()
                       (i == _layers.size()-1 ? 0 : _layers[i+1].size()),
                       _generator);
   }
-}
-
-
-void omnilearn::Network::shuffleTrainData()
-{
-  //shuffle inputs and outputs in the same order
-  std::vector<size_t> indexes(_trainInputs.rows(), 0);
-  for(size_t i = 0; i < indexes.size(); i++)
-    indexes[i] = i;
-  std::shuffle(indexes.begin(), indexes.end(), _generator);
-
-  Matrix temp = Matrix(_trainInputs.rows(), _trainInputs.cols());
-  for(size_t i = 0; i < indexes.size(); i++)
-    temp.row(i) = _trainInputs.row(indexes[i]);
-  std::swap(_trainInputs, temp);
-
-  temp = Matrix(_trainOutputs.rows(), _trainOutputs.cols());
-  for(size_t i = 0; i < indexes.size(); i++)
-    temp.row(i) = _trainOutputs.row(indexes[i]);
-  std::swap(_trainOutputs, temp);
 }
 
 
@@ -768,6 +475,26 @@ void omnilearn::Network::shuffleData()
   _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _nbBatch = static_cast<size_t>(nbBatch);
+}
+
+
+void omnilearn::Network::shuffleTrainData()
+{
+  //shuffle inputs and outputs in the same order
+  std::vector<size_t> indexes(_trainInputs.rows(), 0);
+  for(size_t i = 0; i < indexes.size(); i++)
+    indexes[i] = i;
+  std::shuffle(indexes.begin(), indexes.end(), _generator);
+
+  Matrix temp = Matrix(_trainInputs.rows(), _trainInputs.cols());
+  for(size_t i = 0; i < indexes.size(); i++)
+    temp.row(i) = _trainInputs.row(indexes[i]);
+  std::swap(_trainInputs, temp);
+
+  temp = Matrix(_trainOutputs.rows(), _trainOutputs.cols());
+  for(size_t i = 0; i < indexes.size(); i++)
+    temp.row(i) = _trainOutputs.row(indexes[i]);
+  std::swap(_trainOutputs, temp);
 }
 
 
@@ -845,9 +572,9 @@ void omnilearn::Network::initPreprocess()
   whitened = false;
   reduced = false;
 
-  for(size_t i = 0; i < _param.postprocessOutputs.size(); i++)
+  for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
-    if(_param.postprocessOutputs[i] == Preprocess::Center)
+    if(_param.preprocessOutputs[i] == Preprocess::Center)
     {
       if(centered == true)
         throw Exception("Outputs are centered multiple times.");
@@ -856,7 +583,7 @@ void omnilearn::Network::initPreprocess()
       center(_testOutputs, _outputCenter);
       centered = true;
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Decorrelate)
+    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
     {
       if(decorrelated == true)
         throw Exception("Outputs are decorrelated multiple times.");
@@ -865,7 +592,7 @@ void omnilearn::Network::initPreprocess()
       decorrelate(_testOutputs, _outputDecorrelation);
       decorrelated = true;
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Reduce)
+    else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
     {
       if(reduced == true)
         throw Exception("Outputs are reduced multiple times.");
@@ -874,7 +601,7 @@ void omnilearn::Network::initPreprocess()
       reduce(_testOutputs, _outputDecorrelation, _param.outputReductionThreshold);
       reduced = true;
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Normalize)
+    else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
     {
       if(normalized == true)
         throw Exception("Outputs are normalized multiple times.");
@@ -883,11 +610,11 @@ void omnilearn::Network::initPreprocess()
       normalize(_testOutputs, _outputNormalization);
       normalized = true;
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Whiten)
+    else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
     {
       throw Exception("Outputs can't be whitened.");
     }
-    else if(_param.postprocessOutputs[i] == Preprocess::Standardize)
+    else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
     {
       throw Exception("Outputs can't be standardized.");
     }
@@ -934,7 +661,8 @@ void omnilearn::Network::performeOneEpoch()
 }
 
 
-//process taking already processed inputs and giving processed outputs
+// process taking already processed inputs and giving processed outputs
+// this allow to calculate loss and metrics without performing all the preprocessing
 omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
 {
   for(size_t i = 0; i < _layers.size(); i++)
@@ -1040,220 +768,19 @@ double omnilearn::Network::computeLoss()
 }
 
 
-void omnilearn::Network::save()
+void omnilearn::Network::keep()
 {
     for(size_t i = 0; i < _layers.size(); i++)
     {
-        _layers[i].save();
+        _layers[i].keep();
     }
 }
 
 
-void omnilearn::Network::loadSaved()
+void omnilearn::Network::release()
 {
     for(size_t i = 0; i < _layers.size(); i++)
     {
-        _layers[i].loadSaved();
+        _layers[i].release();
     }
-}
-
-
-void omnilearn::Network::writeInfo(std::string const& path) const
-{
-  std::string loss;
-  if(_param.loss == Loss::BinaryCrossEntropy)
-    loss = "binary cross entropy";
-  else if(_param.loss == Loss::CrossEntropy)
-    loss = "cross entropy";
-  else if(_param.loss == Loss::L1)
-    loss = "mae";
-  else if(_param.loss == Loss::L2)
-    loss = "mse";
-
-  std::ofstream output(path);
-  if(!output)
-    throw Exception("Cannot open/create file " + path);
-
-  output << "input labels:\n";
-  for(size_t i=0; i<_inputLabels.size(); i++)
-      output << _inputLabels[i] << ",";
-  output << "\noutput labels:\n";
-  for(size_t i=0; i<_outputLabels.size(); i++)
-      output << _outputLabels[i] << ",";
-  output << "\n" << "loss:" << "\n" << loss << "\n";
-  for(eigen_size_t i=0; i<_trainLosses.size(); i++)
-      output << _trainLosses[i] << ",";
-  output << "\n";
-  for(eigen_size_t i=0; i<_validLosses.size(); i++)
-      output << _validLosses[i] << ",";
-  output << "\n" << "metric:" << "\n";
-  for(eigen_size_t i=0; i<_testMetric.size(); i++)
-      output << _testMetric[i] << ",";
-  output << "\n";
-  for(eigen_size_t i=0; i<_testSecondMetric.size(); i++)
-      output << _testSecondMetric[i] << ",";
-  if(loss == "binary cross entropy" || loss == "cross entropy")
-  {
-    output << "\nclassification threshold:\n";
-    output << _param.classValidity;
-  }
-  output << "\noptimal epoch:\n";
-  output << _optimalEpoch << "\n";
-
-  output << "input preprocess:\n";
-  for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
-  {
-    if(_param.preprocessInputs[i] == Preprocess::Center)
-      output << "center,";
-    else if(_param.preprocessInputs[i] == Preprocess::Normalize)
-      output << "normalize,";
-    else if(_param.preprocessInputs[i] == Preprocess::Standardize)
-      output << "standardize,";
-    else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
-      output << "decorrelate,";
-    else if(_param.preprocessInputs[i] == Preprocess::Whiten)
-      output << "whiten,";
-    else if(_param.preprocessInputs[i] == Preprocess::Reduce)
-      output << "reduce,";
-  }
-  output << "\n";
-  output << "input eigenvalues:\n";
-  if(_inputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(eigen_size_t i = 0; i < _inputDecorrelation.second.size(); i++)
-      output << _inputDecorrelation.second[i] << ",";
-    output << "\n";
-    output << _param.inputReductionThreshold << "\n";
-    output << _param.inputWhiteningBias << "\n";
-  }
-  output << "input eigenvectors:\n";
-  if(_inputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    Matrix vectors = _inputDecorrelation.first.transpose();
-    for(eigen_size_t i = 0; i < _inputDecorrelation.first.rows(); i++)
-    {
-      for(eigen_size_t j = 0; j < _inputDecorrelation.first.cols(); j++)
-        output << vectors(i, j) << ",";
-      output << "\n";
-    }
-  }
-  output << "input center:\n";
-  if(_inputCenter.size() == 0)
-    output << 0;
-  else
-    for(eigen_size_t i=0; i<_inputCenter.size(); i++)
-        output << _inputCenter[i] << ",";
-  output << "\n";
-  output << "input normalization:\n";
-  if(_inputNormalization.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(size_t i=0; i<_inputNormalization.size(); i++)
-        output << _inputNormalization[i].first << ",";
-    output << "\n";
-    for(size_t i=0; i<_inputNormalization.size(); i++)
-        output << _inputNormalization[i].second << ",";
-    output << "\n";
-  }
-  output << "input standardization:\n";
-  if(_inputStandartization.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(size_t i=0; i<_inputStandartization.size(); i++)
-        output << _inputStandartization[i].first << ",";
-    output << "\n";
-    for(size_t i=0; i<_inputStandartization.size(); i++)
-        output << _inputStandartization[i].second << ",";
-    output << "\n";
-  }
-
-  output << "output preprocess:\n";
-  for(size_t i = 0; i < _param.postprocessOutputs.size(); i++)
-  {
-    if(_param.postprocessOutputs[i] == Preprocess::Center)
-      output << "center,";
-    else if(_param.postprocessOutputs[i] == Preprocess::Decorrelate)
-      output << "decorrelate,";
-    else if(_param.postprocessOutputs[i] == Preprocess::Reduce)
-      output << "reduce,";
-    else if(_param.postprocessOutputs[i] == Preprocess::Normalize)
-      output << "normalize,";
-  }
-  output << "\n";
-  output << "output eigenvalues:\n";
-  if(_outputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(eigen_size_t i = 0; i < _outputDecorrelation.second.size(); i++)
-      output << _outputDecorrelation.second[i] << ",";
-    output << "\n";
-    output << _param.outputReductionThreshold << "\n";
-  }
-  output << "output eigenvectors:\n";
-  if(_outputDecorrelation.second.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    Matrix vectors = _outputDecorrelation.first.transpose();
-    for(eigen_size_t i = 0; i < _outputDecorrelation.first.rows(); i++)
-    {
-      for(eigen_size_t j = 0; j < _outputDecorrelation.first.cols(); j++)
-        output << vectors(i, j) << ",";
-      output << "\n";
-    }
-  }
-  output << "output center:\n";
-  if(_outputCenter.size() == 0)
-    output << 0;
-  else
-    for(eigen_size_t i=0; i<_outputCenter.size(); i++)
-        output << _outputCenter[i] << ",";
-  output << "\n";
-  output << "output normalization:\n";
-  if(_outputNormalization.size() == 0)
-    output << 0 << "\n";
-  else
-  {
-    for(size_t i=0; i<_outputNormalization.size(); i++)
-        output << _outputNormalization[i].first << ",";
-    output << "\n";
-    for(size_t i=0; i<_outputNormalization.size(); i++)
-        output << _outputNormalization[i].second << ",";
-    output << "\n";
-  }
-
-  Matrix testRes(process(_testRawInputs));
-  output << "expected and predicted values:\n";
-  for(size_t i = 0; i < _outputLabels.size(); i++)
-  {
-    output << "label: " << _outputLabels[i] << "\n" ;
-    for(eigen_size_t j = 0; j < _testRawOutputs.rows(); j++)
-      output << _testRawOutputs(j,i) << ",";
-    output << "\n";
-    for(eigen_size_t j = 0; j < testRes.rows(); j++)
-      output << testRes(j,i) << ",";
-    output << "\n";
-  }
-}
-
-
-void omnilearn::Network::saveNetInFile(std::string const& path) const
-{
-  std::ofstream output(path);
-  if(!output)
-    throw Exception("Cannot open/create file " + path);
-  for(size_t i = 0; i < _layers.size(); i++)
-  {
-    output << "Layer: " << _layers[i].size() << "\n";
-    std::vector<rowVector> coefs = _layers[i].getCoefs();
-    for(size_t j = 0; j < coefs.size(); j++)
-      output << coefs[j] << "\n";
-  }
 }

@@ -25,3 +25,17 @@ double omnilearn::normInf(Vector const& vec)
 {
   return vec.maxCoeff();
 }
+
+
+omnilearn::Vector  omnilearn::stdToEigenVector(std::vector<double> const& vec)
+{
+  Vector vec2(vec.size());
+  std::transform(vec.begin(), vec.end(), vec2.begin(), [](double a) -> double {return a;});
+}
+
+
+std::vector<double>  omnilearn::eigenToStdVectorr(Vector const& vec)
+{
+  std::vector<double> vec2(vec.size());
+  std::transform(vec.begin(), vec.end(), vec2.begin(), [](double a) -> double {return a;});
+}

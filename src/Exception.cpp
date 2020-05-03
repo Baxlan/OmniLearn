@@ -5,12 +5,24 @@
 
 
 omnilearn::Exception::Exception(std::string const& msg):
-_msg("[Brain.Exception : " + msg + "]")
+_msg(msg)
 {
 }
 
 
 const char* omnilearn::Exception::what() const noexcept
 {
-    return _msg.c_str();
+    return std::string("[OmniLearn.Exception : " + _msg + "]").c_str();
+}
+
+
+omnilearn::LogException::LogException(std::string const& msg):
+Exception(msg)
+{
+}
+
+
+void omnilearn::LogException::log(std::ofstream& file) const
+{
+    file << what() << "\n";
 }

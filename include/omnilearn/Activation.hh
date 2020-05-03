@@ -5,8 +5,8 @@
 
 #include <map>
 #include <memory>
+#include <string>
 
-#include "Exception.hh"
 #include "Matrix.hh"
 
 
@@ -16,37 +16,23 @@ namespace omnilearn
 
 
 
-namespace Activation
-{
-static const size_t Linear = 0;
-static const size_t Sigmoid = 1;
-static const size_t Tanh = 2;
-static const size_t Softplus = 3;
-static const size_t Relu = 4;
-static const size_t Prelu = 5;
-static const size_t Elu = 6;
-static const size_t Pelu = 7;
-static const size_t Srelu = 8;
-static const size_t Gauss = 9;
-static const size_t Softexp = 10;
-static const size_t Psoftexp = 11;
-} // namespace Activation
+enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Softexp, Psoftexp};
 
 
 
 // interface
-class ActivationFct
+class IActivation
 {
 public:
-    virtual ~ActivationFct(){}
+    virtual ~IActivation(){}
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
     virtual void learn(double gradient, double learningRate) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
-    virtual size_t id() const = 0;
-    virtual void save() = 0;
-    virtual void loadSaved() = 0;
+    virtual Activation signature() const = 0;
+    virtual void keep() = 0;
+    virtual void release() = 0;
 };
 
 
@@ -68,7 +54,7 @@ public:
 
 
 
-class Linear : public ActivationFct
+class Linear : public IActivation
 {
 public:
     Linear(Vector const& coefs = Vector());
@@ -77,14 +63,14 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 };
 
 
 
-class Sigmoid : public ActivationFct
+class Sigmoid : public IActivation
 {
 public:
     Sigmoid(Vector const& coefs = Vector());
@@ -93,14 +79,14 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 };
 
 
 
-class  Tanh : public ActivationFct
+class  Tanh : public IActivation
 {
 public:
     Tanh(Vector const& coefs = Vector());
@@ -109,14 +95,14 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 };
 
 
 
-class Softplus : public ActivationFct
+class Softplus : public IActivation
 {
 public:
     Softplus(Vector const& coefs = Vector());
@@ -125,14 +111,14 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 };
 
 
 
-class Relu : public ActivationFct
+class Relu : public IActivation
 {
 public:
     Relu(Vector const& coefs = (Vector(1) << 0.01).finished());
@@ -141,9 +127,9 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 
 protected:
     double _coef;
@@ -157,12 +143,12 @@ class Prelu : public Relu
 public:
     Prelu(Vector const& coefs = (Vector(1) << 0.01).finished());
     void learn(double gradient, double learningRate);
-    size_t id() const;
+    Activation signature() const;
 };
 
 
 
-class Elu : public ActivationFct
+class Elu : public IActivation
 {
 public:
     Elu(Vector const& coefs = (Vector(1) << 0.01).finished());
@@ -171,9 +157,9 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 
 protected:
     double _coef;
@@ -187,12 +173,12 @@ class Pelu : public Elu
 public:
     Pelu(Vector const& coefs = (Vector(1) << 0.01).finished());
     void learn(double gradient, double learningRate);
-    size_t id() const;
+    Activation signature() const;
 };
 
 
 
-class Srelu : public ActivationFct
+class Srelu : public IActivation
 {
 public:
     Srelu(Vector const& coefs = (Vector(5) << 1.0, 0.1, 1.0, -1.0, 1.0).finished());
@@ -201,9 +187,9 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 
 protected:
     double _coef1;
@@ -221,7 +207,7 @@ protected:
 
 
 
-class Gauss : public ActivationFct
+class Gauss : public IActivation
 {
 public:
     //Gauss(); // should take mean and deviation, and make a parametric version
@@ -230,29 +216,25 @@ public:
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 };
 
 
 
-// IMPLEMENT SOFTEXP HERE
-
-
-
-class Psoftexp : public ActivationFct
+class Softexp : public IActivation
 {
 public:
-    Psoftexp(Vector const& coefs = (Vector(1) << 0.01).finished());
+    Softexp(Vector const& coefs = (Vector(1) << 0.01).finished());
     double activate(double val) const;
     double prime(double val) const;
     void learn(double gradient, double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
-    size_t id() const;
-    void save();
-    void loadSaved();
+    Activation signature() const;
+    void keep();
+    void release();
 
 protected:
     double _coef;
@@ -261,22 +243,68 @@ protected:
 
 
 
+class Psoftexp : public Softexp
+{
+public:
+    Psoftexp(Vector const& coefs = (Vector(1) << 0.01).finished());
+    void learn(double gradient, double learningRate);
+    Activation signature() const;
+
+};
+
+
+
 Vector singleSoftmax(Vector input);
 Matrix softmax(Matrix inputs);
 
 
-static std::map<size_t, std::function<std::shared_ptr<ActivationFct>()>> activationMap = {
-    {0, []{return std::make_shared<Linear>();}},
-    {1, []{return std::make_shared<Sigmoid>();}},
-    {2, []{return std::make_shared<Tanh>();}},
-    {3, []{return std::make_shared<Softplus>();}},
-    {4, []{return std::make_shared<Relu>();}},
-    {5, []{return std::make_shared<Prelu>();}},
-    {6, []{return std::make_shared<Elu>();}},
-    {7, []{return std::make_shared<Pelu>();}},
-    {8, []{return std::make_shared<Srelu>();}},
-    {9, []{return std::make_shared<Gauss>();}},
-    {11, []{return std::make_shared<Psoftexp>();}}
+static std::map<Activation, std::function<std::shared_ptr<IActivation>()>> activationMap = {
+    {Activation::Linear, []{return std::make_shared<Linear>();}},
+    {Activation::Sigmoid, []{return std::make_shared<Sigmoid>();}},
+    {Activation::Tanh, []{return std::make_shared<Tanh>();}},
+    {Activation::Softplus, []{return std::make_shared<Softplus>();}},
+    {Activation::Relu, []{return std::make_shared<Relu>();}},
+    {Activation::Prelu, []{return std::make_shared<Prelu>();}},
+    {Activation::Elu, []{return std::make_shared<Elu>();}},
+    {Activation::Pelu, []{return std::make_shared<Pelu>();}},
+    {Activation::Srelu, []{return std::make_shared<Srelu>();}},
+    {Activation::Gauss, []{return std::make_shared<Gauss>();}},
+    {Activation::Softexp, []{return std::make_shared<Softexp>();}},
+    {Activation::Psoftexp, []{return std::make_shared<Psoftexp>();}}
+};
+
+
+
+static std::map<std::string, Activation> stringToActivationMap = {
+    {"linear", Activation::Linear},
+    {"sigmoid", Activation::Sigmoid},
+    {"tanh", Activation::Tanh},
+    {"softplus", Activation::Softplus},
+    {"relu", Activation::Relu},
+    {"prelu", Activation::Prelu},
+    {"elu", Activation::Elu},
+    {"pelu", Activation::Pelu},
+    {"srelu", Activation::Srelu},
+    {"gauss", Activation::Gauss},
+    {"softexp", Activation::Softexp},
+    {"psoftexp", Activation::Psoftexp}
+};
+
+
+
+static std::map<Activation, std::string> activationToStringMap = {
+    {Activation::Linear, "linear"},
+    {Activation::Sigmoid, "sigmoid"},
+    {Activation::Tanh, "tanh"},
+    {Activation::Softplus, "softplus"},
+    {Activation::Relu, "relu"},
+    {Activation::Prelu, "prelu"},
+    {Activation::Elu, "elu"},
+    {Activation::Pelu, "pelu"},
+    {Activation::Srelu, "srelu"},
+    {Activation::Gauss, "gauss"},
+    {Activation::Softexp, "softexp"},
+    {Activation::Psoftexp, "psoftexp"}
 };
 
 

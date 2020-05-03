@@ -20,15 +20,20 @@ void vesta()
     netp.testRatio = 0.15;
     netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
-    netp.postprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
+    netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
 
     omnilearn::Network net(data, netp);
 
     omnilearn::LayerParam lay;
     lay.maxNorm = 5;
     lay.size = 32;
-    net.addLayer(lay, omnilearn::Aggregation::Dot, omnilearn::Activation::Relu);
-    net.addLayer(lay, omnilearn::Aggregation::Dot, omnilearn::Activation::Linear);
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Relu;
+    net.addLayer(lay);
+
+    lay.activation = omnilearn::Activation::Linear;
+    net.addLayer(lay);
 
 
     net.learn();
@@ -56,7 +61,7 @@ void mnist()
     netp.testRatio = 0.0;
     netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
-    netp.postprocessOutputs = {};
+    netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
 
     omnilearn::Network net(data, netp);
@@ -65,8 +70,13 @@ void mnist()
     omnilearn::LayerParam lay;
     lay.maxNorm = 5;
     lay.size = 300;
-    net.addLayer(lay, omnilearn::Aggregation::Dot, omnilearn::Activation::Relu);
-    net.addLayer(lay, omnilearn::Aggregation::Dot, omnilearn::Activation::Linear);
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Relu;
+    net.addLayer(lay);
+
+    lay.activation = omnilearn::Activation::Linear;
+    net.addLayer(lay);
 
     net.learn();
 }
@@ -83,14 +93,15 @@ void testLoader()
 
 void generate()
 {
-    omnilearn::Network genNet("omnilearn_network", 4);
+    std::srand(static_cast<unsigned>(time(0)));
+    omnilearn::Network genNet("mnist", 4);
     omnilearn::NetworkParam param;
-    param.epoch = 1000;
+    param.epoch = 200;
     param.learningRate = 0.1;
-    omnilearn::Vector target = (omnilearn::Vector(10) << 1,0,0,0,0,0,0,0,0,0).finished();
+    omnilearn::Vector target = (omnilearn::Vector(10) << 0,0,0,0,0,0,0,1,0,0).finished();
     omnilearn::Vector input = omnilearn::Vector::Random(28*28);
 
-    for(size_t i = 0; i < input.size(); i++)
+    for(eigen_size_t i = 0; i < input.size(); i++)
     {
         input[i] += 1;
         input[i] *= 127.5;
@@ -98,17 +109,17 @@ void generate()
 
     omnilearn::Vector res = genNet.generate(param, target, input);
 
-    std::cout << res << "\n\n";
+    std::cout << res << "\n";
     std::cout << genNet.process(res) << "\n";
 }
 
 
 int main()
 {
-    //mnist();
+    mnist();
     //vesta();
     //testLoader();
-    generate();
+    //generate();
 
     return 0;
 }

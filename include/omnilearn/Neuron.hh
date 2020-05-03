@@ -8,6 +8,9 @@
 
 #include "Activation.hh"
 #include "Aggregation.hh"
+#include "json.hh"
+
+using json = nlohmann::json;
 
 
 
@@ -23,8 +26,12 @@ enum class Distrib {Uniform, Normal};
 
 class Neuron
 {
+    friend void to_json(json& jObj, Neuron const& neuron);
+    friend void from_json(json const& jObj, Neuron& neuron);
+
 public:
-    Neuron(size_t aggregation, size_t activation);
+    Neuron() = default; // only used in from_json(Layer). Segfault are possible if used manually
+    Neuron(Aggregation aggregation, Activation activation);
     void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t k, std::mt19937& generator, bool useOutput);
     //each line of the input matrix is a feature. Returns one result per feature.
     Vector process(Matrix const& inputs) const;
@@ -35,20 +42,18 @@ public:
     void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window, double optimizerBias);
     //one gradient per input neuron
     Vector getGradients() const;
-    void save();
-    void loadSaved();
+    void keep();
+    void release();
     void computeGradientsAccordingToInputs(double inputGradient);
     void updateInput(Vector& input, double learningRate);
     //first is weights, second is bias
     std::pair<Matrix, Vector> getWeights() const;
-    rowVector getCoefs() const;
     size_t nbWeights() const;
-    void setCoefs(Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ);
+    void setAggrAct(Aggregation aggr, Activation act);
 
-
-protected:
-    std::shared_ptr<AggregationFunc> _aggregation;
-    std::shared_ptr<ActivationFct> _activation;
+private:
+    std::shared_ptr<IAggregation> _aggregation;
+    std::shared_ptr<IActivation> _activation;
 
     Matrix _weights;
     Vector _bias;
@@ -70,6 +75,11 @@ protected:
 
     Vector _generativeGradients; // partial gradient for each input to tweak
 };
+
+
+
+void to_json(json& jObj, Neuron const& neuron);
+void from_json(json const& jObj, Neuron& neuron);
 
 
 

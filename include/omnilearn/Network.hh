@@ -3,6 +3,7 @@
 #ifndef OMNILEARN_NETWORK_HH_
 #define OMNILEARN_NETWORK_HH_
 
+#include "NetworkIO.hh"
 #include "Layer.hh"
 #include "cost.hh"
 #include "decay.hh"
@@ -60,7 +61,7 @@ struct NetworkParam
     window(0.9),
     plateau(0.99),
     preprocessInputs(),
-    postprocessOutputs(),
+    preprocessOutputs(),
     optimizerBias(1e-5),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
@@ -91,7 +92,7 @@ struct NetworkParam
     double window; //window effect on grads
     double plateau;
     std::vector<Preprocess> preprocessInputs;
-    std::vector<Preprocess> postprocessOutputs;
+    std::vector<Preprocess> preprocessOutputs;
     double optimizerBias;
     double inputReductionThreshold;
     double outputReductionThreshold;
@@ -113,20 +114,23 @@ struct NetworkParam
 
 class Network
 {
+  friend class NetworkIO; // NetworkIO is part of Network
+
 public:
   Network(Data const& data, NetworkParam const& param);
   Network(NetworkParam const& param, Data const& data);
   Network(std::string const& path, size_t threads);
-  void addLayer(LayerParam const& param, size_t aggregation, size_t activation);
+  void addLayer(LayerParam const& param);
   void setTestData(Data const& data);
   bool learn();
   Vector process(Vector inputs) const;
   Matrix process(Matrix inputs) const;
   Vector generate(NetworkParam param, Vector target, Vector input = Vector(0));
+
   Vector preprocess(Vector inputs) const; //transforms real inputs to processed inputs
-  Vector postprocess(Vector inputs) const; //transforms learned outputs to real outputs
+  Vector postprocess(Vector inputs) const; //transforms produced outputs to real outputs
   Vector depreprocess(Vector inputs) const; //transforms processed inputs to real inputs
-  Vector depostprocess(Vector inputs) const; //transforms real outputs to learned outputs
+  Vector depostprocess(Vector inputs) const; //transforms real outputs to produced outputs
   Matrix preprocess(Matrix inputs) const;
   Matrix postprocess(Matrix inputs) const;
   Matrix depreprocess(Matrix inputs) const;
@@ -134,20 +138,18 @@ public:
 
 protected:
   void initLayers();
-  void shuffleTrainData();
-  void shuffleData();
-  void initPreprocess();
+  void shuffleData(); // shuffle data then split them into train/validation/test data
+  void shuffleTrainData(); // shuffle train data each epoch
+  void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void performeOneEpoch();
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted);
-  Vector computeGradVector(Vector const& realResult, Vector const& predicted);
-  double computeLoss(); //return validation loss
-  void save();
-  void loadSaved();
-  void writeInfo(std::string const& path) const;
-  void saveNetInFile(std::string const& path) const;
+  Vector computeGradVector(Vector const& realResult, Vector const& predicted); // calculate error between expected and predicted outputs
+  double computeLoss(); //returns validation loss
+  void keep(); // store weights, bias and other coefs when optimal loss is found
+  void release(); // returns weights, bias and other coefs when learning is done
 
-protected:
+private:
   //parameters
   NetworkParam _param;
 
@@ -198,6 +200,9 @@ protected:
   std::vector<std::pair<double, double>> _inputNormalization;
   std::vector<std::pair<double, double>> _inputStandartization;
   std::pair<Matrix, Vector> _inputDecorrelation;
+
+  //IO
+  NetworkIO _io;
 };
 
 

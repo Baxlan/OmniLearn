@@ -4,11 +4,10 @@
 
 
 
-omnilearn::Layer::Layer(LayerParam const& param, size_t aggregation, size_t activation):
+omnilearn::Layer::Layer(LayerParam const& param):
 _param(param),
 _inputSize(0),
-_neurons(std::vector<Neuron>(param.size, Neuron(aggregation, activation))),
-_aggrAct({aggregation, activation})
+_neurons(std::vector<Neuron>(param.size, Neuron(param.aggregation, param.activation)))
 {
 }
 
@@ -139,20 +138,20 @@ void omnilearn::Layer::computeGradientsAccordingToInputs(Vector const& inputGrad
 }
 
 
-void omnilearn::Layer::save()
+void omnilearn::Layer::keep()
 {
     for(size_t i = 0; i < _neurons.size(); i++)
     {
-        _neurons[i].save();
+        _neurons[i].keep();
     }
 }
 
 
-void omnilearn::Layer::loadSaved()
+void omnilearn::Layer::release()
 {
     for(size_t i = 0; i < _neurons.size(); i++)
     {
-        _neurons[i].loadSaved();
+        _neurons[i].release();
     }
 }
 
@@ -234,29 +233,38 @@ std::vector<std::pair<omnilearn::Matrix, omnilearn::Vector>> omnilearn::Layer::g
 
 void omnilearn::Layer::resize(size_t neurons)
 {
-    _neurons = std::vector<Neuron>(neurons, Neuron(_aggrAct.first, _aggrAct.second));
-}
-
-
-std::vector<omnilearn::rowVector> omnilearn::Layer::getCoefs() const
-{
-    std::vector<rowVector> coefs(_neurons.size() + 1);
-    coefs[0] = (rowVector(2) << static_cast<double>(aggregationMap[_aggrAct.first]()->id()), static_cast<double>(activationMap[_aggrAct.second]()->id())).finished();
-    for(size_t i = 0; i < _neurons.size(); i++)
-    {
-        coefs[i+1] = _neurons[i].getCoefs();
-    }
-    return coefs;
-}
-
-
-void omnilearn::Layer::setCoefs(size_t neuron, Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ)
-{
-    _neurons[neuron].setCoefs(weights, bias, aggreg, activ);
+    _neurons = std::vector<Neuron>(neurons, Neuron(_param.aggregation, _param.activation));
 }
 
 
 size_t omnilearn::Layer::nbWeights() const
 {
     return _neurons[0].nbWeights();
+}
+
+
+void omnilearn::to_json(json& jObj, Layer const& layer)
+{
+    jObj["aggregation"] = aggregationToStringMap[layer._param.aggregation];
+    jObj["activation"] = activationToStringMap[layer._param.activation];
+    jObj["maxnorm"] = layer._param.maxNorm;
+    for(size_t i = 0; i < layer._neurons.size(); i++)
+    {
+        jObj["neurons"][i] = layer._neurons[i];
+    }
+}
+
+
+void omnilearn::from_json(json const& jObj, Layer& layer)
+{
+    layer._param.aggregation = stringToAggregationMap[jObj.at("aggregation")];
+    layer._param.activation = stringToActivationMap[jObj.at("activation")];
+    layer._param.maxNorm = jObj.at("maxnorm");
+    layer._neurons.resize(jObj.at("neurons").size());
+
+    for(size_t i = 0; i < layer._neurons.size(); i++)
+    {
+        layer._neurons[i] = jObj.at("neurons").at(i);
+        layer._neurons[i].setAggrAct(layer._param.aggregation, layer._param.activation);
+    }
 }

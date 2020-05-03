@@ -2,6 +2,8 @@
 
 #include "omnilearn/Activation.hh"
 
+#include "omnilearn/Exception.hh"
+
 
 
 //=============================================================================
@@ -51,19 +53,19 @@ omnilearn::rowVector omnilearn::Linear::getCoefs() const
 }
 
 //static function
-size_t omnilearn::Linear::id() const
+omnilearn::Activation omnilearn::Linear::signature() const
 {
-    return 0;
+    return Activation::Linear;
 }
 
 
-void omnilearn::Linear::save()
+void omnilearn::Linear::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Linear::loadSaved()
+void omnilearn::Linear::release()
 {
     //nothing to do
 }
@@ -119,19 +121,19 @@ omnilearn::rowVector omnilearn::Sigmoid::getCoefs() const
 }
 
 
-size_t omnilearn::Sigmoid::id() const
+omnilearn::Activation omnilearn::Sigmoid::signature() const
 {
-    return 1;
+    return Activation::Sigmoid;
 }
 
 
-void omnilearn::Sigmoid::save()
+void omnilearn::Sigmoid::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Sigmoid::loadSaved()
+void omnilearn::Sigmoid::release()
 {
     //nothing to do
 }
@@ -185,19 +187,19 @@ omnilearn::rowVector omnilearn::Tanh::getCoefs() const
 }
 
 
-size_t omnilearn::Tanh::id() const
+omnilearn::Activation omnilearn::Tanh::signature() const
 {
-    return 2;
+    return Activation::Tanh;
 }
 
 
-void omnilearn::Tanh::save()
+void omnilearn::Tanh::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Tanh::loadSaved()
+void omnilearn::Tanh::release()
 {
     //nothing to do
 }
@@ -251,19 +253,19 @@ omnilearn::rowVector omnilearn::Softplus::getCoefs() const
 }
 
 
-size_t omnilearn::Softplus::id() const
+omnilearn::Activation omnilearn::Softplus::signature() const
 {
-    return 3;
+    return Activation::Softplus;
 }
 
 
-void omnilearn::Softplus::save()
+void omnilearn::Softplus::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Softplus::loadSaved()
+void omnilearn::Softplus::release()
 {
     //nothing to do
 }
@@ -321,19 +323,19 @@ omnilearn::rowVector omnilearn::Relu::getCoefs() const
 }
 
 
-size_t omnilearn::Relu::id() const
+omnilearn::Activation omnilearn::Relu::signature() const
 {
-    return 4;
+    return Activation::Relu;
 }
 
 
-void omnilearn::Relu::save()
+void omnilearn::Relu::keep()
 {
     _savedCoef = _coef;
 }
 
 
-void omnilearn::Relu::loadSaved()
+void omnilearn::Relu::release()
 {
     _coef = _savedCoef;
 }
@@ -361,9 +363,9 @@ void omnilearn::Prelu::learn(double gradient, double learningRate)
 }
 
 
-size_t omnilearn::Prelu::id() const
+omnilearn::Activation omnilearn::Prelu::signature() const
 {
-    return 5;
+    return Activation::Prelu;
 }
 
 
@@ -419,19 +421,19 @@ omnilearn::rowVector omnilearn::Elu::getCoefs() const
 }
 
 
-size_t omnilearn::Elu::id() const
+omnilearn::Activation omnilearn::Elu::signature() const
 {
-    return 6;
+    return Activation::Elu;
 }
 
 
-void omnilearn::Elu::save()
+void omnilearn::Elu::keep()
 {
     _savedCoef = _coef;
 }
 
 
-void omnilearn::Elu::loadSaved()
+void omnilearn::Elu::release()
 {
     _coef = _savedCoef;
 }
@@ -441,7 +443,7 @@ void omnilearn::Elu::loadSaved()
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== PARAMETRIC EXPONENTIAL ACTIVATION =======================================
+//=== PARAMETRIC EXPONENTIAL RELU ACTIVATION ==================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -459,9 +461,9 @@ void omnilearn::Pelu::learn(double gradient, double learningRate)
 }
 
 
-size_t omnilearn::Pelu::id() const
+omnilearn::Activation omnilearn::Pelu::signature() const
 {
-    return 7;
+    return Activation::Pelu;
 }
 
 
@@ -534,13 +536,13 @@ omnilearn::rowVector omnilearn::Srelu::getCoefs() const
 }
 
 
-size_t omnilearn::Srelu::id() const
+omnilearn::Activation omnilearn::Srelu::signature() const
 {
-    return 8;
+    return Activation::Srelu;
 }
 
 
-void omnilearn::Srelu::save()
+void omnilearn::Srelu::keep()
 {
     _savedCoef1 = _coef1;
     _savedCoef2 = _coef2;
@@ -550,7 +552,7 @@ void omnilearn::Srelu::save()
 }
 
 
-void omnilearn::Srelu::loadSaved()
+void omnilearn::Srelu::release()
 {
     _coef1 = _savedCoef1;
     _coef2 = _savedCoef2;
@@ -602,19 +604,19 @@ omnilearn::rowVector omnilearn::Gauss::getCoefs() const
 }
 
 
-size_t omnilearn::Gauss::id() const
+omnilearn::Activation omnilearn::Gauss::signature() const
 {
-    return 9;
+    return Activation::Gauss;
 }
 
 
-void omnilearn::Gauss::save()
+void omnilearn::Gauss::keep()
 {
     //nothing to do
 }
 
 
-void omnilearn::Gauss::loadSaved()
+void omnilearn::Gauss::release()
 {
     //nothing to do
 }
@@ -631,7 +633,69 @@ void omnilearn::Gauss::loadSaved()
 
 
 
-// TO BE IMPLEMENTED
+omnilearn::Softexp::Softexp(Vector const& coefs)
+{
+    if(coefs.size() != 1)
+        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _coef = coefs[0];
+    _savedCoef = 0;
+}
+
+
+double omnilearn::Softexp::activate(double val) const
+{
+    if(_coef < -std::numeric_limits<double>::epsilon())
+        return -std::log(1-(_coef*(val + _coef))) / _coef;
+    else if(_coef > std::numeric_limits<double>::epsilon())
+        return ((std::exp(_coef * val) - 1) / _coef) + _coef;
+    else
+        return val;
+}
+
+
+double omnilearn::Softexp::prime(double val) const
+{
+    if(_coef < 0)
+        return (_coef < 0 ? 1 / (1 - (_coef * (_coef + val))) : std::exp(_coef * val));
+    else
+        return std::exp(_coef * val);
+}
+
+
+void omnilearn::Softexp::learn(double gradient, double learningRate)
+{
+    //TO BE IMPLEMENTED
+}
+
+
+void omnilearn::Softexp::setCoefs([[maybe_unused]] Vector const& coefs)
+{
+    //nothing to do
+}
+
+
+omnilearn::rowVector omnilearn::Softexp::getCoefs() const
+{
+    return (Vector(1) << _coef).finished();
+}
+
+
+omnilearn::Activation omnilearn::Softexp::signature() const
+{
+    return Activation::Softexp;
+}
+
+
+void omnilearn::Softexp::keep()
+{
+    _savedCoef = _coef;
+}
+
+
+void omnilearn::Softexp::release()
+{
+    _coef = _savedCoef;
+}
 
 
 
@@ -645,69 +709,23 @@ void omnilearn::Gauss::loadSaved()
 
 
 
-omnilearn::Psoftexp::Psoftexp(Vector const& coefs)
+omnilearn::Psoftexp::Psoftexp(Vector const& coefs):
+Softexp(coefs)
 {
-    if(coefs.size() != 1)
-        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
-    _coef = coefs[0];
-    _savedCoef = 0;
 }
 
 
-double omnilearn::Psoftexp::activate(double val) const
-{
-    if(_coef < -std::numeric_limits<double>::epsilon())
-        return -std::log(1-(_coef*(val + _coef))) / _coef;
-    else if(_coef > std::numeric_limits<double>::epsilon())
-        return ((std::exp(_coef * val) - 1) / _coef) + _coef;
-    else
-        return val;
-}
-
-
-double omnilearn::Psoftexp::prime(double val) const
-{
-    if(_coef < 0)
-        return (_coef < 0 ? 1 / (1 - (_coef * (_coef + val))) : std::exp(_coef * val));
-    else
-        return std::exp(_coef * val);
-}
-
-
-void omnilearn::Psoftexp::learn(double gradient, double learningRate)
+void omnilearn::Psoftexp::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
 {
     //TO BE IMPLEMENTED
 }
 
 
-void omnilearn::Psoftexp::setCoefs([[maybe_unused]] Vector const& coefs)
+omnilearn::Activation omnilearn::Psoftexp::signature() const
 {
-    //nothing to do
+    return Activation::Psoftexp;
 }
 
-
-omnilearn::rowVector omnilearn::Psoftexp::getCoefs() const
-{
-    return (Vector(1) << _coef).finished();
-}
-
-
-size_t omnilearn::Psoftexp::id() const
-{
-    return 11;
-}
-
-
-void omnilearn::Psoftexp::save()
-{
-    _savedCoef = _coef;
-}
-
-
-void omnilearn::Psoftexp::loadSaved()
-{
-    _coef = _savedCoef;
-}
 
 
 //=============================================================================

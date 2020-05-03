@@ -4,7 +4,7 @@
 
 
 
-omnilearn::Neuron::Neuron(size_t aggregation, size_t activation):
+omnilearn::Neuron::Neuron(Aggregation aggregation, Activation activation):
 _aggregation(aggregationMap[aggregation]()),
 _activation(activationMap[activation]()),
 _weights(Matrix(0, 0)),
@@ -220,21 +220,21 @@ omnilearn::Vector omnilearn::Neuron::getGradients() const
 }
 
 
-void omnilearn::Neuron::save()
+void omnilearn::Neuron::keep()
 {
     _savedWeights = _weights;
     _savedBias = _bias;
-    _aggregation->save();
-    _activation->save();
+    _aggregation->keep();
+    _activation->keep();
 }
 
 
-void omnilearn::Neuron::loadSaved()
+void omnilearn::Neuron::release()
 {
     _weights = _savedWeights;
     _bias = _savedBias;
-    _aggregation->loadSaved();
-    _activation->loadSaved();
+    _aggregation->release();
+    _activation->release();
 }
 
 
@@ -269,35 +269,48 @@ std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::Neuron::getWeights() 
 }
 
 
-//cannot be const, because _weights.data() must return non const double*
-omnilearn::rowVector omnilearn::Neuron::getCoefs() const
-{
-    rowVector aggreg(_aggregation->getCoefs());
-    rowVector activ(_activation->getCoefs());
-    rowVector weights(Eigen::Map<rowVector>(const_cast<double*>(_weights.data()), _weights.size()));
-
-    return (rowVector(aggreg.size() + activ.size() + weights.size() + _bias.size() + 4) <<
-            static_cast<double>(aggreg.size()), aggreg, static_cast<double>(activ.size()), activ, static_cast<double>(_bias.size()), _bias, static_cast<double>(_weights.cols()), weights).finished();
-}
-
-
 size_t omnilearn::Neuron::nbWeights() const
 {
     return _weights.cols();
 }
 
 
-void omnilearn::Neuron::setCoefs(Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ)
+void omnilearn::Neuron::setAggrAct(Aggregation aggr, Activation act)
 {
-    _aggregation->setCoefs(aggreg);
-    _activation->setCoefs(activ);
-    _weights = weights;
-    _bias = bias;
+    _aggregation = aggregationMap[aggr]();
+    _activation = activationMap[act]();
+}
 
-    _previousBiasUpdate = Vector::Constant(_bias.size(), 0);
-    _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
-    _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
-    _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
-    _biasGradients = Vector::Constant(_bias.size(), 0);
-    _generativeGradients = Vector::Constant(_weights.cols(), 0);
+
+void omnilearn::to_json(json& jObj, Neuron const& neuron)
+{
+    jObj["aggregation"] = neuron._aggregation->getCoefs();
+    jObj["activation"] = neuron._activation->getCoefs();
+    jObj["bias"] = neuron._bias;
+
+    for(eigen_size_t i = 0; i < neuron._weights.rows(); i++)
+    {
+        jObj["weights"][i] = Vector(neuron._weights.row(i));
+    }
+}
+
+
+void omnilearn::from_json(json const& jObj, Neuron& neuron)
+{
+    neuron._aggregation->setCoefs(stdToEigenVector(jObj.at("aggregation")));
+    neuron._activation->setCoefs(stdToEigenVector(jObj.at("activation")));
+    neuron._bias = stdToEigenVector(jObj.at("bias"));
+
+    neuron._weights = Matrix(jObj.at("weights").size(), jObj.at("weights").at(0).size());
+
+    for(eigen_size_t i = 0; i < neuron._weights.rows(); i++)
+        neuron._weights.row(i) = stdToEigenVector(jObj.at("weights").at(i));
+
+    // init the neuron members
+    neuron._previousBiasUpdate = Vector::Constant(neuron._bias.size(), 0);
+    neuron._previousWeightUpdate = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
+    neuron._weightsetCount = std::vector<size_t>(neuron._weights.rows(), 0);
+    neuron._gradients = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
+    neuron._biasGradients = Vector::Constant(neuron._bias.size(), 0);
+    neuron._generativeGradients = Vector::Constant(neuron._weights.cols(), 0);
 }

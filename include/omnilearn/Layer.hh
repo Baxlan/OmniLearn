@@ -3,12 +3,15 @@
 #ifndef OMNILEARN_LAYER_HH_
 #define OMNILEARN_LAYER_HH_
 
+#include "json.hh"
 #include "Neuron.hh"
 #include "ThreadPool.hh"
 
 #include <map>
 #include <memory>
 #include <functional>
+
+using json = nlohmann::json;
 
 
 
@@ -26,7 +29,9 @@ struct LayerParam
     mean_boundary(distrib == Distrib::Normal ? 0 : 6),
     deviation(2),
     useOutput(true),
-    k(1)
+    k(1),
+    aggregation(Aggregation::Dot),
+    activation(Activation::Relu)
     {
     }
 
@@ -37,14 +42,20 @@ struct LayerParam
     double deviation; //deviation (if normal) or useless (if uniform)
     bool useOutput; // calculate boundary/deviation by taking output number into account
     size_t k; //number of weight set for each neuron (for maxout)
+    Aggregation aggregation;
+    Activation activation;
 };
 
 
 
 class Layer
 {
+    friend void to_json(json& jObj, Layer const& layer);
+    friend void from_json(json const& jObj, Layer& layer);
+
 public:
-    Layer(LayerParam const& param, size_t aggregation, size_t activation);
+    Layer() = default; // only used in NetworkIO::loadCoefs(). DO NOT USE MANUALLY
+    Layer(LayerParam const& param);
     void init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator);
     void init(size_t nbInputs);
     Matrix process(Matrix const& inputs, ThreadPool& t) const;
@@ -52,24 +63,26 @@ public:
     Vector processToGenerate(Vector const& input, ThreadPool& t);
     void computeGradients(Vector const& inputGradient, ThreadPool& t);
     void computeGradientsAccordingToInputs(Vector const& inputGradient, ThreadPool& t);
-    void save();
-    void loadSaved();
+    void keep();
+    void release();
     Vector getGradients(ThreadPool& t); //one gradient per input neuron
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t);
     void updateInput(Vector& input, double learningRate);
     size_t size() const;
     std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const;
     void resize(size_t neurons);
-    std::vector<rowVector> getCoefs() const;
-    void setCoefs(size_t neuron, Matrix const& weights, Vector const& bias, Vector const& aggreg, Vector const& activ);
     size_t nbWeights() const;
 
-protected:
+private:
     LayerParam _param;
     size_t _inputSize;
     std::vector<Neuron> _neurons;
-    std::pair<size_t, size_t> _aggrAct;
 };
+
+
+
+void to_json(json& jObj, Layer const& layer);
+void from_json(json const& jObj, Layer& layer);
 
 
 
