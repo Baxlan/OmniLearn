@@ -28,7 +28,7 @@ protected:
 struct LogException : public Exception
 {
     LogException(std::string const& msg);
-    void log(std::ofstream& file) const;
+    void log(std::ostream& file) const;
 };
 
 

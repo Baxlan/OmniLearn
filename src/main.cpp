@@ -1,5 +1,6 @@
 
 #include "omnilearn/Network.hh"
+#include "omnilearn/metric.hh"
 
 
 void vesta()

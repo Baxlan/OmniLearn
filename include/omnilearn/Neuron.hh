@@ -3,7 +3,6 @@
 #ifndef OMNILEARN_NEURON_HH_
 #define OMNILEARN_NEURON_HH_
 
-#include <memory>
 #include <random>
 
 #include "Activation.hh"

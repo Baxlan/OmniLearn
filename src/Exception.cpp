@@ -22,7 +22,7 @@ Exception(msg)
 }
 
 
-void omnilearn::LogException::log(std::ofstream& file) const
+void omnilearn::LogException::log(std::ostream& file) const
 {
     file << what() << "\n";
 }

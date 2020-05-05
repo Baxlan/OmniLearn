@@ -3,7 +3,7 @@
 #ifndef OMNILEARN_COST_HH_
 #define OMNILEARN_COST_HH_
 
-#include "Activation.hh"
+#include "Matrix.hh"
 #include "ThreadPool.hh"
 
 

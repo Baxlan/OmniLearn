@@ -1,5 +1,9 @@
 // Network.cpp
 
+#include "omnilearn/cost.hh"
+#include "omnilearn/decay.hh"
+#include "omnilearn/Exception.hh"
+#include "omnilearn/metric.hh"
 #include "omnilearn/Network.hh"
 
 

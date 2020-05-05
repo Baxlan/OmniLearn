@@ -1,6 +1,8 @@
 // csv.cpp
 
 #include "omnilearn/csv.hh"
+#include "omnilearn/Exception.hh"
+#include "omnilearn/ThreadPool.hh"
 
 
 

@@ -2,6 +2,8 @@
 
 #include "omnilearn/fileString.hh"
 
+#include <algorithm>
+
 
 
 std::string omnilearn::strip(std::string str, char c)

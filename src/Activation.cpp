@@ -1,7 +1,6 @@
 // Activation.cpp
 
 #include "omnilearn/Activation.hh"
-
 #include "omnilearn/Exception.hh"
 
 

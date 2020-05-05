@@ -1,7 +1,6 @@
 // Aggregation.cpp
 
 #include "omnilearn/Aggregation.hh"
-
 #include "omnilearn/Exception.hh"
 
 

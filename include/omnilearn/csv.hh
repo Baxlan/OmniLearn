@@ -5,9 +5,8 @@
 
 #include <fstream>
 
-#include "Exception.hh"
 #include "Matrix.hh"
-#include "ThreadPool.hh"
+
 
 
 

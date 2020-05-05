@@ -1,10 +1,12 @@
 // NetworkIO.cpp
 
+#include "omnilearn/Exception.hh"
 #include "omnilearn/NetworkIO.hh"
 #include "omnilearn/Network.hh"
 #include "omnilearn/fileString.hh"
 
 #include <filesystem>
+#include <fstream>
 
 
 

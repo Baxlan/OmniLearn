@@ -7,10 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "json.hh"
 #include "Matrix.hh"
-
-using json = nlohmann::json;
 
 
 

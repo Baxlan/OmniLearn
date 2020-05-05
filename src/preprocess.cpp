@@ -1,6 +1,17 @@
 //preprocess.cpp
 
 #include "omnilearn/preprocess.hh"
+#include "omnilearn/disable_eigen_warnings.hh"
+#include "omnilearn/Exception.hh"
+
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_ALL
+DISABLE_WARNING_EXTRA
+DISABLE_WARNING_DEPRECATED_COPY
+DISABLE_WARNING_OLD_STYLE_CAST
+DISABLE_WARNING_CONVERSION
+#include "omnilearn/eigen/SVD"
+DISABLE_WARNING_POP
 
 
 

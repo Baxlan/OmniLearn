@@ -7,10 +7,6 @@
 #include "Neuron.hh"
 #include "ThreadPool.hh"
 
-#include <map>
-#include <memory>
-#include <functional>
-
 using json = nlohmann::json;
 
 

@@ -1,5 +1,6 @@
 // cost.cpp
 
+#include "omnilearn/Activation.hh"
 #include "omnilearn/cost.hh"
 
 

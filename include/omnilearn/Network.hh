@@ -5,13 +5,9 @@
 
 #include "NetworkIO.hh"
 #include "Layer.hh"
-#include "cost.hh"
-#include "decay.hh"
-#include "metric.hh"
 #include "csv.hh"
 
 #include <iostream>
-#include <utility>
 
 
 

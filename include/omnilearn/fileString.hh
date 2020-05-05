@@ -3,9 +3,7 @@
 #ifndef OMNILEARN_FILESTRING_HH_
 #define OMNILEARN_FILESTRING_HH_
 
-#include <algorithm>
 #include <fstream>
-#include <iterator>
 #include <string>
 #include <vector>
 
