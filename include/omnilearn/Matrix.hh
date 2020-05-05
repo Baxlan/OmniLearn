@@ -32,7 +32,7 @@ double norm(Vector const& vec, double order = 2);
 double normInf(Vector const& vec);
 
 Vector stdToEigenVector(std::vector<double> const& vec);
-std::vector<double> eigenToStdVectorr(Vector const& vec);
+std::vector<double> eigenToStdVector(Vector const& vec);
 
 } // namespace omnilearn
 

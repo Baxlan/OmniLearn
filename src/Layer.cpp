@@ -265,6 +265,5 @@ void omnilearn::from_json(json const& jObj, Layer& layer)
     for(size_t i = 0; i < layer._neurons.size(); i++)
     {
         layer._neurons[i] = jObj.at("neurons").at(i);
-        layer._neurons[i].setAggrAct(layer._param.aggregation, layer._param.activation);
     }
 }

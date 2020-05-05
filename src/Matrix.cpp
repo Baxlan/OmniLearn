@@ -31,11 +31,13 @@ omnilearn::Vector  omnilearn::stdToEigenVector(std::vector<double> const& vec)
 {
   Vector vec2(vec.size());
   std::transform(vec.begin(), vec.end(), vec2.begin(), [](double a) -> double {return a;});
+  return vec2;
 }
 
 
-std::vector<double>  omnilearn::eigenToStdVectorr(Vector const& vec)
+std::vector<double> omnilearn::eigenToStdVector(Vector const& vec)
 {
   std::vector<double> vec2(vec.size());
   std::transform(vec.begin(), vec.end(), vec2.begin(), [](double a) -> double {return a;});
+  return vec2;
 }

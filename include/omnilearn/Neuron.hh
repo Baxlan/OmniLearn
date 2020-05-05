@@ -49,7 +49,6 @@ public:
     //first is weights, second is bias
     std::pair<Matrix, Vector> getWeights() const;
     size_t nbWeights() const;
-    void setAggrAct(Aggregation aggr, Activation act);
 
 private:
     std::shared_ptr<IAggregation> _aggregation;

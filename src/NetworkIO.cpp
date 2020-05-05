@@ -172,6 +172,7 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj)
 
 void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj)
 {
+  jObj["preprocess"] = json::array();
   for(size_t i = 0; i < net._param.preprocessOutputs.size(); i++)
   {
     if(net._param.preprocessOutputs[i] == Preprocess::Center)
@@ -199,9 +200,9 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj)
       jObj["eigenvalues"] = net._outputDecorrelation.second;
 
       Matrix vectors = net._outputDecorrelation.first.transpose();
-      for(eigen_size_t k = 0; k < vectors.rows(); k++)
+      for(eigen_size_t j = 0; j < vectors.rows(); j++)
       {
-        jObj["eigenvectors"][k] = Vector(vectors.row(k));
+        jObj["eigenvectors"][j] = Vector(vectors.row(j));
       }
     }
     else if(net._param.preprocessOutputs[i] == Preprocess::Reduce)
@@ -276,6 +277,7 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj) c
       {
         net._inputDecorrelation.first.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
       }
+      net._inputDecorrelation.first.transposeInPlace();
     }
     else if(jObj.at("preprocess").at(i) == "whiten")
     {
@@ -317,6 +319,7 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj) 
       {
         net._outputDecorrelation.first.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
       }
+      net._outputDecorrelation.first.transposeInPlace();
     }
     else if(jObj.at("preprocess").at(i) == "reduce")
     {
@@ -329,9 +332,9 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj) 
 
 void omnilearn::NetworkIO::loadCoefs(Network& net, json const& jObj) const
 {
-  net._layers.resize(jObj.at("coefs").size());
+  net._layers.resize(jObj.size());
   for(size_t i = 0; i < net._layers.size(); i++)
   {
-    net._layers[i] = jObj.at("coefs").at(i);
+    net._layers[i] = jObj.at(i);
   }
 }

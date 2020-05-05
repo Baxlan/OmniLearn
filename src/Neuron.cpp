@@ -275,15 +275,10 @@ size_t omnilearn::Neuron::nbWeights() const
 }
 
 
-void omnilearn::Neuron::setAggrAct(Aggregation aggr, Activation act)
-{
-    _aggregation = aggregationMap[aggr]();
-    _activation = activationMap[act]();
-}
-
-
 void omnilearn::to_json(json& jObj, Neuron const& neuron)
 {
+    jObj["aggregation type"] = aggregationToStringMap[neuron._aggregation->signature()];
+    jObj["activation type"] = activationToStringMap[neuron._activation->signature()];
     jObj["aggregation"] = neuron._aggregation->getCoefs();
     jObj["activation"] = neuron._activation->getCoefs();
     jObj["bias"] = neuron._bias;
@@ -297,6 +292,8 @@ void omnilearn::to_json(json& jObj, Neuron const& neuron)
 
 void omnilearn::from_json(json const& jObj, Neuron& neuron)
 {
+    neuron._aggregation = aggregationMap[stringToAggregationMap[jObj.at("aggregation type")]]();
+    neuron._activation = activationMap[stringToActivationMap[jObj.at("activation type")]]();
     neuron._aggregation->setCoefs(stdToEigenVector(jObj.at("aggregation")));
     neuron._activation->setCoefs(stdToEigenVector(jObj.at("activation")));
     neuron._bias = stdToEigenVector(jObj.at("bias"));
