@@ -23,15 +23,16 @@ class NetworkIO
 public:
   NetworkIO(std::string const& path);
   void list(std::string const& line); // write in real time what the network does
-  void saveNet(Network const& net);   // write the state of the network when it learned
-  void saveTest(Network const& net);  // write expected and predicted test data
+  void saveList() const;
+  void saveNet(Network const& net) const;   // write the state of the network when it learned
+  void saveTest(Network const& net) const;  // write expected and predicted test data
   void load(Network& net) const;
 
 private:
-  void saveParameters(Network const& net, json& jObj);
-  void saveInputPreprocess(Network const& net, json& jObj);
-  void saveOutputPreprocess(Network const& net, json& jObj);
-  void saveCoefs(Network const& net, json& jObj);
+  void saveParameters(Network const& net, json& jObj) const;
+  void saveInputPreprocess(Network const& net, json& jObj) const;
+  void saveOutputPreprocess(Network const& net, json& jObj) const;
+  void saveCoefs(Network const& net, json& jObj) const;
   void loadParameters(Network& net, json const& jObj) const;
   void loadInputPreprocess(Network& net, json const& jObj) const;
   void loadOutputPreprocess(Network& net, json const& jObj) const;
@@ -39,9 +40,7 @@ private:
 
 private:
   std::string _path;
-  std::fstream _listing;
-  std::fstream _save;
-  std::fstream _test;
+  std::vector<std::string> _listing;
 };
 
 

@@ -2,31 +2,63 @@
 
 #include "omnilearn/NetworkIO.hh"
 #include "omnilearn/Network.hh"
+#include "omnilearn/fileString.hh"
+
+#include <filesystem>
 
 
 
 omnilearn::NetworkIO::NetworkIO(std::string const& path):
 _path(path),
-_listing(path + ".listing", std::fstream::in | std::fstream::out |std::fstream::app),
-_save(path + ".save", std::fstream::in | std::fstream::out | std::fstream::app),
-_test(path + ".test", std::fstream::in | std::fstream::out | std::fstream::app)
+_listing(0)
 {
-  if(!_listing)
-    throw Exception("Cannot access/create file " + path + ".listing");
-  if(!_save)
-    throw Exception("Cannot access/create file " + path + ".listing");
-  if(!_test)
-    throw Exception("Cannot access/create file " + path + ".listing");
+  //check if name is already taken. If yes, add a counter to the name
+  if(std::filesystem::exists(path + ".save") || std::filesystem::exists(path + ".test") || std::filesystem::exists(path + ".listing"))
+  {
+    size_t count = 2;
+    while(true)
+    {
+      if(std::filesystem::exists(path + std::to_string(count) + ".save") || std::filesystem::exists(path + std::to_string(count) + ".test") || std::filesystem::exists(path + std::to_string(count) + ".listing"))
+        count++;
+      else
+      {
+        _path = path + std::to_string(count);
+        break;
+      }
+    }
+  }
+
+  //create files to be sure they are creatable
+  std::ofstream listing(_path + ".listing");
+  std::ofstream save(_path + ".save");
+  std::ofstream test(_path + ".test");
+
+  if(!listing)
+    throw Exception("Cannot access/create file " + _path + ".listing");
+  if(!save)
+    throw Exception("Cannot access/create file " + _path + ".save");
+  if(!test)
+    throw Exception("Cannot access/create file " + _path + ".test");
 }
 
 
 void omnilearn::NetworkIO::list(std::string const& line)
 {
-  _listing << line << "\n";
+  _listing.push_back(line);
 }
 
 
-void omnilearn::NetworkIO::saveNet(Network const& net)
+void omnilearn::NetworkIO::saveList() const
+{
+  std::ofstream listing(_path + ".listing");
+  if(!listing)
+    throw Exception("Cannot access/create file " + _path + ".listing");
+
+  writeLines(_listing, listing);
+}
+
+
+void omnilearn::NetworkIO::saveNet(Network const& net) const
 {
   json jObj;
 
@@ -40,22 +72,30 @@ void omnilearn::NetworkIO::saveNet(Network const& net)
   saveOutputPreprocess(net, jObj["preprocess"]["output"]);
   saveCoefs(net, jObj["coefs"]);
 
-  _save << jObj;
+  std::ofstream save(_path + ".save");
+  if(!save)
+    throw Exception("Cannot access/create file " + _path + ".save");
+
+  save << jObj;
 }
 
 
-void omnilearn::NetworkIO::saveTest(Network const& net)
+void omnilearn::NetworkIO::saveTest(Network const& net) const
 {
+  std::ofstream test(_path + ".test");
+  if(!test)
+    throw Exception("Cannot access/create file " + _path + ".test");
+
   Matrix testRes(net.process(net._testRawInputs));
   for(size_t i = 0; i < net._outputLabels.size(); i++)
   {
-    _test << "label: " << net._outputLabels[i] << "\n" ;
+    test << "label: " << net._outputLabels[i] << "\n" ;
     for(eigen_size_t j = 0; j < net._testRawOutputs.rows(); j++)
-      _test << net._testRawOutputs(j,i) << ",";
-    _test << "\n";
+      test << net._testRawOutputs(j,i) << ",";
+    test << "\n";
     for(eigen_size_t j = 0; j < testRes.rows(); j++)
-      _test << testRes(j,i) << ",";
-    _test << "\n";
+      test << testRes(j,i) << ",";
+    test << "\n";
   }
 }
 
@@ -82,7 +122,7 @@ void omnilearn::NetworkIO::load(Network& net) const
 
 
 
-void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj)
+void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
 {
   if(net._param.loss == Loss::BinaryCrossEntropy)
     jObj["loss"] = "binary cross entropy";
@@ -107,7 +147,7 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj)
 }
 
 
-void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj)
+void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) const
 {
   jObj["preprocess"] = json::array();
   for(size_t i = 0; i < net._param.preprocessInputs.size(); i++)
@@ -170,7 +210,7 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj)
 }
 
 
-void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj)
+void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) const
 {
   jObj["preprocess"] = json::array();
   for(size_t i = 0; i < net._param.preprocessOutputs.size(); i++)
@@ -214,7 +254,7 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj)
 }
 
 
-void omnilearn::NetworkIO::saveCoefs(Network const& net, json& jObj)
+void omnilearn::NetworkIO::saveCoefs(Network const& net, json& jObj) const
 {
   for(size_t i = 0; i < net._layers.size(); i++)
   {

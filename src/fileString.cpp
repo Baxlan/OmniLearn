@@ -83,3 +83,10 @@ std::vector<std::string> omnilearn::readCleanLines(std::string path)
   }
   return content;
 }
+
+
+void omnilearn::writeLines(std::vector<std::string> const& text, std::ostream& stream)
+{
+  for(size_t i = 0; i < text.size(); i++)
+    stream << text[i] << "\n";
+}

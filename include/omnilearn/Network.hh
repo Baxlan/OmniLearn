@@ -9,7 +9,6 @@
 #include "decay.hh"
 #include "metric.hh"
 #include "csv.hh"
-#include "fileString.hh"
 
 #include <iostream>
 #include <utility>
@@ -70,7 +69,7 @@ struct NetworkParam
     {
     }
 
-    size_t seed;
+    unsigned seed;
     size_t batchSize;
     double learningRate;
     double L1;
@@ -154,7 +153,7 @@ private:
   NetworkParam _param;
 
   //random generators
-  size_t _seed;
+  unsigned _seed;
   std::mt19937 _generator;
   std::bernoulli_distribution _dropoutDist;
   std::bernoulli_distribution _dropconnectDist;

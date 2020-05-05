@@ -6,7 +6,7 @@
 
 omnilearn::Network::Network(Data const& data, NetworkParam const& param):
 _param(param),
-_seed(param.seed == 0 ? static_cast<size_t>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
+_seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
 _generator(std::mt19937(_seed)),
 _dropoutDist(std::bernoulli_distribution(param.dropout)),
 _dropconnectDist(std::bernoulli_distribution(param.dropconnect)),

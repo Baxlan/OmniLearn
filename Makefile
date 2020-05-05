@@ -2,8 +2,10 @@ CXX = g++
 
 RM = rm -rf
 
-CXXFLAGS =  -std=c++17 -O3 -Os -s -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wl,--no-as-needed -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
-#CXXFLAGS = -std=c++17 -g3 -Wa,-mbig-obj -pthread -Wall -Wextra -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wl,--no-as-needed -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
+CXXFLAGS =  -std=c++17 -O3 -Os -s -pthread -Wall -W -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
+#CXXFLAGS = -std=c++17 -g3 -Wa,-mbig-obj -pthread -Wall -W -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
+
+LDFLAGS = -Wl,--no-as-needed
 
 NAME = test
 
@@ -37,7 +39,7 @@ OBJS = $(SRCS:.cpp=.o)
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CXX) $(OBJS) -o $(BINDIR)/$(NAME) $(CXXFLAGS)
+	$(CXX) $(OBJS) -o $(BINDIR)/$(NAME) $(CXXFLAGS) $(LDFLAGS)
 
 clean:
 	$(RM) $(OBJS)

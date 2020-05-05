@@ -30,7 +30,7 @@ class Neuron
     friend void from_json(json const& jObj, Neuron& neuron);
 
 public:
-    Neuron() = default; // only used in from_json(Layer). Segfault are possible if used manually
+    Neuron() = default; // only used in from_json(Layer). Segfault may occure if used manually. Cannot be private :(
     Neuron(Aggregation aggregation, Activation activation);
     void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t k, std::mt19937& generator, bool useOutput);
     //each line of the input matrix is a feature. Returns one result per feature.
