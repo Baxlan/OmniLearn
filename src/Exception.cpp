@@ -14,15 +14,3 @@ const char* omnilearn::Exception::what() const noexcept
 {
     return std::string("[OmniLearn.Exception : " + _msg + "]").c_str();
 }
-
-
-omnilearn::LogException::LogException(std::string const& msg):
-Exception(msg)
-{
-}
-
-
-void omnilearn::LogException::log(std::ostream& file) const
-{
-    file << what() << "\n";
-}

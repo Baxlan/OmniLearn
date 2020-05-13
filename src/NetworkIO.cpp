@@ -5,106 +5,78 @@
 #include "omnilearn/Network.hh"
 #include "omnilearn/fileString.hh"
 
-#include <filesystem>
-#include <fstream>
 
 
+omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::string const& text)
+{
+  io._listing << text;
+  if(io._verbose)
+    std::cout << text;
+  if(text.find_first_of('\n') != std::string::npos)
+  {
+    io._listing.close();
+    io._listing = std::ofstream(io._path.string() + ".listing", std::ios::app); // needed to refresh the file in real time for the user. Doesn't work with open().
+    if(!io._listing)
+      throw Exception("Cannot access/create file " + io._path.string() + ".listing");
+  }
+  return io;
+}
 
-omnilearn::NetworkIO::NetworkIO(std::string const& path):
+
+omnilearn::NetworkIO::NetworkIO(fs::path const& path, bool verbose):
 _path(path),
-_listing(0)
+_verbose(verbose)
 {
   //check if name is already taken. If yes, add a counter to the name
-  if(std::filesystem::exists(path + ".save") || std::filesystem::exists(path + ".test") || std::filesystem::exists(path + ".listing"))
+  if(fs::exists(path.string() + ".save") || fs::exists(path.string() + ".listing"))
   {
     size_t count = 2;
     while(true)
     {
-      if(std::filesystem::exists(path + std::to_string(count) + ".save") || std::filesystem::exists(path + std::to_string(count) + ".test") || std::filesystem::exists(path + std::to_string(count) + ".listing"))
+      if(fs::exists(path.string() + std::to_string(count) + ".save") || fs::exists(path.string() + std::to_string(count) + ".listing"))
         count++;
       else
       {
-        _path = path + std::to_string(count);
+        _path = path.string() + std::to_string(count);
         break;
       }
     }
   }
 
-  //create files to be sure they are creatable
-  std::ofstream listing(_path + ".listing");
-  std::ofstream save(_path + ".save");
-  std::ofstream test(_path + ".test");
+  //create/open files to be sure they are available
+  _listing = std::ofstream(_path.string() + ".listing");
+  std::ofstream save(_path.string() + ".save");
 
-  if(!listing)
-    throw Exception("Cannot access/create file " + _path + ".listing");
+  if(!_listing)
+    throw Exception("Cannot access/create file " + _path.string() + ".listing");
   if(!save)
-    throw Exception("Cannot access/create file " + _path + ".save");
-  if(!test)
-    throw Exception("Cannot access/create file " + _path + ".test");
+    throw Exception("Cannot access/create file " + _path.string() + ".save");
 }
 
 
-void omnilearn::NetworkIO::list(std::string const& line)
+
+// jObj[i] : each i is a save of the NN if the NN have been trained multiple time (transfert learning)
+void omnilearn::NetworkIO::save(Network const& net) const
 {
-  _listing.push_back(line);
-}
-
-
-void omnilearn::NetworkIO::saveList() const
-{
-  std::ofstream listing(_path + ".listing");
-  if(!listing)
-    throw Exception("Cannot access/create file " + _path + ".listing");
-
-  writeLines(_listing, listing);
-}
-
-
-void omnilearn::NetworkIO::saveNet(Network const& net) const
-{
-  json jObj;
-
-  jObj["parameters"] = {};
-  jObj["preprocess"]["input"] = {};
-  jObj["preprocess"]["output"] = {};
-  jObj["coefs"] = {};
+  json jObj = {};
 
   saveParameters(net, jObj["parameters"]);
   saveInputPreprocess(net, jObj["preprocess"]["input"]);
   saveOutputPreprocess(net, jObj["preprocess"]["output"]);
   saveCoefs(net, jObj["coefs"]);
+  saveTest(net, jObj["test"]);
 
-  std::ofstream save(_path + ".save");
+  std::ofstream save(_path.string() + ".save");
   if(!save)
-    throw Exception("Cannot access/create file " + _path + ".save");
+    throw Exception("Cannot access/create file " + _path.string() + ".save");
 
   save << jObj;
 }
 
 
-void omnilearn::NetworkIO::saveTest(Network const& net) const
+void omnilearn::NetworkIO::load(Network& net, fs::path const& path)
 {
-  std::ofstream test(_path + ".test");
-  if(!test)
-    throw Exception("Cannot access/create file " + _path + ".test");
-
-  Matrix testRes(net.process(net._testRawInputs));
-  for(size_t i = 0; i < net._outputLabels.size(); i++)
-  {
-    test << "label: " << net._outputLabels[i] << "\n" ;
-    for(eigen_size_t j = 0; j < net._testRawOutputs.rows(); j++)
-      test << net._testRawOutputs(j,i) << ",";
-    test << "\n";
-    for(eigen_size_t j = 0; j < testRes.rows(); j++)
-      test << testRes(j,i) << ",";
-    test << "\n";
-  }
-}
-
-
-void omnilearn::NetworkIO::load(Network& net) const
-{
-  json jObj = json::parse(std::ifstream(_path + ".save"));
+  json jObj = json::parse(std::ifstream(path.string() + ".save"));
 
   loadParameters(net, jObj.at("parameters"));
   loadInputPreprocess(net, jObj.at("preprocess").at("input"));
@@ -265,7 +237,7 @@ void omnilearn::NetworkIO::saveCoefs(Network const& net, json& jObj) const
 }
 
 
-void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj) const
+void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
 {
   if(jObj.at("loss") == "binary cross entropy")
     net._param.loss = Loss::BinaryCrossEntropy;
@@ -286,7 +258,7 @@ void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj) const
 }
 
 
-void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj) const
+void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
 {
   net._param.preprocessInputs.resize(jObj.at("preprocess").size());
   for(size_t i = 0; i < jObj.at("preprocess").size(); i++)
@@ -335,7 +307,7 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj) c
 }
 
 
-void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj) const
+void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
 {
   net._param.preprocessOutputs.resize(jObj.at("preprocess").size());
   for(size_t i = 0; i < jObj.at("preprocess").size(); i++)
@@ -372,11 +344,23 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj) 
 }
 
 
-void omnilearn::NetworkIO::loadCoefs(Network& net, json const& jObj) const
+void omnilearn::NetworkIO::loadCoefs(Network& net, json const& jObj)
 {
   net._layers.resize(jObj.size());
   for(size_t i = 0; i < net._layers.size(); i++)
   {
     net._layers[i] = jObj.at(i);
+  }
+}
+
+
+void omnilearn::NetworkIO::saveTest(Network const& net, json& jObj) const
+{
+  Matrix testRes(net.process(net._testRawInputs));
+  for(size_t i = 0; i < net._outputLabels.size(); i++)
+  {
+    jObj[jObj.size()][i]["label"] = net._outputLabels[i];
+    jObj[jObj.size()][i]["expected"] = net._testRawOutputs.col(i);
+    jObj[jObj.size()][i]["predicted"] = testRes.col(i);
   }
 }

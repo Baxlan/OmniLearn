@@ -8,95 +8,37 @@
 
 
 
-omnilearn::Network::Network(Data const& data, NetworkParam const& param):
-_param(param),
-_seed(param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed),
-_generator(std::mt19937(_seed)),
-_dropoutDist(std::bernoulli_distribution(param.dropout)),
-_dropconnectDist(std::bernoulli_distribution(param.dropconnect)),
-_layers(),
-_pool(param.threads),
-_trainInputs(data.inputs),
-_trainOutputs(data.outputs),
-_validationInputs(),
-_validationOutputs(),
-_testInputs(),
-_testOutputs(),
-_testRawInputs(),
-_testRawOutputs(),
-_testNormalizedOutputsForMetric(),
-_nbBatch(),
-_epoch(),
-_optimalEpoch(),
-_trainLosses(),
-_validLosses(),
-_testMetric(),
-_testSecondMetric(),
-_inputLabels(data.inputLabels),
-_outputLabels(data.outputLabels),
-_outputCenter(),
-_outputNormalization(),
-_outputDecorrelation(),
-_metricNormalization(),
-_inputCenter(),
-_inputNormalization(),
-_inputStandartization(),
-_inputDecorrelation(),
-_io(param.name)
+void omnilearn::Network::load(fs::path const& path, size_t threads)
 {
-}
-
-
-omnilearn::Network::Network(NetworkParam const& param, Data const& data):
-Network(data, param)
-{
-}
-
-
-omnilearn::Network::Network(std::string const& path, size_t threads):
-_param(),
-_seed(),
-_generator(),
-_dropoutDist(),
-_dropconnectDist(),
-_layers(),
-_pool(threads),
-_trainInputs(),
-_trainOutputs(),
-_validationInputs(),
-_validationOutputs(),
-_testInputs(),
-_testOutputs(),
-_testRawInputs(),
-_testRawOutputs(),
-_testNormalizedOutputsForMetric(),
-_nbBatch(),
-_epoch(),
-_optimalEpoch(),
-_trainLosses(),
-_validLosses(),
-_testMetric(),
-_testSecondMetric(),
-_inputLabels(),
-_outputLabels(),
-_outputCenter(),
-_outputNormalization(),
-_outputDecorrelation(),
-_metricNormalization(),
-_inputCenter(),
-_inputNormalization(),
-_inputStandartization(),
-_inputDecorrelation(),
-_io(path)
-{
+  _pool = std::make_unique<ThreadPool>(threads);
   _param.threads = threads;
-  _io.load(*this);
+  NetworkIO::load(*this, path);
 }
 
 
 void omnilearn::Network::addLayer(LayerParam const& param)
 {
   _layers.push_back(Layer(param));
+}
+
+
+void omnilearn::Network::setParam(NetworkParam const& param)
+{
+  _param = param;
+  _seed = (param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed);
+  _generator = std::mt19937(_seed);
+  _dropoutDist = std::bernoulli_distribution(param.dropout);
+  _dropconnectDist = std::bernoulli_distribution(param.dropconnect);
+  _pool =  std::make_unique<ThreadPool>(param.threads);
+}
+
+
+void omnilearn::Network::setData(Data const& data)
+{
+  _trainInputs = data.inputs;
+  _trainOutputs = data.outputs;
+  _inputLabels = data.inputLabels;
+  _outputLabels = data.outputLabels;
 }
 
 
@@ -113,58 +55,69 @@ void omnilearn::Network::setTestData(Data const& data)
 
 bool omnilearn::Network::learn()
 {
-  shuffleData();
-  initPreprocess();
-  _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
-  initLayers();
+  _io = std::make_unique<NetworkIO>(_param.name, _param.verbose);
 
-  _testNormalizedOutputsForMetric = _testRawOutputs;
-  _metricNormalization = normalize(_testNormalizedOutputsForMetric);
-
-  std::cout << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
-  std::cout << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
-
-  double lowestLoss = computeLoss();
-  std::cout << "\n";
-  for(_epoch = 1; _epoch < _param.epoch; _epoch++)
+  try
   {
-    performeOneEpoch();
+    shuffleData();
+    initPreprocess();
+    _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
+    initLayers();
 
-    std::cout << "Epoch: " << _epoch;
-    double validLoss = computeLoss();
+    _testNormalizedOutputsForMetric = _testRawOutputs;
+    _metricNormalization = normalize(_testNormalizedOutputsForMetric);
 
-    double lr = _param.learningRate;
-    if(_param.decay == Decay::Inverse)
-      lr = inverse(_param.learningRate, _epoch, _param.decayValue);
-    else if(_param.decay == Decay::Exp)
-      lr = exp(_param.learningRate, _epoch, _param.decayValue);
-    else if(_param.decay == Decay::Step)
-      lr = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
-    else if(_param.decay == Decay::Plateau)
-      if(_epoch - _optimalEpoch > _param.decayDelay)
-          _param.learningRate /= _param.decayValue;
+    *_io << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
+    *_io << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
 
-    std::cout << "   LR: " << lr << "   gap from opti: " << 100 * validLoss / lowestLoss << "%   Remain. epochs: " << _optimalEpoch + _param.patience - _epoch + 1<< "\n";
-    if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss) || std::isnan(_testMetric[_epoch]))
-      return false;
-
-    //EARLY STOPPING
-    if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than _param.plateau percent in _param.patience epochs, stop learning
+    double lowestLoss = computeLoss();
+    *_io << "\n";
+    for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
-      keep();
-      lowestLoss = validLoss;
-      _optimalEpoch = _epoch;
-    }
-    if(_epoch - _optimalEpoch > _param.patience)
-      break;
+      performeOneEpoch();
 
-    //shuffle train data between each epoch
-    shuffleTrainData();
+      *_io << "Epoch: " << _epoch;
+      double validLoss = computeLoss();
+
+      double lr = _param.learningRate;
+      if(_param.decay == Decay::Inverse)
+        lr = inverse(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Exp)
+        lr = exp(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Step)
+        lr = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
+      else if(_param.decay == Decay::Plateau)
+        if(_epoch - _optimalEpoch > _param.decayDelay)
+            _param.learningRate /= _param.decayValue;
+
+      *_io << "   LR: " << lr << "   gap from opti: " << 100 * validLoss / lowestLoss << "%   Remain. epochs: " << _optimalEpoch + _param.patience - _epoch + 1<< "\n";
+      if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss) || std::isnan(_testMetric[_epoch]))
+        return false;
+
+      //EARLY STOPPING
+      if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than _param.plateau percent in _param.patience epochs, stop learning
+      {
+        keep();
+        lowestLoss = validLoss;
+        _optimalEpoch = _epoch;
+      }
+      if(_epoch - _optimalEpoch > _param.patience)
+        break;
+
+      //shuffle train data between each epoch
+      shuffleTrainData();
+    }
+    release();
+    *_io << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
+    _io->save(*this);
   }
-  release();
-  std::cout << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
-  _io.saveTest(*this);
-  _io.saveNet(*this);
+  catch(Exception const& e)
+  {
+    *_io << e.what();
+    _io.reset();
+    throw;
+  }
+  _io.reset();
   return true;
 }
 
@@ -180,7 +133,7 @@ omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
   inputs = preprocess(inputs);
   for(size_t i = 0; i < _layers.size(); i++)
   {
-    inputs = _layers[i].process(inputs, _pool);
+    inputs = _layers[i].process(inputs, *_pool);
   }
   // if cross-entropy loss is used, then score must be softmax
   if(_param.loss == Loss::CrossEntropy)
@@ -204,15 +157,15 @@ omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target
     Vector res = input;
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      res = _layers[i].processToGenerate(res, _pool);
+      res = _layers[i].processToGenerate(res, *_pool);
     }
     Vector gradients(computeGradVector(target, res));
     for(size_t i = 0; i < _layers.size() - 1; i++)
     {
-      _layers[_layers.size() - i - 1].computeGradients(gradients, _pool);
-      gradients = _layers[_layers.size() - i - 1].getGradients(_pool);
+      _layers[_layers.size() - i - 1].computeGradients(gradients, *_pool);
+      gradients = _layers[_layers.size() - i - 1].getGradients(*_pool);
     }
-    _layers[0].computeGradientsAccordingToInputs(gradients, _pool);
+    _layers[0].computeGradientsAccordingToInputs(gradients, *_pool);
     _layers[0].updateInput(input, param.learningRate);
   }
   input = depreprocess(input);
@@ -637,14 +590,14 @@ void omnilearn::Network::performeOneEpoch()
 
       for(size_t i = 0; i < _layers.size(); i++)
       {
-        featureInput = _layers[i].processToLearn(featureInput, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, _pool);
+        featureInput = _layers[i].processToLearn(featureInput, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, *_pool);
       }
 
       Vector gradients(computeGradVector(featureOutput, featureInput));
       for(size_t i = 0; i < _layers.size(); i++)
       {
-        _layers[_layers.size() - i - 1].computeGradients(gradients, _pool);
-        gradients = _layers[_layers.size() - i - 1].getGradients(_pool);
+        _layers[_layers.size() - i - 1].computeGradients(gradients, *_pool);
+        gradients = _layers[_layers.size() - i - 1].getGradients(*_pool);
       }
     }
 
@@ -659,7 +612,7 @@ void omnilearn::Network::performeOneEpoch()
 
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(lr, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _param.optimizerBias, _pool);
+      _layers[i].updateWeights(lr, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _param.optimizerBias, *_pool);
     }
   }
 }
@@ -671,7 +624,7 @@ omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
 {
   for(size_t i = 0; i < _layers.size(); i++)
   {
-    inputs = _layers[i].process(inputs, _pool);
+    inputs = _layers[i].process(inputs, *_pool);
   }
   // if cross-entropy loss is used, then score must be softmax
   if(_param.loss == Loss::CrossEntropy)
@@ -685,26 +638,26 @@ omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
 omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult, Matrix const& predicted)
 {
   if(_param.loss == Loss::L1)
-    return L1Loss(realResult, predicted, _pool);
+    return L1Loss(realResult, predicted, *_pool);
   else if(_param.loss == Loss::L2)
-    return L2Loss(realResult, predicted, _pool);
+    return L2Loss(realResult, predicted, *_pool);
   else if(_param.loss == Loss::BinaryCrossEntropy)
-    return binaryCrossEntropyLoss(realResult, predicted, _pool);
+    return binaryCrossEntropyLoss(realResult, predicted, *_pool);
   else //if loss == crossEntropy
-    return crossEntropyLoss(realResult, predicted, _pool);
+    return crossEntropyLoss(realResult, predicted, *_pool);
 }
 
 
 omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult, Vector const& predicted)
 {
   if(_param.loss == Loss::L1)
-    return L1Grad(realResult, predicted, _pool);
+    return L1Grad(realResult, predicted, *_pool);
   else if(_param.loss == Loss::L2)
-    return L2Grad(realResult, predicted, _pool);
+    return L2Grad(realResult, predicted, *_pool);
   else if(_param.loss == Loss::BinaryCrossEntropy)
-    return binaryCrossEntropyGrad(realResult, predicted, _pool);
+    return binaryCrossEntropyGrad(realResult, predicted, *_pool);
   else //if loss == crossEntropy
-    return crossEntropyGrad(realResult, predicted, _pool);
+    return crossEntropyGrad(realResult, predicted, *_pool);
 }
 
 
@@ -715,7 +668,7 @@ double omnilearn::Network::computeLoss()
   std::vector<std::vector<std::pair<Matrix, Vector>>> weights(_layers.size());
   for(size_t i = 0; i < _layers.size(); i++)
   {
-    weights[i] = _layers[i].getWeights(_pool);
+    weights[i] = _layers[i].getWeights(*_pool);
   }
 
   //L1 and L2 regularization loss
@@ -759,7 +712,7 @@ double omnilearn::Network::computeLoss()
   else
     testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classValidity);
 
-  std::cout << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
+  *_io << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
   _trainLosses.conservativeResize(_trainLosses.size() + 1);
   _trainLosses[_trainLosses.size()-1] = trainLoss;
   _validLosses.conservativeResize(_validLosses.size() + 1);

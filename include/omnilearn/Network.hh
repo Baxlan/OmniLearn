@@ -7,7 +7,11 @@
 #include "Layer.hh"
 #include "csv.hh"
 
-#include <iostream>
+#include <filesystem>
+
+
+
+namespace fs = std::filesystem;
 
 
 
@@ -35,21 +39,21 @@ struct NetworkParam
 {
     NetworkParam():
     seed(0),
-    batchSize(0),
+    batchSize(1),
     learningRate(0.001),
     L1(0),
     L2(0),
-    epoch(100),
+    epoch(10000),
     patience(5),
     dropout(0),
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
     loss(Loss::L2),
-    decayValue(0.05),
-    decayDelay(5),
+    decayValue(2),
+    decayDelay(2),
     decay(Decay::None),
-    classValidity(0.9),
+    classValidity(0.5),
     threads(1),
     optimizer(Optimizer::None),
     momentum(0.9),
@@ -61,7 +65,8 @@ struct NetworkParam
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
     inputWhiteningBias(1e-5),
-    name("omnilearn_network")
+    name("omnilearn_network"),
+    verbose(false)
     {
     }
 
@@ -93,6 +98,7 @@ struct NetworkParam
     double outputReductionThreshold;
     double inputWhiteningBias;
     std::string name;
+    bool verbose;
 };
 
 
@@ -112,10 +118,11 @@ class Network
   friend class NetworkIO; // NetworkIO is part of Network
 
 public:
-  Network(Data const& data, NetworkParam const& param);
-  Network(NetworkParam const& param, Data const& data);
-  Network(std::string const& path, size_t threads);
+  Network() = default;
+  void load(fs::path const& path, size_t threads);
   void addLayer(LayerParam const& param);
+  void setParam(NetworkParam const& param);
+  void setData(Data const& data);
   void setTestData(Data const& data);
   bool learn();
   Vector process(Vector inputs) const;
@@ -158,7 +165,7 @@ private:
   std::vector<Layer> _layers;
 
   //threadpool for parallelization
-  mutable ThreadPool _pool;
+  mutable std::unique_ptr<ThreadPool> _pool; // must be a pointer to be able to re-construct the pool (non copyable because of mutex)
 
   //data
   Matrix _trainInputs;
@@ -197,7 +204,7 @@ private:
   std::pair<Matrix, Vector> _inputDecorrelation;
 
   //IO
-  NetworkIO _io;
+  std::unique_ptr<NetworkIO> _io; // is a pointer because we only need IO during training
 };
 
 

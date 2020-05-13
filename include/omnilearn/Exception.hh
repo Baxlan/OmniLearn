@@ -25,14 +25,6 @@ protected:
 
 
 
-struct LogException : public Exception
-{
-    LogException(std::string const& msg);
-    void log(std::ostream& file) const;
-};
-
-
-
 } // namespace omnilearn
 
 
