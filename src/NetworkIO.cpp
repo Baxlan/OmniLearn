@@ -13,12 +13,7 @@ omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::string const& te
   if(io._verbose)
     std::cout << text;
   if(text.find_first_of('\n') != std::string::npos)
-  {
-    io._listing.close();
-    io._listing = std::ofstream(io._path.string() + ".listing", std::ios::app); // needed to refresh the file in real time for the user. Doesn't work with open().
-    if(!io._listing)
-      throw Exception("Cannot access/create file " + io._path.string() + ".listing");
-  }
+    io._listing.flush();
   return io;
 }
 

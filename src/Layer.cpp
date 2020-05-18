@@ -211,26 +211,6 @@ size_t omnilearn::Layer::size() const
 }
 
 
-std::vector<std::pair<omnilearn::Matrix, omnilearn::Vector>> omnilearn::Layer::getWeights(ThreadPool& t) const
-{
-    std::vector<std::pair<Matrix, Vector>> weights(size());
-    std::vector<std::future<void>> tasks(_neurons.size());
-
-    for(size_t i = 0; i < _neurons.size(); i++)
-    {
-        tasks[i] = t.enqueue([this, &weights, i]()->void
-        {
-            weights[i] = _neurons[i].getWeights();
-        });
-    }
-    for(size_t i = 0; i < tasks.size(); i++)
-    {
-        tasks[i].get();
-    }
-        return weights;
-}
-
-
 void omnilearn::Layer::resize(size_t neurons)
 {
     _neurons = std::vector<Neuron>(neurons, Neuron(_param.aggregation, _param.activation));
@@ -240,6 +220,30 @@ void omnilearn::Layer::resize(size_t neurons)
 size_t omnilearn::Layer::nbWeights() const
 {
     return _neurons[0].nbWeights();
+}
+
+
+std::pair<double, double> omnilearn::Layer::L1L2(ThreadPool& t) const
+{
+    std::vector<std::future<void>> tasks(_neurons.size());
+    std::pair<double, double> L1L2;
+    double L1 = 0;
+    double L2 = 0;
+
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        tasks[i] = t.enqueue([this, &L1, &L2, &L1L2, i]()->void
+        {
+            L1L2 = _neurons[i].L1L2();
+            L1 += L1L2.first;
+            L2 += L1L2.second;
+        });
+    }
+    for(size_t i = 0; i < tasks.size(); i++)
+    {
+        tasks[i].get();
+    }
+    return {L1, L2};
 }
 
 

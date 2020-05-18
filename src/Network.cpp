@@ -664,34 +664,17 @@ omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult
 //return validation loss
 double omnilearn::Network::computeLoss()
 {
-  //for each layer, for each neuron, first are weights, second are bias
-  std::vector<std::vector<std::pair<Matrix, Vector>>> weights(_layers.size());
-  for(size_t i = 0; i < _layers.size(); i++)
-  {
-    weights[i] = _layers[i].getWeights(*_pool);
-  }
-
   //L1 and L2 regularization loss
   double L1 = 0;
   double L2 = 0;
+  std::pair<double, double> L1L2;
 
-  for(size_t i = 0; i < weights.size(); i++)
+  for(size_t i = 0; i < _layers.size(); i++)
   //for each layer
   {
-    for(size_t j = 0; j < weights[i].size(); j++)
-    //for each neuron
-    {
-      for(eigen_size_t k = 0; k < weights[i][j].first.rows(); k++)
-      //for each weight set
-      {
-        for(eigen_size_t l = 0; l < weights[i][j].first.cols(); l++)
-        //for each weight
-        {
-          L1 += std::abs(weights[i][j].first(k, l));
-          L2 += std::pow(weights[i][j].first(k, l), 2);
-        }
-      }
-    }
+    L1L2 = _layers[i].L1L2(*_pool);
+    L1 += L1L2.first;
+    L2 += L1L2.second;
   }
 
   L1 *= _param.L1;

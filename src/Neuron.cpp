@@ -262,16 +262,25 @@ void omnilearn::Neuron::updateInput(Vector& input, double learningRate)
 }
 
 
-//first is weights, second is bias
-std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::Neuron::getWeights() const
-{
-    return {_weights, _bias};
-}
-
-
 size_t omnilearn::Neuron::nbWeights() const
 {
     return _weights.cols();
+}
+
+
+std::pair<double, double> omnilearn::Neuron::L1L2() const
+{
+    double L1 = 0;
+    double L2 = 0;
+    for(eigen_size_t i = 0; i < _weights.rows(); i++)
+    {
+        for(eigen_size_t j = 0; j < _weights.cols(); j++)
+        {
+            L1 += std::abs(_weights(i, j));
+            L2 += std::pow(_weights(i, j), 2);
+        }
+    }
+    return {L1, L2};
 }
 
 

@@ -46,8 +46,8 @@ public:
     void computeGradientsAccordingToInputs(double inputGradient);
     void updateInput(Vector& input, double learningRate);
     //first is weights, second is bias
-    std::pair<Matrix, Vector> getWeights() const;
     size_t nbWeights() const;
+    std::pair<double, double> L1L2() const;
 
 private:
     std::shared_ptr<IAggregation> _aggregation;

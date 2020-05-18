@@ -65,9 +65,9 @@ public:
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t);
     void updateInput(Vector& input, double learningRate);
     size_t size() const;
-    std::vector<std::pair<Matrix, Vector>> getWeights(ThreadPool& t) const;
     void resize(size_t neurons);
     size_t nbWeights() const;
+    std::pair<double, double> L1L2(ThreadPool& t) const;
 
 private:
     LayerParam _param;

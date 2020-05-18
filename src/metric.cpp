@@ -60,7 +60,6 @@ std::pair<double, double> omnilearn::regressionMetrics(Matrix real, Matrix predi
     Vector mae = Vector::Constant(real.rows(), 0);
     Vector mse = Vector::Constant(real.rows(), 0);
 
-    //mean absolute error
     for(eigen_size_t i = 0; i < real.rows(); i++)
     {
         for(eigen_size_t j = 0; j < real.cols(); j++)
