@@ -225,6 +225,13 @@ omnilearn::Matrix omnilearn::Network::preprocess(Matrix inputs) const
     {
       reduce(inputs, _inputDecorrelation, _param.inputReductionThreshold);
     }
+    else if(_param.preprocessInputs[i] == Preprocess::Recorrelate)
+    {
+      for(eigen_size_t j = 0; j < inputs.rows(); j++)
+      {
+        inputs.row(j) = _inputDecorrelation.first * inputs.row(j).transpose();
+      }
+    }
   }
   return inputs;
 }
@@ -336,6 +343,10 @@ omnilearn::Matrix omnilearn::Network::depreprocess(Matrix inputs) const
       {
         inputs.col(i) *= (std::sqrt(_inputDecorrelation.second[i])+_param.inputWhiteningBias);
       }
+    }
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Recorrelate)
+    {
+      decorrelate(inputs, _inputDecorrelation);
     }
   }
   return inputs;
@@ -463,6 +474,7 @@ void omnilearn::Network::initPreprocess()
   bool decorrelated = false;
   bool whitened = false;
   bool reduced = false;
+  bool recorrelated = false;
 
   for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
   {
@@ -497,6 +509,8 @@ void omnilearn::Network::initPreprocess()
     {
       if(decorrelated == true)
         throw Exception("Inputs are decorrelated multiple times.");
+      if(centered == false && standardized == false)
+        throw Exception("Inputs cannot be decorrelated before centering or standartization.");
       _inputDecorrelation = decorrelate(_trainInputs);
       decorrelate(_validationInputs, _inputDecorrelation);
       decorrelate(_testInputs, _inputDecorrelation);
@@ -506,6 +520,10 @@ void omnilearn::Network::initPreprocess()
     {
       if(whitened == true)
         throw Exception("Inputs are whitened multiple times.");
+      if(decorrelated == false)
+        throw Exception("Inputs cannot be whitened before decorrelation.");
+      if(recorrelated == true)
+        throw Exception("Inputs cannot be whitened after recorrelation.");
       whiten(_trainInputs, _inputDecorrelation, _param.inputWhiteningBias);
       whiten(_validationInputs, _inputDecorrelation, _param.inputWhiteningBias);
       whiten(_testInputs, _inputDecorrelation, _param.inputWhiteningBias);
@@ -515,10 +533,28 @@ void omnilearn::Network::initPreprocess()
     {
       if(reduced == true)
         throw Exception("Inputs are reduced multiple times.");
+      if(recorrelated == true)
+        throw Exception("Inputs cannot be reduced after recorrelation.");
       reduce(_trainInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduce(_validationInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduce(_testInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduced = true;
+    }
+    else if(_param.preprocessInputs[i] == Preprocess::Recorrelate)
+    {
+      if(recorrelated == true)
+        throw Exception("Inputs are recorrelated multiple times.");
+      if(reduced == true)
+        throw Exception("Inputs cannot be recorrelated after reduction.");
+
+      for(eigen_size_t j = 0; j < _trainInputs.rows(); j++)
+        _trainInputs.row(j) = _inputDecorrelation.first * _trainInputs.row(j).transpose();
+      for(eigen_size_t j = 0; j < _validationInputs.rows(); j++)
+        _validationInputs.row(j) = _inputDecorrelation.first * _validationInputs.row(j).transpose();
+      for(eigen_size_t j = 0; j < _testInputs.rows(); j++)
+        _testInputs.row(j) = _inputDecorrelation.first * _testInputs.row(j).transpose();
+
+      recorrelated = true;
     }
   }
 
@@ -528,6 +564,7 @@ void omnilearn::Network::initPreprocess()
   decorrelated = false;
   whitened = false;
   reduced = false;
+  recorrelated = false;
 
   for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
@@ -544,6 +581,8 @@ void omnilearn::Network::initPreprocess()
     {
       if(decorrelated == true)
         throw Exception("Outputs are decorrelated multiple times.");
+      if(centered == false && standardized == false)
+        throw Exception("Inputs cannot be decorrelated before centering.");
       _outputDecorrelation = decorrelate(_trainOutputs);
       decorrelate(_validationOutputs, _outputDecorrelation);
       decorrelate(_testOutputs, _outputDecorrelation);
@@ -574,6 +613,10 @@ void omnilearn::Network::initPreprocess()
     else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
     {
       throw Exception("Outputs can't be standardized.");
+    }
+    else if(_param.preprocessOutputs[i] == Preprocess::Recorrelate)
+    {
+      throw Exception("Outputs can't be recorrelated.");
     }
   }
 }

@@ -175,6 +175,10 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
       jObj["preprocess"][i] = "reduce";
       jObj["reduction threshold"] = net._param.inputReductionThreshold;
     }
+    else if(net._param.preprocessInputs[i] == Preprocess::Recorrelate)
+    {
+      jObj["preprocess"][i] = "recorrelate";
+    }
   }
 }
 
@@ -297,6 +301,10 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
     {
       net._param.preprocessInputs[i] = Preprocess::Reduce;
       net._param.inputReductionThreshold = jObj.at("reduction threshold");
+    }
+    else if(jObj.at("preprocess").at(i) == "recorrelate")
+    {
+      net._param.preprocessInputs[i] = Preprocess::Recorrelate;
     }
   }
 }

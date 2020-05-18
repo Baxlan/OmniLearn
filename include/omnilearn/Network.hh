@@ -20,7 +20,7 @@ namespace omnilearn
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
-enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce};
+enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
 enum class Decay {None, Inverse, Exp, Step, Plateau};
 
 
