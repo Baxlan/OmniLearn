@@ -109,7 +109,7 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
 {
     _featureGradient = Vector(_weights.cols());
 
-    _actGradient = _activation->prime(_actResult) * inputGradient;
+    _actGradient = _activation->prime(_aggregResult.first) * inputGradient;
     Vector grad(_aggregation->prime(_input, _weights.row(_aggregResult.second)));
 
     for(eigen_size_t i = 0; i < grad.size(); i++)
@@ -240,7 +240,7 @@ void omnilearn::Neuron::release()
 
 void omnilearn::Neuron::computeGradientsAccordingToInputs(double inputGradient)
 {
-    _actGradient = _activation->prime(_actResult) * inputGradient;
+    _actGradient = _activation->prime(_aggregResult.first) * inputGradient;
     Vector grad(_aggregation->primeInput(_input, _weights.row(_aggregResult.second)));
 
     for(eigen_size_t i = 0; i < grad.size(); i++)

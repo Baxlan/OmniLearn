@@ -25,8 +25,8 @@ void omnilearn::Network::addLayer(LayerParam const& param)
 void omnilearn::Network::setParam(NetworkParam const& param)
 {
   _param = param;
-  _seed = (param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : param.seed);
-  _generator = std::mt19937(_seed);
+  _param.seed = (_param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : _param.seed);
+  _generator = std::mt19937(_param.seed);
   _dropoutDist = std::bernoulli_distribution(param.dropout);
   _dropconnectDist = std::bernoulli_distribution(param.dropconnect);
   _pool =  std::make_unique<ThreadPool>(param.threads);
@@ -71,6 +71,7 @@ bool omnilearn::Network::learn()
     *_io << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
 
     double lowestLoss = computeLoss();
+    _optimalEpoch = 0;
     *_io << "\n";
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {

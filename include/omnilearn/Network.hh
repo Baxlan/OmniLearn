@@ -156,7 +156,6 @@ private:
   NetworkParam _param;
 
   //random generators
-  unsigned _seed;
   std::mt19937 _generator;
   std::bernoulli_distribution _dropoutDist;
   std::bernoulli_distribution _dropconnectDist;

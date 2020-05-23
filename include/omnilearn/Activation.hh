@@ -226,7 +226,7 @@ public:
 class Softexp : public IActivation
 {
 public:
-    Softexp(Vector const& coefs = (Vector(1) << 0.01).finished());
+    Softexp(Vector const& coefs = (Vector(1) << 0.5).finished());
     double activate(double val) const;
     double prime(double val) const;
     void learn(double gradient, double learningRate);
@@ -246,7 +246,7 @@ protected:
 class Psoftexp : public Softexp
 {
 public:
-    Psoftexp(Vector const& coefs = (Vector(1) << 0.01).finished());
+    Psoftexp(Vector const& coefs = (Vector(1) << 0.5).finished());
     void learn(double gradient, double learningRate);
     Activation signature() const;
 

@@ -98,7 +98,8 @@ double omnilearn::Sigmoid::activate(double val) const
 
 double omnilearn::Sigmoid::prime(double val) const
 {
-    return val * (1 - val);
+    double val2 = activate(val);
+    return val2 * (1 - val2);
 }
 
 
@@ -164,7 +165,7 @@ double omnilearn::Tanh::activate(double val) const
 
 double omnilearn::Tanh::prime(double val) const
 {
-    return -1/std::pow(std::cosh(val),2);
+    return 1 - std::pow(activate(val),2);
 }
 
 
@@ -655,9 +656,9 @@ double omnilearn::Softexp::activate(double val) const
 double omnilearn::Softexp::prime(double val) const
 {
     if(_coef < 0)
-        return (_coef < 0 ? 1 / (1 - (_coef * (_coef + val))) : std::exp(_coef * val));
+        return 1 / (1 - (_coef * (_coef + val)));
     else
-        return std::exp(_coef * val);
+       return std::exp(_coef * val);
 }
 
 
