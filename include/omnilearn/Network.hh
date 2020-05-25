@@ -138,7 +138,7 @@ public:
   Matrix depreprocess(Matrix inputs) const;
   Matrix depostprocess(Matrix inputs) const;
 
-protected:
+private:
   void initLayers();
   void shuffleData(); // shuffle data then split them into train/validation/test data
   void shuffleTrainData(); // shuffle train data each epoch

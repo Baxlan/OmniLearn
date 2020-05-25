@@ -34,20 +34,30 @@ omnilearn::Matrix omnilearn::Layer::process(Matrix const& inputs, ThreadPool& t)
     Matrix output(inputs.rows(), _neurons.size());
     std::vector<std::future<void>> tasks(_neurons.size());
 
+    // only one instance of exception_ptr is required because all threads would throw the same exception
+    std::exception_ptr ep = nullptr;
+
     for(size_t i = 0; i < _neurons.size(); i++)
     {
-        tasks[i] = t.enqueue([this, &inputs, &output, i]()->void
+        tasks[i] = t.enqueue([this, &inputs, &output, i, &ep]()->void
         {
-            //one result per feature (for each neuron)
-            Vector result = _neurons[i].process(inputs);
-            for(eigen_size_t j = 0; j < result.size(); j++)
-                output(j, i) = result[j];
+            try
+            {
+                //one result per feature (for each neuron)
+                Vector result = _neurons[i].process(inputs);
+                for(eigen_size_t j = 0; j < result.size(); j++)
+                    output(j, i) = result[j];
+            }
+            catch(...)
+            {
+                ep = std::current_exception();
+            }
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
+    if(ep)
+        std::rethrow_exception(ep);
     return output;
 }
 
@@ -74,9 +84,7 @@ omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, double d
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
     return output;
 }
 
@@ -87,17 +95,27 @@ omnilearn::Vector omnilearn::Layer::processToGenerate(Vector const& input, Threa
     Vector output(_neurons.size());
     std::vector<std::future<void>> tasks(_neurons.size());
 
+    // only one instance of exception_ptr is required because all threads would throw the same exception
+    std::exception_ptr ep = nullptr;
+
     for(size_t i = 0; i < _neurons.size(); i++)
     {
-        tasks[i] = t.enqueue([this, &input, &output, i]()->void
+        tasks[i] = t.enqueue([this, &input, &output, i, &ep]()->void
         {
-            output(i) = _neurons[i].processToGenerate(input);
+            try
+            {
+                output(i) = _neurons[i].processToGenerate(input);
+            }
+            catch(...)
+            {
+                ep = std::current_exception();
+            }
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
+    if(ep)
+        std::rethrow_exception(ep);
     return output;
 }
 
@@ -114,9 +132,7 @@ void omnilearn::Layer::computeGradients(Vector const& inputGradient, ThreadPool&
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
 }
 
 
@@ -132,9 +148,7 @@ void omnilearn::Layer::computeGradientsAccordingToInputs(Vector const& inputGrad
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
 }
 
 
@@ -189,9 +203,7 @@ void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, 
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
 }
 
 
@@ -240,9 +252,7 @@ std::pair<double, double> omnilearn::Layer::L1L2(ThreadPool& t) const
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
-    {
         tasks[i].get();
-    }
     return {L1, L2};
 }
 
