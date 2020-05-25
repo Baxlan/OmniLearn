@@ -219,9 +219,6 @@ omnilearn::Maxout::Maxout(Vector const& coefs)
 
 std::pair<double, size_t> omnilearn::Maxout::aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
 {
-    if(weights.rows() < 2)
-        throw Exception("Maxout aggregation requires multiple weight sets.");
-
     //each index represents a weight set
     Vector dots(weights.rows());
 

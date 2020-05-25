@@ -16,7 +16,7 @@ namespace omnilearn
 
 
 
-enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Softexp, Psoftexp};
+enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Softexp, Psoftexp, Sin, Sinc};
 
 
 
@@ -254,8 +254,41 @@ public:
 
 
 
+class Sin : public IActivation
+{
+public:
+    Sin(Vector const& coefs = Vector());
+    double activate(double val) const;
+    double prime(double val) const;
+    void learn(double gradient, double learningRate);
+    void setCoefs(Vector const& coefs);
+    rowVector getCoefs() const;
+    Activation signature() const;
+    void keep();
+    void release();
+};
+
+
+
+class Sinc : public IActivation
+{
+public:
+    Sinc(Vector const& coefs = Vector());
+    double activate(double val) const;
+    double prime(double val) const;
+    void learn(double gradient, double learningRate);
+    void setCoefs(Vector const& coefs);
+    rowVector getCoefs() const;
+    Activation signature() const;
+    void keep();
+    void release();
+};
+
+
+
 Vector singleSoftmax(Vector input);
 Matrix softmax(Matrix inputs);
+
 
 
 static std::map<Activation, std::function<std::shared_ptr<IActivation>()>> activationMap = {
@@ -270,7 +303,9 @@ static std::map<Activation, std::function<std::shared_ptr<IActivation>()>> activ
     {Activation::Srelu, []{return std::make_shared<Srelu>();}},
     {Activation::Gauss, []{return std::make_shared<Gauss>();}},
     {Activation::Softexp, []{return std::make_shared<Softexp>();}},
-    {Activation::Psoftexp, []{return std::make_shared<Psoftexp>();}}
+    {Activation::Psoftexp, []{return std::make_shared<Psoftexp>();}},
+    {Activation::Sin, []{return std::make_shared<Sin>();}},
+    {Activation::Sinc, []{return std::make_shared<Sinc>();}}
 };
 
 
@@ -287,7 +322,9 @@ static std::map<std::string, Activation> stringToActivationMap = {
     {"srelu", Activation::Srelu},
     {"gauss", Activation::Gauss},
     {"softexp", Activation::Softexp},
-    {"psoftexp", Activation::Psoftexp}
+    {"psoftexp", Activation::Psoftexp},
+    {"sin", Activation::Sin},
+    {"sinc", Activation::Sinc}
 };
 
 
@@ -304,7 +341,9 @@ static std::map<Activation, std::string> activationToStringMap = {
     {Activation::Srelu, "srelu"},
     {Activation::Gauss, "gauss"},
     {Activation::Softexp, "softexp"},
-    {Activation::Psoftexp, "psoftexp"}
+    {Activation::Psoftexp, "psoftexp"},
+    {Activation::Sin, "sin"},
+    {Activation::Sinc, "sinc"}
 };
 
 

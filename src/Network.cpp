@@ -53,7 +53,7 @@ void omnilearn::Network::setTestData(Data const& data)
 }
 
 
-bool omnilearn::Network::learn()
+void omnilearn::Network::learn()
 {
   _io = std::make_unique<NetworkIO>(_param.name, _param.verbose);
 
@@ -63,6 +63,7 @@ bool omnilearn::Network::learn()
     initPreprocess();
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
+    _actualLearningRate = _param.learningRate;
 
     _testNormalizedOutputsForMetric = _testRawOutputs;
     _metricNormalization = normalize(_testNormalizedOutputsForMetric);
@@ -70,43 +71,47 @@ bool omnilearn::Network::learn()
     *_io << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
     *_io << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
 
-    double lowestLoss = computeLoss();
+    computeLoss();
+    double lowestLoss = _validLosses[0];
     _optimalEpoch = 0;
-    *_io << "\n";
+    *_io << "Epoch: 0" << "   Validation loss: " << _validLosses[0] << "   Training loss: " << _trainLosses[0] << "   First metric: " << _testMetric[0] << "   Second metric: " << _testSecondMetric[0] << "\n";
+
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
       performeOneEpoch();
 
-      *_io << "Epoch: " << _epoch;
-      double validLoss = computeLoss();
+      computeLoss();
+      double gap = 100 * _validLosses[_epoch] / lowestLoss;
 
-      double lr = _param.learningRate;
-      if(_param.decay == Decay::Inverse)
-        lr = inverse(_param.learningRate, _epoch, _param.decayValue);
-      else if(_param.decay == Decay::Exp)
-        lr = exp(_param.learningRate, _epoch, _param.decayValue);
-      else if(_param.decay == Decay::Step)
-        lr = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
-      else if(_param.decay == Decay::Plateau)
-        if(_epoch - _optimalEpoch > _param.decayDelay)
-            _param.learningRate /= _param.decayValue;
-
-      *_io << "   LR: " << lr << "   gap from opti: " << 100 * validLoss / lowestLoss << "%   Remain. epochs: " << _optimalEpoch + _param.patience - _epoch + 1<< "\n";
-      if(std::isnan(_trainLosses[_epoch]) || std::isnan(validLoss) || std::isnan(_testMetric[_epoch]))
-        return false;
-
-      //EARLY STOPPING
-      if(validLoss < lowestLoss * _param.plateau) //if loss increases, or doesn't decrease more than _param.plateau percent in _param.patience epochs, stop learning
+      //if validation loss is inferior to (_param.plateau * optimal loss), save current weights
+      if(_validLosses[_epoch] < lowestLoss * _param.plateau)
       {
         keep();
-        lowestLoss = validLoss;
+        lowestLoss = _validLosses[_epoch];
         _optimalEpoch = _epoch;
       }
-      if(_epoch - _optimalEpoch > _param.patience)
+
+      *_io << "Epoch: " << _epoch << "   Validation loss: " << _validLosses[_epoch] << "   Training loss: " << _trainLosses[_epoch] << "   First metric: " << _testMetric[_epoch] << "   Second metric: " << _testSecondMetric[_epoch] << "   LR: " << _actualLearningRate << "   gap: " << gap << "%   Remaining: " << _optimalEpoch + _param.patience - _epoch << "\n";
+      if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
+        throw Exception("The last train, validation or test loss is NaN. The issue probably comes from a too large weight. Try reducing the learning rate or use maxnorm ?");
+
+      //EARLY STOPPING
+      if(_epoch - _optimalEpoch >= _param.patience)
         break;
 
-      //shuffle train data between each epoch
       shuffleTrainData();
+      adaptLearningRate();
+      adaptBatchSize();
+
+      if(_param.decay == Decay::Inverse)
+        _actualLearningRate = inverse(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Exp)
+        _actualLearningRate = exp(_param.learningRate, _epoch, _param.decayValue);
+      else if(_param.decay == Decay::Step)
+        _actualLearningRate = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
+      else if(_param.decay == Decay::Plateau)
+        if(_epoch - _optimalEpoch >= _param.decayDelay)
+            _actualLearningRate /= _param.decayValue;
     }
     release();
     *_io << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
@@ -119,7 +124,6 @@ bool omnilearn::Network::learn()
     throw;
   }
   _io.reset();
-  return true;
 }
 
 
@@ -645,18 +649,9 @@ void omnilearn::Network::performeOneEpoch()
       }
     }
 
-    double lr = _param.learningRate;
-    //plateau decay is taken into account in learn()
-    if(_param.decay == Decay::Inverse)
-      lr = inverse(_param.learningRate, _epoch, _param.decayValue);
-    else if(_param.decay == Decay::Exp)
-      lr = exp(_param.learningRate, _epoch, _param.decayValue);
-    else if(_param.decay == Decay::Step)
-      lr = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
-
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(lr, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _param.optimizerBias, *_pool);
+      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _param.optimizerBias, *_pool);
     }
   }
 }
@@ -679,7 +674,7 @@ omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
 }
 
 
-omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult, Matrix const& predicted)
+omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const
 {
   if(_param.loss == Loss::L1)
     return L1Loss(realResult, predicted, *_pool);
@@ -692,7 +687,7 @@ omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult
 }
 
 
-omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult, Vector const& predicted)
+omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult, Vector const& predicted) const
 {
   if(_param.loss == Loss::L1)
     return L1Grad(realResult, predicted, *_pool);
@@ -706,7 +701,7 @@ omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult
 
 
 //return validation loss
-double omnilearn::Network::computeLoss()
+void omnilearn::Network::computeLoss()
 {
   //L1 and L2 regularization loss
   double L1 = 0;
@@ -739,7 +734,6 @@ double omnilearn::Network::computeLoss()
   else
     testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classValidity);
 
-  *_io << "   Valid_Loss: " << validationLoss << "   Train_Loss: " << trainLoss << "   First metric: " << (testMetric.first) << "   Second metric: " << (testMetric.second);
   _trainLosses.conservativeResize(_trainLosses.size() + 1);
   _trainLosses[_trainLosses.size()-1] = trainLoss;
   _validLosses.conservativeResize(_validLosses.size() + 1);
@@ -748,7 +742,6 @@ double omnilearn::Network::computeLoss()
   _testMetric[_testMetric.size()-1] = testMetric.first;
   _testSecondMetric.conservativeResize(_testSecondMetric.size() + 1);
   _testSecondMetric[_testSecondMetric.size()-1] = testMetric.second;
-  return validationLoss;
 }
 
 
@@ -767,4 +760,16 @@ void omnilearn::Network::release()
     {
         _layers[i].release();
     }
+}
+
+
+void omnilearn::Network::adaptLearningRate()
+{
+
+}
+
+
+void omnilearn::Network::adaptBatchSize()
+{
+
 }

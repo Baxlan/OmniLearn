@@ -22,13 +22,13 @@ $(SRCDIR)/csv.cpp \
 $(SRCDIR)/decay.cpp \
 $(SRCDIR)/Exception.cpp \
 $(SRCDIR)/fileString.cpp \
+$(SRCDIR)/Interpreter.cpp \
 $(SRCDIR)/Layer.cpp \
 $(SRCDIR)/Matrix.cpp \
 $(SRCDIR)/metric.cpp \
 $(SRCDIR)/Network.cpp \
 $(SRCDIR)/NetworkIO.cpp \
 $(SRCDIR)/Neuron.cpp \
-$(SRCDIR)/Parser.cpp \
 $(SRCDIR)/preprocess.cpp \
 $(SRCDIR)/main.cpp \
 

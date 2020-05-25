@@ -124,7 +124,7 @@ public:
   void setParam(NetworkParam const& param);
   void setData(Data const& data);
   void setTestData(Data const& data);
-  bool learn();
+  void learn();
   Vector process(Vector inputs) const;
   Matrix process(Matrix inputs) const;
   Vector generate(NetworkParam param, Vector target, Vector input = Vector(0));
@@ -145,15 +145,18 @@ private:
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void performeOneEpoch();
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
-  Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted);
-  Vector computeGradVector(Vector const& realResult, Vector const& predicted); // calculate error between expected and predicted outputs
-  double computeLoss(); //returns validation loss
+  Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;
+  Vector computeGradVector(Vector const& realResult, Vector const& predicted) const; // calculate error between expected and predicted outputs
+  void computeLoss(); //returns validation loss
   void keep(); // store weights, bias and other coefs when optimal loss is found
   void release(); // returns weights, bias and other coefs when learning is done
+  void adaptLearningRate();
+  void adaptBatchSize();
 
 private:
   //parameters
   NetworkParam _param;
+  double _actualLearningRate;
 
   //random generators
   std::mt19937 _generator;

@@ -727,6 +727,144 @@ omnilearn::Activation omnilearn::Psoftexp::signature() const
 }
 
 
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== SINUS ACTIVATION ========================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+omnilearn::Sin::Sin(Vector const& coefs)
+{
+    if(coefs.size() != 0)
+        throw Exception("Sin activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+}
+
+
+double omnilearn::Sin::activate(double val) const
+{
+    return std::sin(val);
+}
+
+
+double omnilearn::Sin::prime([[maybe_unused]] double val) const
+{
+    return std::cos(val);
+}
+
+
+void omnilearn::Sin::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+{
+    //nothing to learn
+}
+
+
+void omnilearn::Sin::setCoefs([[maybe_unused]] Vector const& coefs)
+{
+    //nothing to do
+}
+
+
+omnilearn::rowVector omnilearn::Sin::getCoefs() const
+{
+    return Vector(0);
+}
+
+//static function
+omnilearn::Activation omnilearn::Sin::signature() const
+{
+    return Activation::Sin;
+}
+
+
+void omnilearn::Sin::keep()
+{
+    //nothing to do
+}
+
+
+void omnilearn::Sin::release()
+{
+    //nothing to do
+}
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== CARDINAL SINUS ACTIVATION ===============================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+omnilearn::Sinc::Sinc(Vector const& coefs)
+{
+    if(coefs.size() != 0)
+        throw Exception("Sinc activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+}
+
+
+double omnilearn::Sinc::activate(double val) const
+{
+    if(val > -std::numeric_limits<double>::epsilon() && val < std::numeric_limits<double>::epsilon())
+        return 1;
+    else
+        return std::sin(val)/val;
+}
+
+
+double omnilearn::Sinc::prime([[maybe_unused]] double val) const
+{
+    if(val > -std::numeric_limits<double>::epsilon() && val < std::numeric_limits<double>::epsilon())
+        return 0;
+    else
+        return (std::cos(val)/val) - (std::sin(val)/std::pow(val, 2));
+}
+
+
+void omnilearn::Sinc::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+{
+    //nothing to learn
+}
+
+
+void omnilearn::Sinc::setCoefs([[maybe_unused]] Vector const& coefs)
+{
+    //nothing to do
+}
+
+
+omnilearn::rowVector omnilearn::Sinc::getCoefs() const
+{
+    return Vector(0);
+}
+
+//static function
+omnilearn::Activation omnilearn::Sinc::signature() const
+{
+    return Activation::Sinc;
+}
+
+
+void omnilearn::Sinc::keep()
+{
+    //nothing to do
+}
+
+
+void omnilearn::Sinc::release()
+{
+    //nothing to do
+}
+
+
+
 
 //=============================================================================
 //=============================================================================
