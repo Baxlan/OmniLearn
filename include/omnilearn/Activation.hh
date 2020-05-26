@@ -16,7 +16,7 @@ namespace omnilearn
 
 
 
-enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Softexp, Psoftexp, Sin, Sinc};
+enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Pgauss, Softexp, Psoftexp, Sin, Sinc};
 
 
 
@@ -34,23 +34,6 @@ public:
     virtual void keep() = 0;
     virtual void release() = 0;
 };
-
-
-
-/*
-* id 0  : linear
-* id 1  : sigmoid
-* id 2  : tanh
-* id 3  : softplus
-* id 4  : relu
-* id 5  : prelu
-* id 6  : elu
-* id 7  : pelu
-* id 8  : srelu
-* id 9  : gauss
-* id 10 : softexp
-* id 11 : psoftexp
-*/
 
 
 
@@ -181,7 +164,7 @@ public:
 class Srelu : public IActivation
 {
 public:
-    Srelu(Vector const& coefs = (Vector(5) << 1.0, 0.1, 1.0, -1.0, 1.0).finished());
+    Srelu(Vector const& coefs = (Vector(4) << 0.1, 0.1, -1.0, 1.0).finished());
     double activate(double val) const;
     double prime(double val) const;
     void learn(double gradient, double learningRate);
@@ -194,13 +177,11 @@ public:
 protected:
     double _coef1;
     double _coef2;
-    double _coef3;
     double _hinge1;
     double _hinge2;
 
     double _savedCoef1;
     double _savedCoef2;
-    double _savedCoef3;
     double _savedHinge1;
     double _savedHinge2;
 };
@@ -210,7 +191,7 @@ protected:
 class Gauss : public IActivation
 {
 public:
-    //Gauss(); // should take mean and deviation, and make a parametric version
+    Gauss(Vector const& coefs = (Vector(3) << 0.0, 1.0, 1.0).finished()); // should take mean and deviation, and make a parametric version
     double activate(double val) const;
     double prime(double val) const;
     void learn(double gradient, double learningRate);
@@ -219,6 +200,25 @@ public:
     Activation signature() const;
     void keep();
     void release();
+
+protected:
+    double _center;
+    double _dev;
+    double _coef;
+    double _savedCenter;
+    double _savedDev;
+    double _savedCoef;
+};
+
+
+
+class Pgauss : public Gauss
+{
+public:
+    Pgauss(Vector const& coefs = (Vector(3) << 0, 1, 1).finished());
+    void learn(double gradient, double learningRate);
+    Activation signature() const;
+
 };
 
 
@@ -302,6 +302,7 @@ static std::map<Activation, std::function<std::shared_ptr<IActivation>()>> activ
     {Activation::Pelu, []{return std::make_shared<Pelu>();}},
     {Activation::Srelu, []{return std::make_shared<Srelu>();}},
     {Activation::Gauss, []{return std::make_shared<Gauss>();}},
+    {Activation::Pgauss, []{return std::make_shared<Pgauss>();}},
     {Activation::Softexp, []{return std::make_shared<Softexp>();}},
     {Activation::Psoftexp, []{return std::make_shared<Psoftexp>();}},
     {Activation::Sin, []{return std::make_shared<Sin>();}},
@@ -321,6 +322,7 @@ static std::map<std::string, Activation> stringToActivationMap = {
     {"pelu", Activation::Pelu},
     {"srelu", Activation::Srelu},
     {"gauss", Activation::Gauss},
+    {"pgauss", Activation::Pgauss},
     {"softexp", Activation::Softexp},
     {"psoftexp", Activation::Psoftexp},
     {"sin", Activation::Sin},
@@ -340,6 +342,7 @@ static std::map<Activation, std::string> activationToStringMap = {
     {Activation::Pelu, "pelu"},
     {Activation::Srelu, "srelu"},
     {Activation::Gauss, "gauss"},
+    {Activation::Pgauss, "pgauss"},
     {Activation::Softexp, "softexp"},
     {Activation::Psoftexp, "psoftexp"},
     {Activation::Sin, "sin"},

@@ -40,9 +40,10 @@ void omnilearn::Linear::learn([[maybe_unused]] double gradient, [[maybe_unused]]
 }
 
 
-void omnilearn::Linear::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Linear::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Linear activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -109,9 +110,10 @@ void omnilearn::Sigmoid::learn([[maybe_unused]] double gradient, [[maybe_unused]
 }
 
 
-void omnilearn::Sigmoid::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Sigmoid::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Sigmoid activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -175,9 +177,10 @@ void omnilearn::Tanh::learn([[maybe_unused]] double gradient, [[maybe_unused]] d
 }
 
 
-void omnilearn::Tanh::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Tanh::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Tanh activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -241,9 +244,10 @@ void omnilearn::Softplus::learn([[maybe_unused]] double gradient, [[maybe_unused
 }
 
 
-void omnilearn::Softplus::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Softplus::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Softplus activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -314,6 +318,7 @@ void omnilearn::Relu::setCoefs(Vector const& coefs)
     if(coefs.size() != 1)
         throw Exception("Relu/Prelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _coef = coefs[0];
+    _savedCoef = 0;
 }
 
 
@@ -352,7 +357,8 @@ void omnilearn::Relu::release()
 
 
 
-omnilearn::Prelu::Prelu(Vector const& coefs) : Relu(coefs)
+omnilearn::Prelu::Prelu(Vector const& coefs):
+Relu(coefs)
 {
 }
 
@@ -412,6 +418,7 @@ void omnilearn::Elu::setCoefs(Vector const& coefs)
     if(coefs.size() != 1)
         throw Exception("Elu/Pelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _coef = coefs[0];
+    _savedCoef = 0;
 }
 
 
@@ -450,7 +457,8 @@ void omnilearn::Elu::release()
 
 
 
-omnilearn::Pelu::Pelu(Vector const& coefs) : Elu(coefs)
+omnilearn::Pelu::Pelu(Vector const& coefs):
+Elu(coefs)
 {
 }
 
@@ -471,7 +479,7 @@ omnilearn::Activation omnilearn::Pelu::signature() const
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== S-SHAPED ACTIVATION =====================================================
+//=== (PARAMETRIC) S-SHAPED ACTIVATION ========================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -480,51 +488,59 @@ omnilearn::Activation omnilearn::Pelu::signature() const
 
 omnilearn::Srelu::Srelu(Vector const& coefs)
 {
-    if(coefs.size() != 5)
-        // 3 coefs and 2 hinges
-        throw Exception("Srelu activation function needs 5 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 4)
+        throw Exception("Srelu activation function needs 4 coefficients. " + std::to_string(coefs.size()) + " provided.");
     _coef1 = coefs[0];
     _coef2 = coefs[1];
-    _coef3 = coefs[2];
-    _hinge1 = coefs[3];
-    _hinge2 = coefs[4];
+    _hinge1 = coefs[2];
+    _hinge2 = coefs[3];
+
+    _savedCoef1 = 0;
+    _savedCoef2 = 0;
+    _savedHinge1 = 0;
+    _savedHinge2 = 0;
 }
 
 
 double omnilearn::Srelu::activate(double val) const
 {
-    // TO BE IMPLEMENTED
-    return 0;
+    if(val <= _hinge1)
+        return _hinge1 + _coef1 * (val - _hinge1);
+    else if(val >= _hinge2)
+        return _hinge2 + _coef2 * (val - _hinge2);
+    else
+        return val;
 }
 
 
 double omnilearn::Srelu::prime(double val) const
 {
-    // TO BE IMPLEMENTED
-    return 0;
+    if(val <= _hinge1)
+        return _coef1;
+    else if(val >= _hinge2)
+        return _coef2;
+    else
+        return 1;
 }
 
 
-void omnilearn::Srelu::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Srelu::learn(double gradient, double learningRate)
 {
-    //nothing to learn
+    // TO BE IMPLEMENTED
 }
 
 
 void omnilearn::Srelu::setCoefs(Vector const& coefs)
 {
-    if(coefs.size() != 5)
-        // 3 coefs and 2 hinges
-        throw Exception("Srelu activation function needs 5 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 4)
+        throw Exception("Srelu activation function needs 4 coefficients. " + std::to_string(coefs.size()) + " provided.");
     _coef1 = coefs[0];
     _coef2 = coefs[1];
-    _coef3 = coefs[2];
     _hinge1 = coefs[3];
     _hinge2 = coefs[4];
 
     _savedCoef1 = 0;
     _savedCoef2 = 0;
-    _savedCoef3 = 0;
     _savedHinge1 = 0;
     _savedHinge2 = 0;
 }
@@ -532,7 +548,7 @@ void omnilearn::Srelu::setCoefs(Vector const& coefs)
 
 omnilearn::rowVector omnilearn::Srelu::getCoefs() const
 {
-    return (Vector(5) << _coef1, _coef2, _coef3, _hinge1, _hinge2).finished();
+    return (Vector(4) << _coef1, _coef2, _hinge1, _hinge2).finished();
 }
 
 
@@ -546,7 +562,6 @@ void omnilearn::Srelu::keep()
 {
     _savedCoef1 = _coef1;
     _savedCoef2 = _coef2;
-    _savedCoef3 = _coef3;
     _savedHinge1 = _hinge1;
     _savedHinge2 = _hinge2;
 }
@@ -556,7 +571,6 @@ void omnilearn::Srelu::release()
 {
     _coef1 = _savedCoef1;
     _coef2 = _savedCoef2;
-    _coef3 = _savedCoef3;
     _hinge1 = _savedHinge1;
     _hinge2 = _savedHinge2;
 }
@@ -567,22 +581,36 @@ void omnilearn::Srelu::release()
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== GAUSSIAN ACTIVATION =====================================================
+//=== GAUSS ACTIVATION ========================================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
 
+
+
+omnilearn::Gauss::Gauss(Vector const& coefs)
+{
+    if(coefs.size() != 3)
+        throw Exception("Gauss/Pgauss activation functions need 3 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _center = coefs[0];
+    _dev = coefs[1];
+    _coef = coefs[2];
+
+    _savedCenter = 0;
+    _savedDev = 0;
+    _savedCoef = 0;
+}
 
 
 double omnilearn::Gauss::activate(double val) const
 {
-    return std::exp(-std::pow(val, 2));
+    return _coef * std::exp(-std::pow(val - _center, 2) / (2*std::pow(_dev, 2)));
 }
 
 
 double omnilearn::Gauss::prime(double val) const
 {
-    return -2 * val * std::exp(-std::pow(val, 2));
+    return activate(val) * (_center - val) / std::pow(_dev, 2);
 }
 
 
@@ -592,15 +620,23 @@ void omnilearn::Gauss::learn([[maybe_unused]] double gradient, [[maybe_unused]] 
 }
 
 
-void omnilearn::Gauss::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Gauss::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 3)
+        throw Exception("Gauss/Pgauss activation functions need 3 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _center = coefs[0];
+    _dev = coefs[1];
+    _coef = coefs[2];
+
+    _savedCenter = 0;
+    _savedDev = 0;
+    _savedCoef = 0;
 }
 
 
 omnilearn::rowVector omnilearn::Gauss::getCoefs() const
 {
-    return Vector(0);
+    return (Vector(3) << _center, _dev, _coef).finished();
 }
 
 
@@ -612,13 +648,46 @@ omnilearn::Activation omnilearn::Gauss::signature() const
 
 void omnilearn::Gauss::keep()
 {
-    //nothing to do
+    _savedCenter = _center;
+    _savedDev = _dev;
+    _savedCoef = _coef;
 }
 
 
 void omnilearn::Gauss::release()
 {
-    //nothing to do
+    _center = _savedCenter;
+    _dev = _savedDev;
+    _coef = _savedCoef;
+}
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== PARAMETRIC GAUSS ACTIVATION =============================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+omnilearn::Pgauss::Pgauss(Vector const& coefs):
+Gauss(coefs)
+{
+}
+
+
+void omnilearn::Pgauss::learn(double gradient, double learningRate)
+{
+
+}
+
+
+omnilearn::Activation omnilearn::Pgauss::signature() const
+{
+    return Activation::Pgauss;
 }
 
 
@@ -636,7 +705,7 @@ void omnilearn::Gauss::release()
 omnilearn::Softexp::Softexp(Vector const& coefs)
 {
     if(coefs.size() != 1)
-        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        throw Exception("Softexp/Psoftexp activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _coef = coefs[0];
     _savedCoef = 0;
 }
@@ -662,15 +731,18 @@ double omnilearn::Softexp::prime(double val) const
 }
 
 
-void omnilearn::Softexp::learn(double gradient, double learningRate)
+void omnilearn::Softexp::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
 {
-    //TO BE IMPLEMENTED
+    // nothing to learn
 }
 
 
-void omnilearn::Softexp::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Softexp::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 1)
+        throw Exception("Softexp/Psoftexp activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _coef = coefs[0];
+    _savedCoef = 0;
 }
 
 
@@ -715,7 +787,7 @@ Softexp(coefs)
 }
 
 
-void omnilearn::Psoftexp::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Psoftexp::learn(double gradient, double learningRate)
 {
     //TO BE IMPLEMENTED
 }
@@ -762,9 +834,10 @@ void omnilearn::Sin::learn([[maybe_unused]] double gradient, [[maybe_unused]] do
 }
 
 
-void omnilearn::Sin::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Sin::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Sin activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
 }
 
 
@@ -834,9 +907,10 @@ void omnilearn::Sinc::learn([[maybe_unused]] double gradient, [[maybe_unused]] d
 }
 
 
-void omnilearn::Sinc::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Sinc::setCoefs(Vector const& coefs)
 {
-    //nothing to do
+    if(coefs.size() != 0)
+        throw Exception("Sinc activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
 }
 
 

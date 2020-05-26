@@ -51,16 +51,16 @@ void vesta()
     omnilearn::NetworkParam netp;
     netp.threads = 4;
     netp.batchSize = 10;
-    netp.learningRate = 0.0002;
+    netp.learningRate = 0.001;
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 5;
-    netp.plateau = 0.95;
+    netp.plateau = 0.99;
     netp.decay = omnilearn::Decay::Plateau;
     netp.decayValue = 2;
     netp.decayDelay = 1;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.optimizer = omnilearn::Optimizer::None;
+    netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
     netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
     netp.verbose = true;
@@ -71,12 +71,13 @@ void vesta()
 
     omnilearn::LayerParam lay;
     lay.maxNorm = 5;
-    lay.size = 64;
+    lay.size = 32;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
 
+    lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Linear;
     net.addLayer(lay);
 

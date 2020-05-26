@@ -38,14 +38,6 @@ public:
 
 
 
-/*
-* id 0  : dot
-* id 1  : distance
-* id 2  : maxout
-*/
-
-
-
 class Dot : public IAggregation
 {
 public:
