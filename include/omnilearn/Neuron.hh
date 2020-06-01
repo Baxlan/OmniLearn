@@ -45,6 +45,7 @@ public:
     void release();
     void computeGradientsAccordingToInputs(double inputGradient);
     void updateInput(Vector& input, double learningRate);
+    void resetGradientsForGeneration();
     //first is weights, second is bias
     size_t nbWeights() const;
     std::pair<double, double> L1L2() const;
@@ -60,11 +61,13 @@ private:
     std::pair<double, size_t> _aggregResult;
     double _actResult;
 
-    double _actGradient; //gradient between aggregation and activation
-    Matrix _gradients; //sum (over features of the batch) of partial gradient for each weight
+    double _inputGradient; //sum (over features of the batch) of gradients passed in input (used for parametric activation)
+    double _sumedActGradient; //sum (over features of the batch) of gradient of activation according to aggregation result (used fir parametric aggregation)
+    double _actGradient; //gradient of activation according to aggregation result
+    Matrix _gradients; //sum (over features of the batch) of partial gradient of aggregation according to each weight
     Vector _biasGradients;
-    Vector _featureGradient; // store gradients for the current feature
-    std::vector<size_t> _weightsetCount; //counts the number of gradients in each weight set
+    Vector _featureGradient; // store gradients for the current feature (for the previous layer's neurons)
+    std::vector<size_t> _weightsetCount; //counts the number of features passed in each weight set
     Matrix _previousWeightUpdate;
     Vector _previousBiasUpdate;
 

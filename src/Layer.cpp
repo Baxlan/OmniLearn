@@ -209,11 +209,27 @@ void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, 
 
 void omnilearn::Layer::updateInput(Vector& input, double learningRate)
 {
-    // no parallelization here because editing the same input by multiple neurons at the same time would cause errors
+    // no parallelization here because editing the same input by multiple neurons at the same time would cause data races
     for(size_t i = 0; i < _neurons.size(); i++)
     {
         _neurons[i].updateInput(input, learningRate);
     }
+}
+
+
+void omnilearn::Layer::resetGradientsForGeneration(ThreadPool& t)
+{
+    std::vector<std::future<void>> tasks(_neurons.size());
+
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        tasks[i] = t.enqueue([this, i]()->void
+        {
+            _neurons[i].resetGradientsForGeneration();
+        });
+    }
+    for(size_t i = 0; i < tasks.size(); i++)
+        tasks[i].get();
 }
 
 

@@ -136,14 +136,14 @@ void mnist()
     omnilearn::NetworkParam netp;
     netp.threads = 4;
     netp.batchSize = 100;
-    netp.learningRate = 0.0001;
+    netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.epoch = 500;
     netp.patience = 5;
     netp.plateau = 0.99;
     netp.decay = omnilearn::Decay::Plateau;
     netp.decayValue = 2;
-    netp.decayDelay = 2;
+    netp.decayDelay = 1;
     netp.classValidity = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.0;
@@ -159,13 +159,14 @@ void mnist()
     net.setTestData(testdata);
 
     omnilearn::LayerParam lay;
-    lay.maxNorm = 5;
-    lay.size = 300;
+    lay.maxNorm = 0;
+    lay.size = 256;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
 
+    lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Linear;
     net.addLayer(lay);
 
@@ -178,7 +179,7 @@ void testLoader()
     omnilearn::Network genNet;
     genNet.load("omnilearn_network", 4);
     omnilearn::Data data = omnilearn::loadData("dataset/mnist_test.csv", ',', 4);
-    std::pair<double, double> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.8);
+    std::pair<double, double> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
     std::cout << metric.first << " " << metric.second << "\n";
 }
 
@@ -210,9 +211,9 @@ void generate()
 int main()
 {
     //mnist();
-    vesta();
+    //vesta();
     //testLoader();
-    //generate();
+    generate();
 
     return 0;
 }

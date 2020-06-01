@@ -20,7 +20,7 @@ struct LayerParam
 {
     LayerParam():
     size(8),
-    maxNorm(32),
+    maxNorm(0),
     distrib(Distrib::Normal),
     mean_boundary(distrib == Distrib::Normal ? 0 : 6),
     deviation(2),
@@ -64,6 +64,7 @@ public:
     Vector getGradients(ThreadPool& t); //one gradient per input neuron
     void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t);
     void updateInput(Vector& input, double learningRate);
+    void resetGradientsForGeneration(ThreadPool& t);
     size_t size() const;
     void resize(size_t neurons);
     size_t nbWeights() const;

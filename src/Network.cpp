@@ -172,6 +172,9 @@ omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target
     }
     _layers[0].computeGradientsAccordingToInputs(gradients, *_pool);
     _layers[0].updateInput(input, param.learningRate);
+
+    for(size_t i = 0; i < _layers.size(); i++)
+      _layers[i].resetGradientsForGeneration(*_pool);
   }
   input = depreprocess(input);
   return input;
