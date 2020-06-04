@@ -1,7 +1,7 @@
 // disable_eigen_warnings.hh
 
-#ifndef OMNILEARN_DISABLE_EIGEN_WARNINGS_HH_
-#define OMNILEARN_DISABLE_EIGEN_WARNINGS_HH_
+#ifndef OMNILEARN_DISABLE_EIGEN_WARNINGS_H_
+#define OMNILEARN_DISABLE_EIGEN_WARNINGS_H_
 
 #if defined(_MSC_VER) // Visual Studio
     #define DISABLE_WARNING_PUSH           __pragma(warning(push))
@@ -38,4 +38,4 @@
 
 #endif
 
-#endif // OMNILEARN_DISABLE_EIGEN_WARNINGS_HH_
+#endif // OMNILEARN_DISABLE_EIGEN_WARNINGS_H_

@@ -3,7 +3,7 @@
 #ifndef OMNILEARN_MATRIX_HH_
 #define OMNILEARN_MATRIX_HH_
 
-#include "disable_eigen_warnings.hh"
+#include "disable_eigen_warnings.h"
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_ALL

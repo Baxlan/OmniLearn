@@ -1,7 +1,7 @@
 //preprocess.cpp
 
 #include "omnilearn/preprocess.hh"
-#include "omnilearn/disable_eigen_warnings.hh"
+#include "omnilearn/disable_eigen_warnings.h"
 #include "omnilearn/Exception.hh"
 
 DISABLE_WARNING_PUSH

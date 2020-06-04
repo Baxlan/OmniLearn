@@ -1,6 +1,7 @@
+// main.cpp
 
 #include "omnilearn/Network.hh"
-#include "omnilearn/metric.hh"
+#include "omnilearn/metric.h"
 
 
 

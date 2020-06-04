@@ -1,7 +1,7 @@
-// metric.hh
+// metric.h
 
-#ifndef OMNILEARN_TEST_HH_
-#define OMNILEARN_TEST_HH_
+#ifndef OMNILEARN_TEST_H_
+#define OMNILEARN_TEST_H_
 
 #include "preprocess.hh"
 
@@ -25,4 +25,4 @@ std::pair<double, double> regressionMetrics(Matrix real, Matrix predicted, std::
 
 
 
-#endif // OMNILEARN_TEST_HH_
+#endif // OMNILEARN_TEST_H_

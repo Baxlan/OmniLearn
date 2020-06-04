@@ -1,6 +1,6 @@
 //metric.cpp
 
-#include "omnilearn/metric.hh"
+#include "omnilearn/metric.h"
 
 
 

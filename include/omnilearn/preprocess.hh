@@ -1,7 +1,7 @@
-// preprocess.hh
+// preprocess.h
 
-#ifndef OMNILEARN_PREPROCESS_HH_
-#define OMNILEARN_PREPROCESS_HH_
+#ifndef OMNILEARN_PREPROCESS_H_
+#define OMNILEARN_PREPROCESS_H_
 
 #include "Matrix.hh"
 
@@ -35,4 +35,4 @@ void reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double thre
 
 } //namespace omnilearn
 
-#endif // OMNILEARN_PREPROCESS_HH_
+#endif // OMNILEARN_PREPROCESS_H_

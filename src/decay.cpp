@@ -1,6 +1,6 @@
 // decay.cpp
 
-#include "omnilearn/decay.hh"
+#include "omnilearn/decay.h"
 
 
 

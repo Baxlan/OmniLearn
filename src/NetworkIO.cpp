@@ -3,8 +3,6 @@
 #include "omnilearn/Exception.hh"
 #include "omnilearn/NetworkIO.hh"
 #include "omnilearn/Network.hh"
-#include "omnilearn/fileString.hh"
-
 
 
 omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::string const& text)

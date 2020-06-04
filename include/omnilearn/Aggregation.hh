@@ -28,7 +28,8 @@ public:
     virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, size_t is the index of the weight set used
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
-    virtual void learn(double gradient, double learningRate) = 0;
+    virtual void computeGradients(double aggr, double inputGrad) = 0;
+    virtual void updateCoefs(double learningRate) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
     virtual Aggregation signature() const = 0;
@@ -45,7 +46,8 @@ public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Aggregation signature() const;
@@ -62,7 +64,8 @@ public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Aggregation signature() const;
@@ -81,7 +84,8 @@ class Pdistance : public Distance
 {
 public:
     Pdistance(Vector const& coefs = (Vector(1) << 2).finished());
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     Aggregation signature() const;
 };
 
@@ -94,7 +98,8 @@ public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Aggregation signature() const;

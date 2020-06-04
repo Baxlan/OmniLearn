@@ -42,9 +42,15 @@ omnilearn::Vector omnilearn::Dot::primeInput([[maybe_unused]] Vector const& inpu
 }
 
 
-void omnilearn::Dot::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Dot::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Dot::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -135,9 +141,15 @@ omnilearn::Vector omnilearn::Distance::primeInput(Vector const& inputs, Vector c
 }
 
 
-void omnilearn::Distance::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Distance::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Distance::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -190,7 +202,13 @@ Distance(coefs)
 }
 
 
-void omnilearn::Pdistance::learn(double gradient, double learningRate)
+void omnilearn::Pdistance::computeGradients(double aggr, double inputGrad)
+{
+
+}
+
+
+void omnilearn::Pdistance::updateCoefs(double learningRate)
 {
 
 }
@@ -248,9 +266,15 @@ omnilearn::Vector omnilearn::Maxout::primeInput([[maybe_unused]] Vector const& i
 }
 
 
-void omnilearn::Maxout::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Maxout::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Maxout::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 

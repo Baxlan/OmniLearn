@@ -61,8 +61,6 @@ private:
     std::pair<double, size_t> _aggregResult;
     double _actResult;
 
-    double _inputGradient; //sum (over features of the batch) of gradients passed in input (used for parametric activation)
-    double _sumedActGradient; //sum (over features of the batch) of gradient of activation according to aggregation result (used fir parametric aggregation)
     double _actGradient; //gradient of activation according to aggregation result
     Matrix _gradients; //sum (over features of the batch) of partial gradient of aggregation according to each weight
     Vector _biasGradients;

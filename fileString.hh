@@ -1,7 +1,7 @@
-// fileString.hh
+// fileString.h
 
-#ifndef OMNILEARN_FILESTRING_HH_
-#define OMNILEARN_FILESTRING_HH_
+#ifndef OMNILEARN_FILESTRING_H_
+#define OMNILEARN_FILESTRING_H_
 
 #include <fstream>
 #include <string>
@@ -27,4 +27,4 @@ void writeLines(std::vector<std::string> const& text, std::ostream& stream);
 
 
 
-#endif // OMNILEARN_FILESTRING_HH_
+#endif // OMNILEARN_FILESTRING_H_

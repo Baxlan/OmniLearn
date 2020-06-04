@@ -1,7 +1,7 @@
-// csv.hh
+// csv.h
 
-#ifndef OMNILEARN_CSV_HH_
-#define OMNILEARN_CSV_HH_
+#ifndef OMNILEARN_CSV_H_
+#define OMNILEARN_CSV_H_
 
 #include <fstream>
 
@@ -38,4 +38,4 @@ Data loadData(std::string const& path, char separator, size_t threads = 1);
 
 } // namespace omnilearn
 
-#endif // OMNILEARN_CSV_HH_
+#endif // OMNILEARN_CSV_H_

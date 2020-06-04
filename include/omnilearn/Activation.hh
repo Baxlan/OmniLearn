@@ -27,7 +27,8 @@ public:
     virtual ~IActivation(){}
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
-    virtual void learn(double gradient, double learningRate) = 0;
+    virtual void computeGradients(double aggr, double inputGrad) = 0;
+    virtual void updateCoefs(double learningRate) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
     virtual Activation signature() const = 0;
@@ -43,7 +44,8 @@ public:
     Linear(Vector const& coefs = Vector());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -59,7 +61,8 @@ public:
     Sigmoid(Vector const& coefs = Vector());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -75,7 +78,8 @@ public:
     Tanh(Vector const& coefs = Vector());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -91,7 +95,8 @@ public:
     Softplus(Vector const& coefs = Vector());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -107,7 +112,8 @@ public:
     Relu(Vector const& coefs = (Vector(1) << 0.01).finished());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -125,7 +131,8 @@ class Prelu : public Relu
 {
 public:
     Prelu(Vector const& coefs = (Vector(1) << 0.01).finished());
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     Activation signature() const;
 };
 
@@ -137,7 +144,8 @@ public:
     Elu(Vector const& coefs = (Vector(1) << 0.01).finished());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -155,7 +163,8 @@ class Pelu : public Elu
 {
 public:
     Pelu(Vector const& coefs = (Vector(1) << 0.01).finished());
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     Activation signature() const;
 };
 
@@ -167,7 +176,8 @@ public:
     Srelu(Vector const& coefs = (Vector(4) << 0.1, 0.1, -1.0, 1.0).finished());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -194,7 +204,8 @@ public:
     Gauss(Vector const& coefs = (Vector(3) << 0.0, 1.0, 1.0).finished()); // should take mean and deviation, and make a parametric version
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -216,7 +227,8 @@ class Pgauss : public Gauss
 {
 public:
     Pgauss(Vector const& coefs = (Vector(3) << 0, 1, 1).finished());
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     Activation signature() const;
 
 };
@@ -229,7 +241,8 @@ public:
     Softexp(Vector const& coefs = (Vector(1) << 0.5).finished());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -247,7 +260,8 @@ class Psoftexp : public Softexp
 {
 public:
     Psoftexp(Vector const& coefs = (Vector(1) << 0.5).finished());
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     Activation signature() const;
 
 };
@@ -260,7 +274,8 @@ public:
     Sin(Vector const& coefs = Vector());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -276,7 +291,8 @@ public:
     Sinc(Vector const& coefs = Vector());
     double activate(double val) const;
     double prime(double val) const;
-    void learn(double gradient, double learningRate);
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;

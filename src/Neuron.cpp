@@ -12,8 +12,6 @@ _bias(Vector(0)),
 _input(),
 _aggregResult(),
 _actResult(),
-_inputGradient(),
-_sumedActGradient(),
 _actGradient(),
 _gradients(),
 _biasGradients(),
@@ -57,8 +55,6 @@ void omnilearn::Neuron::init(Distrib distrib, double distVal1, double distVal2, 
     _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
     _biasGradients = Vector::Constant(_bias.size(), 0);
     _generativeGradients = Vector::Constant(_weights.cols(), 0);
-    _inputGradient = 0;
-    _sumedActGradient = 0;
 }
 
 
@@ -113,9 +109,7 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
 {
     _featureGradient = Vector(_weights.cols());
 
-    _inputGradient += inputGradient;
     _actGradient = _activation->prime(_aggregResult.first);
-    _sumedActGradient += _actGradient;
     Vector grad(_aggregation->prime(_input, _weights.row(_aggregResult.second)));
 
     for(eigen_size_t i = 0; i < grad.size(); i++)
@@ -141,12 +135,10 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
             }
             _biasGradients[i] /= static_cast<double>(_weightsetCount[i]);
         }
-        _inputGradient /= std::accumulate(_weightsetCount.begin(), _weightsetCount.end(), 0.0);
-        _sumedActGradient /= std::accumulate(_weightsetCount.begin(), _weightsetCount.end(), 0.0);
     }
 
-    _activation->learn(_inputGradient, learningRate);
-    _aggregation->learn(_sumedActGradient, learningRate);
+    _activation->updateCoefs(learningRate);
+    _aggregation->updateCoefs(learningRate);
 
     for(eigen_size_t i = 0; i < _weights.rows(); i++)
     {
@@ -221,8 +213,6 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
     _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
     _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
     _biasGradients = Vector::Constant(_bias.size(), 0);
-    _inputGradient = 0;
-    _sumedActGradient = 0;
 }
 
 
@@ -337,6 +327,4 @@ void omnilearn::from_json(json const& jObj, Neuron& neuron)
     neuron._gradients = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
     neuron._biasGradients = Vector::Constant(neuron._bias.size(), 0);
     neuron._generativeGradients = Vector::Constant(neuron._weights.cols(), 0);
-    neuron._inputGradient = 0;
-    neuron._sumedActGradient = 0;
 }

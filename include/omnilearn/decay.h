@@ -1,7 +1,7 @@
-// decay.hh
+// decay.h
 
-#ifndef OMNILEARN_ANNEALING_HH_
-#define OMNILEARN_ANNEALING_HH_
+#ifndef OMNILEARN_ANNEALING_H_
+#define OMNILEARN_ANNEALING_H_
 
 #include <cmath>
 
@@ -22,4 +22,4 @@ double step(double initialLR, size_t epoch, double decayValue, size_t delay);
 
 
 
-#endif // OMNILEARN_ANNEALING_HH_
+#endif // OMNILEARN_ANNEALING_H_

@@ -1,7 +1,7 @@
-// cost.cpp
+// cost.h
 
-#ifndef OMNILEARN_COST_HH_
-#define OMNILEARN_COST_HH_
+#ifndef OMNILEARN_COST_H_
+#define OMNILEARN_COST_H_
 
 #include "Matrix.hh"
 #include "ThreadPool.hh"
@@ -27,4 +27,4 @@ Vector binaryCrossEntropyGrad(Vector const& real, Vector const& predicted, Threa
 
 } // namespace omnilearn
 
-#endif // OMNILEARN_COST_HH_
+#endif // OMNILEARN_COST_H_

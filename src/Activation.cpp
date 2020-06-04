@@ -34,9 +34,15 @@ double omnilearn::Linear::prime([[maybe_unused]] double val) const
 }
 
 
-void omnilearn::Linear::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Linear::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Linear::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -104,9 +110,15 @@ double omnilearn::Sigmoid::prime(double val) const
 }
 
 
-void omnilearn::Sigmoid::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Sigmoid::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Sigmoid::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -171,9 +183,15 @@ double omnilearn::Tanh::prime(double val) const
 }
 
 
-void omnilearn::Tanh::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Tanh::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Tanh::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -238,9 +256,15 @@ double omnilearn::Softplus::prime(double val) const
 }
 
 
-void omnilearn::Softplus::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Softplus::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Softplus::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -307,9 +331,15 @@ double omnilearn::Relu::prime(double val) const
 }
 
 
-void omnilearn::Relu::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Relu::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Relu::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -363,9 +393,15 @@ Relu(coefs)
 }
 
 
-void omnilearn::Prelu::learn(double gradient, double learningRate)
+void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 {
-    //TO BE IMPLEMENTED
+
+}
+
+
+void omnilearn::Prelu::updateCoefs(double learningRate)
+{
+
 }
 
 
@@ -407,9 +443,15 @@ double omnilearn::Elu::prime(double val) const
 }
 
 
-void omnilearn::Elu::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Elu::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Elu::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -463,9 +505,15 @@ Elu(coefs)
 }
 
 
-void omnilearn::Pelu::learn(double gradient, double learningRate)
+void omnilearn::Pelu::computeGradients(double aggr, double inputGrad)
 {
-    //TO BE IMPLEMENTED
+
+}
+
+
+void omnilearn::Pelu::updateCoefs(double learningRate)
+{
+
 }
 
 
@@ -524,9 +572,15 @@ double omnilearn::Srelu::prime(double val) const
 }
 
 
-void omnilearn::Srelu::learn(double gradient, double learningRate)
+void omnilearn::Srelu::computeGradients(double aggr, double inputGrad)
 {
-    // TO BE IMPLEMENTED
+
+}
+
+
+void omnilearn::Srelu::updateCoefs(double learningRate)
+{
+
 }
 
 
@@ -614,9 +668,15 @@ double omnilearn::Gauss::prime(double val) const
 }
 
 
-void omnilearn::Gauss::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Gauss::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Gauss::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -679,7 +739,13 @@ Gauss(coefs)
 }
 
 
-void omnilearn::Pgauss::learn(double gradient, double learningRate)
+void omnilearn::Pgauss::computeGradients(double aggr, double inputGrad)
+{
+
+}
+
+
+void omnilearn::Pgauss::updateCoefs(double learningRate)
 {
 
 }
@@ -731,9 +797,15 @@ double omnilearn::Softexp::prime(double val) const
 }
 
 
-void omnilearn::Softexp::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Softexp::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    // nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Softexp::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -787,9 +859,15 @@ Softexp(coefs)
 }
 
 
-void omnilearn::Psoftexp::learn(double gradient, double learningRate)
+void omnilearn::Psoftexp::computeGradients(double aggr, double inputGrad)
 {
-    //TO BE IMPLEMENTED
+
+}
+
+
+void omnilearn::Psoftexp::updateCoefs(double learningRate)
+{
+
 }
 
 
@@ -828,9 +906,15 @@ double omnilearn::Sin::prime([[maybe_unused]] double val) const
 }
 
 
-void omnilearn::Sin::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Sin::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Sin::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
@@ -901,9 +985,15 @@ double omnilearn::Sinc::prime([[maybe_unused]] double val) const
 }
 
 
-void omnilearn::Sinc::learn([[maybe_unused]] double gradient, [[maybe_unused]] double learningRate)
+void omnilearn::Sinc::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
 {
-    //nothing to learn
+    //nothing to do
+}
+
+
+void omnilearn::Sinc::updateCoefs([[maybe_unused]] double learningRate)
+{
+    //nothing to do
 }
 
 
