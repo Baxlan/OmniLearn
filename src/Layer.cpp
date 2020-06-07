@@ -7,8 +7,10 @@
 omnilearn::Layer::Layer(LayerParam const& param):
 _param(param),
 _inputSize(0),
-_neurons(std::vector<Neuron>(param.size, Neuron(param.aggregation, param.activation)))
+_neurons(std::vector<Neuron>(param.size))
 {
+    for(size_t i = 0; i < _neurons.size(); i++)
+        _neurons[i] = Neuron(param.aggregation, param.activation);
 }
 
 
@@ -241,7 +243,9 @@ size_t omnilearn::Layer::size() const
 
 void omnilearn::Layer::resize(size_t neurons)
 {
-    _neurons = std::vector<Neuron>(neurons, Neuron(_param.aggregation, _param.activation));
+    _neurons = std::vector<Neuron>(neurons);
+    for(size_t i = 0; i < _neurons.size(); i++)
+        _neurons[i] = Neuron(_param.aggregation, _param.activation);
 }
 
 

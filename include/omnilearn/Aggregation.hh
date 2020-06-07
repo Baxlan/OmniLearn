@@ -28,7 +28,7 @@ public:
     virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, size_t is the index of the weight set used
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
-    virtual void computeGradients(double aggr, double inputGrad) = 0;
+    virtual void computeGradients(Vector const& inputs, Vector const& weights, double inputGrad) = 0;
     virtual void updateCoefs(double learningRate) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
@@ -46,7 +46,7 @@ public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
-    void computeGradients(double aggr, double inputGrad);
+    void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
     void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
@@ -64,7 +64,7 @@ public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
-    void computeGradients(double aggr, double inputGrad);
+    void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
     void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
@@ -84,9 +84,13 @@ class Pdistance : public Distance
 {
 public:
     Pdistance(Vector const& coefs = (Vector(1) << 2).finished());
-    void computeGradients(double aggr, double inputGrad);
+    void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
     void updateCoefs(double learningRate);
     Aggregation signature() const;
+
+protected:
+    double _orderGradient;
+    size_t _counter;
 };
 
 
@@ -98,7 +102,7 @@ public:
     std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
-    void computeGradients(double aggr, double inputGrad);
+    void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
     void updateCoefs(double learningRate);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
@@ -109,11 +113,11 @@ public:
 
 
 
-static std::map<Aggregation, std::function<std::shared_ptr<IAggregation>()>> aggregationMap = {
-    {Aggregation::Dot, []{return std::make_shared<Dot>();}},
-    {Aggregation::Distance, []{return std::make_shared<Distance>();}},
-    {Aggregation::Pdistance, []{return std::make_shared<Pdistance>();}},
-    {Aggregation::Maxout, []{return std::make_shared<Maxout>();}}
+static std::map<Aggregation, std::function<std::unique_ptr<IAggregation>()>> aggregationMap = {
+    {Aggregation::Dot, []{return std::make_unique<Dot>();}},
+    {Aggregation::Distance, []{return std::make_unique<Distance>();}},
+    {Aggregation::Pdistance, []{return std::make_unique<Pdistance>();}},
+    {Aggregation::Maxout, []{return std::make_unique<Maxout>();}}
 };
 
 

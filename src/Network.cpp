@@ -93,7 +93,7 @@ void omnilearn::Network::learn()
 
       *_io << "Epoch: " << _epoch << "   Validation loss: " << _validLosses[_epoch] << "   Training loss: " << _trainLosses[_epoch] << "   First metric: " << _testMetric[_epoch] << "   Second metric: " << _testSecondMetric[_epoch] << "   LR: " << _actualLearningRate << "   gap: " << gap << "%   Remaining: " << _optimalEpoch + _param.patience - _epoch << "\n";
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
-        throw Exception("The last train, validation or test loss is NaN. The issue probably comes from too large weights. Try reducing the learning rate or use maxnorm ?");
+        throw Exception("The last train, validation or test loss is NaN. The issue probably comes from too large weights.");
 
       //EARLY STOPPING
       if(_epoch - _optimalEpoch >= _param.patience)

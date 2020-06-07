@@ -8,6 +8,7 @@
 #include "Activation.hh"
 #include "Aggregation.hh"
 #include "json.hh"
+#include "optimizer.h"
 
 using json = nlohmann::json;
 
@@ -18,7 +19,6 @@ namespace omnilearn
 
 
 
-enum class Optimizer {None, Momentum, Nesterov, Adagrad, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
 enum class Distrib {Uniform, Normal};
 
 
@@ -51,8 +51,8 @@ public:
     std::pair<double, double> L1L2() const;
 
 private:
-    std::shared_ptr<IAggregation> _aggregation;
-    std::shared_ptr<IActivation> _activation;
+    std::unique_ptr<IAggregation> _aggregation;
+    std::unique_ptr<IActivation> _activation;
 
     Matrix _weights;
     Vector _bias;

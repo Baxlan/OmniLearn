@@ -164,7 +164,7 @@ void mnist()
     lay.size = 256;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Relu;
+    lay.activation = omnilearn::Activation::Prelu;
     net.addLayer(lay);
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -211,10 +211,10 @@ void generate()
 
 int main()
 {
-    //mnist();
+    mnist();
     //vesta();
     //testLoader();
-    generate();
+    //generate();
 
     return 0;
 }

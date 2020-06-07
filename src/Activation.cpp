@@ -4,7 +4,7 @@
 #include "omnilearn/Exception.hh"
 
 
-
+#include <iostream>
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -380,7 +380,7 @@ void omnilearn::Relu::release()
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== PARAMETRIC RELU ACTIVATION ==============================================
+//=== PARAMETRIC (LEAKY) RELU ACTIVATION ======================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -388,20 +388,28 @@ void omnilearn::Relu::release()
 
 
 omnilearn::Prelu::Prelu(Vector const& coefs):
-Relu(coefs)
+Relu(coefs),
+_coefGradient(0),
+_counter(0)
 {
 }
 
 
 void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 {
-
+    _coefGradient += (aggr < 0 ? aggr * inputGrad : 0);
+    _counter += 1;
 }
 
 
 void omnilearn::Prelu::updateCoefs(double learningRate)
 {
+    _coefGradient /= static_cast<double>(_counter);
 
+    _coef += learningRate * _coefGradient;
+
+    _coefGradient = 0;
+    _counter = 0;
 }
 
 

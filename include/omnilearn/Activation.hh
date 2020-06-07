@@ -134,6 +134,10 @@ public:
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(double learningRate);
     Activation signature() const;
+
+protected:
+    double _coefGradient;
+    double _counter;
 };
 
 
@@ -307,22 +311,22 @@ Matrix softmax(Matrix inputs);
 
 
 
-static std::map<Activation, std::function<std::shared_ptr<IActivation>()>> activationMap = {
-    {Activation::Linear, []{return std::make_shared<Linear>();}},
-    {Activation::Sigmoid, []{return std::make_shared<Sigmoid>();}},
-    {Activation::Tanh, []{return std::make_shared<Tanh>();}},
-    {Activation::Softplus, []{return std::make_shared<Softplus>();}},
-    {Activation::Relu, []{return std::make_shared<Relu>();}},
-    {Activation::Prelu, []{return std::make_shared<Prelu>();}},
-    {Activation::Elu, []{return std::make_shared<Elu>();}},
-    {Activation::Pelu, []{return std::make_shared<Pelu>();}},
-    {Activation::Srelu, []{return std::make_shared<Srelu>();}},
-    {Activation::Gauss, []{return std::make_shared<Gauss>();}},
-    {Activation::Pgauss, []{return std::make_shared<Pgauss>();}},
-    {Activation::Softexp, []{return std::make_shared<Softexp>();}},
-    {Activation::Psoftexp, []{return std::make_shared<Psoftexp>();}},
-    {Activation::Sin, []{return std::make_shared<Sin>();}},
-    {Activation::Sinc, []{return std::make_shared<Sinc>();}}
+static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activationMap = {
+    {Activation::Linear, []{return std::make_unique<Linear>();}},
+    {Activation::Sigmoid, []{return std::make_unique<Sigmoid>();}},
+    {Activation::Tanh, []{return std::make_unique<Tanh>();}},
+    {Activation::Softplus, []{return std::make_unique<Softplus>();}},
+    {Activation::Relu, []{return std::make_unique<Relu>();}},
+    {Activation::Prelu, []{return std::make_unique<Prelu>();}},
+    {Activation::Elu, []{return std::make_unique<Elu>();}},
+    {Activation::Pelu, []{return std::make_unique<Pelu>();}},
+    {Activation::Srelu, []{return std::make_unique<Srelu>();}},
+    {Activation::Gauss, []{return std::make_unique<Gauss>();}},
+    {Activation::Pgauss, []{return std::make_unique<Pgauss>();}},
+    {Activation::Softexp, []{return std::make_unique<Softexp>();}},
+    {Activation::Psoftexp, []{return std::make_unique<Psoftexp>();}},
+    {Activation::Sin, []{return std::make_unique<Sin>();}},
+    {Activation::Sinc, []{return std::make_unique<Sinc>();}}
 };
 
 

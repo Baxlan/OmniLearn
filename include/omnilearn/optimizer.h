@@ -10,7 +10,12 @@ namespace omnilearn
 
 
 
-void optimizedUpdate();
+enum class Optimizer {None, Momentum, Nesterov, Adagrad, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
+
+
+
+
+void optimizedUpdate(Optimizer opti, double momentum, double window, double optimizerBias);
 
 
 

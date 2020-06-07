@@ -42,7 +42,7 @@ omnilearn::Vector omnilearn::Dot::primeInput([[maybe_unused]] Vector const& inpu
 }
 
 
-void omnilearn::Dot::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
+void omnilearn::Dot::computeGradients([[maybe_unused]] Vector const& inputs, [[maybe_unused]] Vector const& weights, [[maybe_unused]] double inputGrad)
 {
     //nothing to do
 }
@@ -130,7 +130,7 @@ omnilearn::Vector omnilearn::Distance::prime(Vector const& inputs, Vector const&
 
 omnilearn::Vector omnilearn::Distance::primeInput(Vector const& inputs, Vector const& weights) const
 {
-    double a = std::pow(aggregate(inputs, weights, _bias).first, (1-_order));
+    double a = std::pow(aggregate(inputs, weights.transpose(), _bias).first, (1-_order));
     Vector result(weights.size());
 
     for(eigen_size_t i = 0; i < weights.size(); i++)
@@ -141,7 +141,7 @@ omnilearn::Vector omnilearn::Distance::primeInput(Vector const& inputs, Vector c
 }
 
 
-void omnilearn::Distance::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
+void omnilearn::Distance::computeGradients([[maybe_unused]] Vector const& inputs, [[maybe_unused]] Vector const& weights, [[maybe_unused]] double inputGrad)
 {
     //nothing to do
 }
@@ -197,20 +197,36 @@ void omnilearn::Distance::release()
 
 
 omnilearn::Pdistance::Pdistance(Vector const& coefs):
-Distance(coefs)
+Distance(coefs),
+_orderGradient(0),
+_counter(0)
 {
 }
 
 
-void omnilearn::Pdistance::computeGradients(double aggr, double inputGrad)
+void omnilearn::Pdistance::computeGradients(Vector const& inputs, Vector const& weights, double inputGrad)
 {
+    Vector diff(inputs - weights);
+    double calc = 0;
 
+    for(eigen_size_t i = 0; i < inputs.size(); i++)
+    {
+        calc += std::log(diff[i]) * std::pow(diff[i], _order);
+    }
+
+    _orderGradient += (calc * inputGrad * std::pow(aggregate(inputs, weights.transpose(), _bias).first, (1-_order))) / _order;
+    _counter += 1;
 }
 
 
 void omnilearn::Pdistance::updateCoefs(double learningRate)
 {
+    _orderGradient /= static_cast<double>(_counter);
 
+    _order += _orderGradient * learningRate;
+
+    _orderGradient = 0;
+    _counter = 0;
 }
 
 
@@ -266,7 +282,7 @@ omnilearn::Vector omnilearn::Maxout::primeInput([[maybe_unused]] Vector const& i
 }
 
 
-void omnilearn::Maxout::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
+void omnilearn::Maxout::computeGradients([[maybe_unused]] Vector const& inputs, [[maybe_unused]] Vector const& weights, [[maybe_unused]] double inputGrad)
 {
     //nothing to do
 }
