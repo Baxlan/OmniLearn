@@ -193,7 +193,7 @@ omnilearn::Vector omnilearn::Layer::getGradients(ThreadPool& t)
 }
 
 
-void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t)
+void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, double weightDecay, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, ThreadPool& t)
 {
     std::vector<std::future<void>> tasks(_neurons.size());
 
@@ -201,7 +201,7 @@ void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, 
     {
         tasks[i] = t.enqueue([=]()->void
         {
-            _neurons[i].updateWeights(learningRate, L1, L2, _param.maxNorm, opti, momentum, window, optimizerBias);
+            _neurons[i].updateWeights(learningRate, L1, L2, weightDecay, _param.maxNorm, automaticLearningRate, adaptiveLearningRate, momentum, window, optimizerBias, iteration);
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
@@ -274,6 +274,22 @@ std::pair<double, double> omnilearn::Layer::L1L2(ThreadPool& t) const
     for(size_t i = 0; i < tasks.size(); i++)
         tasks[i].get();
     return {L1, L2};
+}
+
+
+void omnilearn::Layer::nesterov(ThreadPool& t)
+{
+    std::vector<std::future<void>> tasks(_neurons.size());
+
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        tasks[i] = t.enqueue([this, i]()->void
+        {
+            _neurons[i].nesterov();
+        });
+    }
+    for(size_t i = 0; i < tasks.size(); i++)
+        tasks[i].get();
 }
 
 

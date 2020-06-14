@@ -62,13 +62,14 @@ public:
     void keep();
     void release();
     Vector getGradients(ThreadPool& t); //one gradient per input neuron
-    void updateWeights(double learningRate, double L1, double L2, Optimizer opti, double momentum, double window, double optimizerBias, ThreadPool& t);
+    void updateWeights(double learningRate, double L1, double L2, double weightDecay, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, ThreadPool& t);
     void updateInput(Vector& input, double learningRate);
     void resetGradientsForGeneration(ThreadPool& t);
     size_t size() const;
     void resize(size_t neurons);
     size_t nbWeights() const;
     std::pair<double, double> L1L2(ThreadPool& t) const;
+    void nesterov(ThreadPool& t);
 
 private:
     LayerParam _param;

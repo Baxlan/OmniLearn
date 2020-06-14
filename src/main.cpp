@@ -21,7 +21,6 @@ void boston()
     netp.decayDelay = 2;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
-    netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
     netp.preprocessOutputs = {omnilearn::Preprocess::Normalize};
     netp.verbose = true;
@@ -31,7 +30,6 @@ void boston()
     net.setData(data);
 
     omnilearn::LayerParam lay;
-    lay.maxNorm = 5;
     lay.size = 32;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -61,17 +59,17 @@ void vesta()
     netp.decayDelay = 1;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
     netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
     netp.verbose = true;
+    netp.window = 0.9;
+    netp.momentum = 0.9;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
     omnilearn::LayerParam lay;
-    lay.maxNorm = 5;
     lay.size = 32;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -104,18 +102,17 @@ void iris()
     netp.classValidity = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
+    netp.momentum = 0;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
     omnilearn::LayerParam lay;
-    lay.maxNorm = 5;
     lay.size = 300;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -148,11 +145,16 @@ void mnist()
     netp.classValidity = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.0;
-    netp.optimizer = omnilearn::Optimizer::Rmsprop;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
+
+    netp.adaptiveLearningRate = true;
+    netp.momentum = 0;
+    netp.window = 0.9;
+
+
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -160,11 +162,11 @@ void mnist()
     net.setTestData(testdata);
 
     omnilearn::LayerParam lay;
-    lay.maxNorm = 0;
+    lay.maxNorm = 100;
     lay.size = 256;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Prelu;
+    lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
 
     lay.aggregation = omnilearn::Aggregation::Dot;

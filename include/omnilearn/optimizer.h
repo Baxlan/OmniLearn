@@ -3,6 +3,8 @@
 #ifndef OPTIMIZER_H_
 #define OPTIMIZER_H_
 
+#include <cmath> // included here (not in .cpp) because size_t is needed
+
 
 
 namespace omnilearn
@@ -10,12 +12,8 @@ namespace omnilearn
 
 
 
-enum class Optimizer {None, Momentum, Nesterov, Adagrad, Rmsprop, Adam, Adamax, Nadam, AmsGrad};
-
-
-
-
-void optimizedUpdate(Optimizer opti, double momentum, double window, double optimizerBias);
+void optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool automaticLearningRate,
+                     bool adaptiveLearningRate, double learningRate, double momentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
 
 
 

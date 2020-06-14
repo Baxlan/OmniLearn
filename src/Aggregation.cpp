@@ -85,6 +85,12 @@ void omnilearn::Dot::release()
 }
 
 
+void omnilearn::Dot::nesterov()
+{
+    //nothing to do
+}
+
+
 
 //=============================================================================
 //=============================================================================
@@ -185,6 +191,12 @@ void omnilearn::Distance::release()
 }
 
 
+void omnilearn::Distance::nesterov()
+{
+    //nothing to do
+}
+
+
 
 //=============================================================================
 //=============================================================================
@@ -233,6 +245,12 @@ void omnilearn::Pdistance::updateCoefs(double learningRate)
 omnilearn::Aggregation omnilearn::Pdistance::signature() const
 {
     return Aggregation::Pdistance;
+}
+
+
+void omnilearn::Pdistance::nesterov()
+{
+
 }
 
 
@@ -320,6 +338,12 @@ void omnilearn::Maxout::keep()
 
 
 void omnilearn::Maxout::release()
+{
+    //nothing to do
+}
+
+
+void omnilearn::Maxout::nesterov()
 {
     //nothing to do
 }

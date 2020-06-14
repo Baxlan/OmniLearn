@@ -35,6 +35,7 @@ public:
     virtual Aggregation signature() const = 0;
     virtual void keep() = 0;
     virtual void release() = 0;
+    virtual void nesterov() = 0;
 };
 
 
@@ -53,6 +54,7 @@ public:
     Aggregation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 
@@ -71,6 +73,7 @@ public:
     Aggregation signature() const;
     void keep();
     void release();
+    void nesterov();
 
 protected:
     double _order;
@@ -87,6 +90,7 @@ public:
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
     void updateCoefs(double learningRate);
     Aggregation signature() const;
+    void nesterov();
 
 protected:
     double _orderGradient;
@@ -109,6 +113,7 @@ public:
     Aggregation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 

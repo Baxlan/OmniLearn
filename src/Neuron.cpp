@@ -1,7 +1,7 @@
 // Neuron.cpp
 
 #include "omnilearn/Neuron.hh"
-
+#include "omnilearn/optimizer.h"
 
 
 omnilearn::Neuron::Neuron(Aggregation aggregation, Activation activation):
@@ -17,6 +17,12 @@ _gradients(),
 _biasGradients(),
 _featureGradient(),
 _weightsetCount(),
+_previousWeightGradient(),
+_previousBiasGradient(),
+_previousWeightGradient2(),
+_previousBiasGradient2(),
+_optimalPreviousWeightGradient2(),
+_optimalPreviousBiasGradient2(),
 _previousWeightUpdate(),
 _previousBiasUpdate(),
 _savedWeights(),
@@ -51,6 +57,12 @@ void omnilearn::Neuron::init(Distrib distrib, double distVal1, double distVal2, 
     }
     _previousBiasUpdate = Vector::Constant(_bias.size(), 0);
     _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+    _previousBiasGradient = _previousBiasUpdate;
+    _previousWeightGradient = _previousWeightUpdate;
+    _previousBiasGradient2 = _previousBiasUpdate;
+    _previousWeightGradient2 = _previousWeightUpdate;
+    _optimalPreviousWeightGradient2 = _previousWeightUpdate;
+    _optimalPreviousBiasGradient2 = _previousBiasUpdate;
     _weightsetCount = std::vector<size_t>(_weights.rows(), 0);
     _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
     _biasGradients = Vector::Constant(_bias.size(), 0);
@@ -125,7 +137,7 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
 }
 
 
-void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window, double optimizerBias)
+void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration)
 {
     //average gradients over features
     for(eigen_size_t i = 0; i < _gradients.rows(); i++)
@@ -145,53 +157,11 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
 
     for(eigen_size_t i = 0; i < _weights.rows(); i++)
     {
+        optimizedUpdate(_bias[i], _previousBiasGradient[i], _previousBiasGradient2[i], _optimalPreviousBiasGradient2[i], _previousBiasUpdate[i], _biasGradients[i], automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, 0, 0, 0);
+
         for(eigen_size_t j = 0; j < _weights.cols(); j++)
         {
-            if(opti == Optimizer::None)
-            {
-                _weights(i, j) += (learningRate*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
-                _bias[i] += learningRate * _biasGradients[i];
-            }
-            else if(opti == Optimizer::Momentum || opti == Optimizer::Nesterov)
-            {
-                _previousWeightUpdate(i, j) = learningRate*(_gradients(i, j)) - momentum * _previousWeightUpdate(i, j);
-                _previousBiasUpdate[i] = learningRate * _biasGradients[i] - momentum * _previousBiasUpdate[i];
-
-                _weights(i, j) += _previousWeightUpdate(i, j) + learningRate*(-(L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1));
-                _bias[i] += _previousBiasUpdate[i];
-            }
-            else if(opti == Optimizer::Adagrad)
-            {
-                _previousWeightUpdate(i, j) += std::pow(_gradients(i, j), 2);
-                _previousBiasUpdate[i] += std::pow(_biasGradients[i], 2);
-
-                _weights(i, j) += ((learningRate/(std::sqrt(_previousWeightUpdate(i, j))+ optimizerBias))*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
-                _bias[i] += (learningRate/(std::sqrt(_previousBiasUpdate[i])+ optimizerBias)) * _biasGradients[i];
-            }
-            else if(opti == Optimizer::Rmsprop)
-            {
-                _previousWeightUpdate(i, j) = window * _previousWeightUpdate(i, j) + (1 - window) * std::pow(_gradients(i, j), 2);
-                _previousBiasUpdate[i] = window * _previousBiasUpdate[i] + (1 - window) * std::pow(_biasGradients[i], 2);
-
-                _weights(i, j) += ((learningRate/(std::sqrt(_previousWeightUpdate(i, j))+ optimizerBias))*(_gradients(i, j) - (L2 * _weights(i, j)) - (_weights(i, j) > 0 ? L1 : -L1)));
-                _bias[i] += (learningRate/(std::sqrt(_previousBiasUpdate[i])+ optimizerBias)) * _biasGradients[i];
-            }
-            else if(opti == Optimizer::Adam)
-            {
-
-            }
-            else if(opti == Optimizer::Adamax)
-            {
-
-            }
-            else if(opti == Optimizer::Nadam)
-            {
-
-            }
-            else if(opti == Optimizer::AmsGrad)
-            {
-
-            }
+            optimizedUpdate(_weights(i, j), _previousWeightGradient(i, j), _previousWeightGradient2(i, j), _optimalPreviousWeightGradient2(i, j), _previousWeightUpdate(i, j), _gradients(i, j), automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, L1, L2, weightDecay);
         }
     }
 
@@ -295,6 +265,13 @@ std::pair<double, double> omnilearn::Neuron::L1L2() const
 }
 
 
+void omnilearn::Neuron::nesterov()
+{
+    _aggregation->nesterov();
+    _activation->nesterov();
+}
+
+
 void omnilearn::to_json(json& jObj, Neuron const& neuron)
 {
     jObj["aggregation type"] = aggregationToStringMap[neuron._aggregation->signature()];
@@ -326,6 +303,12 @@ void omnilearn::from_json(json const& jObj, Neuron& neuron)
     // init the neuron members
     neuron._previousBiasUpdate = Vector::Constant(neuron._bias.size(), 0);
     neuron._previousWeightUpdate = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
+    neuron._previousBiasGradient = neuron._previousBiasUpdate;
+    neuron._previousWeightGradient = neuron._previousWeightUpdate;
+    neuron._previousBiasGradient2 = neuron._previousBiasUpdate;
+    neuron._previousWeightGradient2 = neuron._previousWeightUpdate;
+    neuron._optimalPreviousWeightGradient2 = neuron._previousWeightUpdate;
+    neuron._optimalPreviousBiasGradient2 = neuron._previousBiasUpdate;
     neuron._weightsetCount = std::vector<size_t>(neuron._weights.rows(), 0);
     neuron._gradients = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
     neuron._biasGradients = Vector::Constant(neuron._bias.size(), 0);

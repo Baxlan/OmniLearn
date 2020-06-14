@@ -38,17 +38,17 @@ public:
     double processToGenerate(Vector const& input);
     //compute gradients for one feature, finally summed for the whole batch
     void computeGradients(double inputGradient);
-    void updateWeights(double learningRate, double L1, double L2, double maxNorm, Optimizer opti, double momentum, double window, double optimizerBias);
+    void updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration);
     //one gradient per input neuron
     Vector getGradients() const;
     void keep();
     void release();
     void computeGradientsAccordingToInputs(double inputGradient);
-    void updateInput(Vector& input, double learningRate);
+    void updateInput(Vector& input, double learningRate); // for generation
     void resetGradientsForGeneration();
-    //first is weights, second is bias
     size_t nbWeights() const;
     std::pair<double, double> L1L2() const;
+    void nesterov();
 
 private:
     std::unique_ptr<IAggregation> _aggregation;
@@ -66,8 +66,14 @@ private:
     Vector _biasGradients;
     Vector _featureGradient; // store gradients for the current feature (for the previous layer's neurons)
     std::vector<size_t> _weightsetCount; //counts the number of features passed in each weight set
-    Matrix _previousWeightUpdate;
-    Vector _previousBiasUpdate;
+    Matrix _previousWeightGradient; // used for optimizers (momentum effect)
+    Vector _previousBiasGradient; // used for optimizers (momentum effect)
+    Matrix _previousWeightGradient2; // used for optimizers (window effect)
+    Vector _previousBiasGradient2; // used for optimizers (window effect)
+    Matrix _optimalPreviousWeightGradient2; // used for optimizers (see AMSGrad documentation)
+    Vector _optimalPreviousBiasGradient2; // used for optimizers (see AMSGrad docimentation)
+    Matrix _previousWeightUpdate; // used for optimizers (to replace learning rate)
+    Vector _previousBiasUpdate; // used for optimizers (to replace learning rate)
 
     Matrix _savedWeights;
     Vector _savedBias;

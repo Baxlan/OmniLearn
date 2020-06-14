@@ -34,6 +34,7 @@ public:
     virtual Activation signature() const = 0;
     virtual void keep() = 0;
     virtual void release() = 0;
+    virtual void nesterov() = 0;
 };
 
 
@@ -51,6 +52,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 
@@ -68,6 +70,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 
@@ -85,6 +88,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 
@@ -102,6 +106,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 
@@ -119,6 +124,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 
 protected:
     double _coef;
@@ -134,6 +140,7 @@ public:
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(double learningRate);
     Activation signature() const;
+    void nesterov();
 
 protected:
     double _coefGradient;
@@ -155,6 +162,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 
 protected:
     double _coef;
@@ -170,6 +178,7 @@ public:
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(double learningRate);
     Activation signature() const;
+    void nesterov();
 };
 
 
@@ -187,6 +196,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 
 protected:
     double _coef1;
@@ -215,6 +225,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 
 protected:
     double _center;
@@ -234,7 +245,7 @@ public:
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(double learningRate);
     Activation signature() const;
-
+    void nesterov();
 };
 
 
@@ -252,6 +263,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 
 protected:
     double _coef;
@@ -267,7 +279,7 @@ public:
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(double learningRate);
     Activation signature() const;
-
+    void nesterov();
 };
 
 
@@ -285,6 +297,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 
@@ -302,6 +315,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    void nesterov();
 };
 
 

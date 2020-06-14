@@ -40,9 +40,10 @@ struct NetworkParam
     NetworkParam():
     seed(0),
     batchSize(1),
-    learningRate(0.001),
+    learningRate(0.01),
     L1(0),
     L2(0),
+    weightDecay(0),
     epoch(10000),
     patience(5),
     dropout(0),
@@ -51,17 +52,19 @@ struct NetworkParam
     testRatio(0.2),
     loss(Loss::L2),
     decayValue(2),
-    decayDelay(2),
+    decayDelay(1),
     decay(Decay::None),
     classValidity(0.5),
     threads(1),
-    optimizer(Optimizer::None),
-    momentum(0.9),
+    automaticLearningRate(false),
+    adaptiveLearningRate(false),
+    nesterov(false),
+    momentum(0),
     window(0.9),
     plateau(0.99),
     preprocessInputs(),
     preprocessOutputs(),
-    optimizerBias(1e-5),
+    optimizerBias(1e-3),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
     inputWhiteningBias(1e-5),
@@ -75,6 +78,7 @@ struct NetworkParam
     double learningRate;
     double L1;
     double L2;
+    double weightDecay;
     size_t epoch;
     size_t patience;
     double dropout;
@@ -87,7 +91,9 @@ struct NetworkParam
     Decay decay;
     double classValidity;
     size_t threads;
-    Optimizer optimizer;
+    bool automaticLearningRate;
+    bool adaptiveLearningRate;
+    bool nesterov;
     double momentum; //momentum
     double window; //window effect on grads
     double plateau;
@@ -144,6 +150,7 @@ private:
   void shuffleTrainData(); // shuffle train data each epoch
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void performeOneEpoch();
+  void nesterov(); // add momentum to weights to process (and get loss) with pre corrected weights, to allow nesterov optimization
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;
   Vector computeGradVector(Vector const& realResult, Vector const& predicted) const; // calculate error between expected and predicted outputs
@@ -184,6 +191,7 @@ private:
   size_t _nbBatch;
   size_t _epoch;
   size_t _optimalEpoch;
+  size_t _iteration;
   Vector _trainLosses;
   Vector _validLosses;
   Vector _testMetric;

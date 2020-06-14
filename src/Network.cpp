@@ -29,7 +29,7 @@ void omnilearn::Network::setParam(NetworkParam const& param)
   _generator = std::mt19937(_param.seed);
   _dropoutDist = std::bernoulli_distribution(param.dropout);
   _dropconnectDist = std::bernoulli_distribution(param.dropconnect);
-  _pool =  std::make_unique<ThreadPool>(param.threads);
+  _pool = std::make_unique<ThreadPool>(param.threads);
 }
 
 
@@ -76,6 +76,7 @@ void omnilearn::Network::learn()
     _optimalEpoch = 0;
     *_io << "Epoch: 0" << "   Validation loss: " << _validLosses[0] << "   Training loss: " << _trainLosses[0] << "   First metric: " << _testMetric[0] << "   Second metric: " << _testSecondMetric[0] << "\n";
 
+    _iteration = 0;
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
       performeOneEpoch();
@@ -632,8 +633,12 @@ void omnilearn::Network::initPreprocess()
 
 void omnilearn::Network::performeOneEpoch()
 {
+  if(_param.nesterov)
+    nesterov();
+
   for(size_t batch = 0; batch < _nbBatch; batch++)
   {
+    _iteration += 1;
     for(size_t feature = 0; feature < _param.batchSize; feature++)
     {
       Vector featureInput = _trainInputs.row(batch*_param.batchSize + feature);
@@ -654,8 +659,17 @@ void omnilearn::Network::performeOneEpoch()
 
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.optimizer, _param.momentum, _param.window, _param.optimizerBias, *_pool);
+      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.momentum, _param.window, _param.optimizerBias, _iteration, *_pool);
     }
+  }
+}
+
+
+void omnilearn::Network::nesterov()
+{
+  for(size_t i = 0; i < _layers.size(); i++)
+  {
+    _layers[i].nesterov(*_pool);
   }
 }
 
