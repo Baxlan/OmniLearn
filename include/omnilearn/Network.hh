@@ -64,7 +64,7 @@ struct NetworkParam
     plateau(0.99),
     preprocessInputs(),
     preprocessOutputs(),
-    optimizerBias(1e-3),
+    optimizerBias(1e-6),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
     inputWhiteningBias(1e-5),
@@ -150,7 +150,6 @@ private:
   void shuffleTrainData(); // shuffle train data each epoch
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void performeOneEpoch();
-  void nesterov(); // add momentum to weights to process (and get loss) with pre corrected weights, to allow nesterov optimization
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;
   Vector computeGradVector(Vector const& realResult, Vector const& predicted) const; // calculate error between expected and predicted outputs
@@ -159,6 +158,7 @@ private:
   void release(); // returns weights, bias and other coefs when learning is done
   void adaptLearningRate();
   void adaptBatchSize();
+  void check() const;
 
 private:
   //parameters

@@ -137,7 +137,7 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
 }
 
 
-void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration)
+void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool nesterov, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, bool lockWeights, bool lockBias)
 {
     //average gradients over features
     for(eigen_size_t i = 0; i < _gradients.rows(); i++)
@@ -145,9 +145,7 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
         if(_weightsetCount[i] != 0)
         {
             for(eigen_size_t j = 0; j < _gradients.cols(); j++)
-            {
                 _gradients(i, j) /= static_cast<double>(_weightsetCount[i]);
-            }
             _biasGradients[i] /= static_cast<double>(_weightsetCount[i]);
         }
     }
@@ -157,12 +155,12 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
 
     for(eigen_size_t i = 0; i < _weights.rows(); i++)
     {
-        optimizedUpdate(_bias[i], _previousBiasGradient[i], _previousBiasGradient2[i], _optimalPreviousBiasGradient2[i], _previousBiasUpdate[i], _biasGradients[i], automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, 0, 0, 0);
+        if(!lockBias)
+            optimizedUpdate(_bias[i], _previousBiasGradient[i], _previousBiasGradient2[i], _optimalPreviousBiasGradient2[i], _previousBiasUpdate[i], _biasGradients[i], nesterov, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, 0, 0, 0);
 
-        for(eigen_size_t j = 0; j < _weights.cols(); j++)
-        {
-            optimizedUpdate(_weights(i, j), _previousWeightGradient(i, j), _previousWeightGradient2(i, j), _optimalPreviousWeightGradient2(i, j), _previousWeightUpdate(i, j), _gradients(i, j), automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, L1, L2, weightDecay);
-        }
+        if(!lockWeights)
+            for(eigen_size_t j = 0; j < _weights.cols(); j++)
+                optimizedUpdate(_weights(i, j), _previousWeightGradient(i, j), _previousWeightGradient2(i, j), _optimalPreviousWeightGradient2(i, j), _previousWeightUpdate(i, j), _gradients(i, j), nesterov, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, L1, L2, weightDecay);
     }
 
     //max norm constraint
@@ -262,13 +260,6 @@ std::pair<double, double> omnilearn::Neuron::L1L2() const
         }
     }
     return {L1, L2};
-}
-
-
-void omnilearn::Neuron::nesterov()
-{
-    _aggregation->nesterov();
-    _activation->nesterov();
 }
 
 

@@ -77,12 +77,6 @@ void omnilearn::Linear::release()
 }
 
 
-void omnilearn::Linear::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -153,12 +147,6 @@ void omnilearn::Sigmoid::keep()
 
 
 void omnilearn::Sigmoid::release()
-{
-    //nothing to do
-}
-
-
-void omnilearn::Sigmoid::nesterov()
 {
     //nothing to do
 }
@@ -237,12 +225,6 @@ void omnilearn::Tanh::release()
 }
 
 
-void omnilearn::Tanh::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -311,12 +293,6 @@ void omnilearn::Softplus::keep()
 
 
 void omnilearn::Softplus::release()
-{
-    //nothing to do
-}
-
-
-void omnilearn::Softplus::nesterov()
 {
     //nothing to do
 }
@@ -399,12 +375,6 @@ void omnilearn::Relu::release()
 }
 
 
-void omnilearn::Relu::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -445,12 +415,6 @@ void omnilearn::Prelu::updateCoefs(double learningRate)
 omnilearn::Activation omnilearn::Prelu::signature() const
 {
     return Activation::Prelu;
-}
-
-
-void omnilearn::Prelu::nesterov()
-{
-    //nothing to do
 }
 
 
@@ -531,12 +495,6 @@ void omnilearn::Elu::release()
 }
 
 
-void omnilearn::Elu::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -569,12 +527,6 @@ void omnilearn::Pelu::updateCoefs(double learningRate)
 omnilearn::Activation omnilearn::Pelu::signature() const
 {
     return Activation::Pelu;
-}
-
-
-void omnilearn::Pelu::nesterov()
-{
-    //nothing to do
 }
 
 
@@ -685,12 +637,6 @@ void omnilearn::Srelu::release()
 }
 
 
-void omnilearn::Srelu::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -782,12 +728,6 @@ void omnilearn::Gauss::release()
 }
 
 
-void omnilearn::Gauss::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -820,12 +760,6 @@ void omnilearn::Pgauss::updateCoefs(double learningRate)
 omnilearn::Activation omnilearn::Pgauss::signature() const
 {
     return Activation::Pgauss;
-}
-
-
-void omnilearn::Pgauss::nesterov()
-{
-    //nothing to do
 }
 
 
@@ -914,12 +848,6 @@ void omnilearn::Softexp::release()
 }
 
 
-void omnilearn::Softexp::nesterov()
-{
-    //nothing to do
-}
-
-
 
 //=============================================================================
 //=============================================================================
@@ -952,12 +880,6 @@ void omnilearn::Psoftexp::updateCoefs(double learningRate)
 omnilearn::Activation omnilearn::Psoftexp::signature() const
 {
     return Activation::Psoftexp;
-}
-
-
-void omnilearn::Psoftexp::nesterov()
-{
-    //nothing to do
 }
 
 
@@ -1029,12 +951,6 @@ void omnilearn::Sin::keep()
 
 
 void omnilearn::Sin::release()
-{
-    //nothing to do
-}
-
-
-void omnilearn::Sin::nesterov()
 {
     //nothing to do
 }
@@ -1114,12 +1030,6 @@ void omnilearn::Sinc::keep()
 
 
 void omnilearn::Sinc::release()
-{
-    //nothing to do
-}
-
-
-void omnilearn::Sinc::nesterov()
 {
     //nothing to do
 }

@@ -1,11 +1,10 @@
 // optimizer.cpp
 
 #include "omnilearn/optimizer.h"
-#include <limits>
 
 
 
-void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool automaticLearningRate,
+void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool nesterov, bool automaticLearningRate,
                                 bool adaptiveLearningRate, double learningRate, double momentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     // to disable momentum, set it to 0
@@ -22,8 +21,8 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
     optimalPreviousGrad2 = (adaptiveLearningRate ? std::max(optimalPreviousGrad2, previousGrad2) : 1);
     // the max operator is used to get the AMSGrad optimizer advantage on sparse data (i.e. if informative data are infrequent, this max operator give them more power)
 
-    learningRate = (automaticLearningRate ?  (std::sqrt(previousUpdate) + optimizerBias) : learningRate);
-    learningRate /= (std::sqrt(optimalPreviousGrad2 / (1-std::pow(window, iteration))) + optimizerBias);
+    learningRate = (automaticLearningRate ?  std::sqrt(previousUpdate + optimizerBias) : learningRate);
+    learningRate /= std::sqrt((optimalPreviousGrad2 / (1-std::pow(window, iteration))) + optimizerBias);
     // the 1/(1-std::pow(window, iteration)) factor is here to unbias optimalPreviousGrad2 at the first iterations
 
     double oldCoef = coefToUpdate;

@@ -27,7 +27,9 @@ struct LayerParam
     useOutput(true),
     k(1),
     aggregation(Aggregation::Dot),
-    activation(Activation::Relu)
+    activation(Activation::Relu),
+    lockWeights(false),
+    lockBias(false)
     {
     }
 
@@ -40,6 +42,8 @@ struct LayerParam
     size_t k; //number of weight set for each neuron (for maxout)
     Aggregation aggregation;
     Activation activation;
+    bool lockWeights;
+    bool lockBias;
 };
 
 
@@ -62,14 +66,13 @@ public:
     void keep();
     void release();
     Vector getGradients(ThreadPool& t); //one gradient per input neuron
-    void updateWeights(double learningRate, double L1, double L2, double weightDecay, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, ThreadPool& t);
+    void updateWeights(double learningRate, double L1, double L2, double weightDecay, bool nesterov, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, ThreadPool& t);
     void updateInput(Vector& input, double learningRate);
     void resetGradientsForGeneration(ThreadPool& t);
     size_t size() const;
     void resize(size_t neurons);
     size_t nbWeights() const;
     std::pair<double, double> L1L2(ThreadPool& t) const;
-    void nesterov(ThreadPool& t);
 
 private:
     LayerParam _param;

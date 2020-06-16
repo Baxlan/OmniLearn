@@ -59,6 +59,7 @@ void omnilearn::Network::learn()
 
   try
   {
+    check();
     shuffleData();
     initPreprocess();
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
@@ -633,9 +634,6 @@ void omnilearn::Network::initPreprocess()
 
 void omnilearn::Network::performeOneEpoch()
 {
-  if(_param.nesterov)
-    nesterov();
-
   for(size_t batch = 0; batch < _nbBatch; batch++)
   {
     _iteration += 1;
@@ -659,17 +657,8 @@ void omnilearn::Network::performeOneEpoch()
 
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.momentum, _param.window, _param.optimizerBias, _iteration, *_pool);
+      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.nesterov, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.momentum, _param.window, _param.optimizerBias, _iteration, *_pool);
     }
-  }
-}
-
-
-void omnilearn::Network::nesterov()
-{
-  for(size_t i = 0; i < _layers.size(); i++)
-  {
-    _layers[i].nesterov(*_pool);
   }
 }
 
@@ -789,4 +778,23 @@ void omnilearn::Network::adaptLearningRate()
 void omnilearn::Network::adaptBatchSize()
 {
 
+}
+
+
+void omnilearn::Network::check() const
+{
+  if(_param.automaticLearningRate && !_param.adaptiveLearningRate)
+    throw Exception("Cannot use automatic learning rate without adaptive learning rate.");
+
+  if(_param.nesterov && _param.adaptiveLearningRate && _param.window < 0.9)
+    throw Exception("Cannot use Nesterov correction with adaptive learning rate if window is less than 0.9.");
+
+  if(_param.L1 < 0 || _param.L2 < 0 || _param.weightDecay < 0)
+    throw Exception("L1 / L2 regularization and weight decay cannot be negative.");
+
+  if(_param.dropconnect < 0 || _param.dropconnect >= 1 || _param.dropout < 0 || _param.dropout >= 1)
+    throw Exception("Dropout and dropconnect must be in [0, 1[.");
+
+  if(_param.momentum < 0 || _param.momentum >= 1 || _param.window < 0 || _param.window >= 1)
+    throw Exception("Momentum and window must be in [0, 1[.");
 }
