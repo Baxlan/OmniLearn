@@ -38,7 +38,7 @@ public:
     double processToGenerate(Vector const& input);
     //compute gradients for one feature, finally summed for the whole batch
     void computeGradients(double inputGradient);
-    void updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool nesterov, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, bool lockWeights, bool lockBias);
+    void updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, bool lockWeights, bool lockBias);
     //one gradient per input neuron
     Vector getGradients() const;
     void keep();

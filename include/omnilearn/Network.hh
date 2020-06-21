@@ -58,7 +58,6 @@ struct NetworkParam
     threads(1),
     automaticLearningRate(false),
     adaptiveLearningRate(false),
-    nesterov(false),
     momentum(0),
     window(0.9),
     plateau(0.99),
@@ -93,7 +92,6 @@ struct NetworkParam
     size_t threads;
     bool automaticLearningRate;
     bool adaptiveLearningRate;
-    bool nesterov;
     double momentum; //momentum
     double window; //window effect on grads
     double plateau;

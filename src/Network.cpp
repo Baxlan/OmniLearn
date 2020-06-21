@@ -657,7 +657,9 @@ void omnilearn::Network::performeOneEpoch()
 
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.nesterov, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.momentum, _param.window, _param.optimizerBias, _iteration, *_pool);
+      // BE CAREFUL, MOMENTUM IS USED 3 TIMES BUT THE PREVIOUS AND NEXT MOMENTUM MUST BE USED IN THE SECOND AND THIRD OCCURENCES (bad implementation here in case of adaptive momentum)
+      // also, the 4th momentum term should be the product of momentums (bad implementation here in case of adaptive momentum)
+      _layers[i].updateWeights(_actualLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.momentum, _param.momentum, _param.momentum, std::pow(_param.momentum, _iteration), _param.window, _param.optimizerBias, _iteration, *_pool);
     }
   }
 }
@@ -786,8 +788,8 @@ void omnilearn::Network::check() const
   if(_param.automaticLearningRate && !_param.adaptiveLearningRate)
     throw Exception("Cannot use automatic learning rate without adaptive learning rate.");
 
-  if(_param.nesterov && _param.adaptiveLearningRate && _param.window < 0.9)
-    throw Exception("Cannot use Nesterov correction with adaptive learning rate if window is less than 0.9.");
+  if(_param.adaptiveLearningRate && _param.window < 0.9)
+    throw Exception("When using adaptive learning rate, the window parameter must be superior to 0.9 (because of Nesterov approximation).");
 
   if(_param.L1 < 0 || _param.L2 < 0 || _param.weightDecay < 0)
     throw Exception("L1 / L2 regularization and weight decay cannot be negative.");

@@ -193,7 +193,7 @@ omnilearn::Vector omnilearn::Layer::getGradients(ThreadPool& t)
 }
 
 
-void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, double weightDecay, bool nesterov, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, ThreadPool& t)
+void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, double weightDecay, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, ThreadPool& t)
 {
     std::vector<std::future<void>> tasks(_neurons.size());
 
@@ -201,7 +201,7 @@ void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, 
     {
         tasks[i] = t.enqueue([=]()->void
         {
-            _neurons[i].updateWeights(learningRate, L1, L2, weightDecay, _param.maxNorm, nesterov, automaticLearningRate, adaptiveLearningRate, momentum, window, optimizerBias, iteration, _param.lockWeights, _param.lockBias);
+            _neurons[i].updateWeights(learningRate, L1, L2, weightDecay, _param.maxNorm, automaticLearningRate, adaptiveLearningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, _param.lockWeights, _param.lockBias);
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)

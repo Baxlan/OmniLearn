@@ -137,7 +137,7 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
 }
 
 
-void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool nesterov, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double window, double optimizerBias, size_t iteration, bool lockWeights, bool lockBias)
+void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, bool lockWeights, bool lockBias)
 {
     //average gradients over features
     for(eigen_size_t i = 0; i < _gradients.rows(); i++)
@@ -156,11 +156,11 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
     for(eigen_size_t i = 0; i < _weights.rows(); i++)
     {
         if(!lockBias)
-            optimizedUpdate(_bias[i], _previousBiasGradient[i], _previousBiasGradient2[i], _optimalPreviousBiasGradient2[i], _previousBiasUpdate[i], _biasGradients[i], nesterov, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, 0, 0, 0);
+            optimizedUpdate(_bias[i], _previousBiasGradient[i], _previousBiasGradient2[i], _optimalPreviousBiasGradient2[i], _previousBiasUpdate[i], _biasGradients[i], automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
 
         if(!lockWeights)
             for(eigen_size_t j = 0; j < _weights.cols(); j++)
-                optimizedUpdate(_weights(i, j), _previousWeightGradient(i, j), _previousWeightGradient2(i, j), _optimalPreviousWeightGradient2(i, j), _previousWeightUpdate(i, j), _gradients(i, j), nesterov, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, window, optimizerBias, iteration, L1, L2, weightDecay);
+                optimizedUpdate(_weights(i, j), _previousWeightGradient(i, j), _previousWeightGradient2(i, j), _optimalPreviousWeightGradient2(i, j), _previousWeightUpdate(i, j), _gradients(i, j), automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, weightDecay);
     }
 
     //max norm constraint

@@ -62,7 +62,8 @@ void vesta()
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
     netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
     netp.verbose = true;
-    netp.window = 0.9;
+    netp.adaptiveLearningRate = true;
+    netp.window = 0.999;
     netp.momentum = 0.9;
 
     omnilearn::Network net;
@@ -81,7 +82,6 @@ void vesta()
     net.addLayer(lay);
 
     net.learn();
-
 }
 
 
@@ -150,8 +150,9 @@ void mnist()
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
 
+    netp.automaticLearningRate = true;
     netp.adaptiveLearningRate = true;
-    netp.momentum = 0;
+    netp.momentum = 0.9;
     netp.window = 0.9;
 
 
