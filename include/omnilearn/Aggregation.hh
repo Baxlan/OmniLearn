@@ -29,7 +29,7 @@ public:
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
     virtual void computeGradients(Vector const& inputs, Vector const& weights, double inputGrad) = 0;
-    virtual void updateCoefs(double learningRate) = 0;
+    virtual void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
     virtual Aggregation signature() const = 0;
@@ -47,7 +47,7 @@ public:
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
-    void updateCoefs(double learningRate);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Aggregation signature() const;
@@ -65,7 +65,7 @@ public:
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
-    void updateCoefs(double learningRate);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Aggregation signature() const;
@@ -85,11 +85,15 @@ class Pdistance : public Distance
 public:
     Pdistance(Vector const& coefs = (Vector(1) << 2).finished());
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
-    void updateCoefs(double learningRate);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     Aggregation signature() const;
 
 protected:
     double _orderGradient;
+    double _previousOrderGrad;
+    double _previousOrderGrad2;
+    double _optimalPreviousOrderGrad2;
+    double _previousOrderUpdate;
     size_t _counter;
 };
 
@@ -103,7 +107,7 @@ public:
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
-    void updateCoefs(double learningRate);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Aggregation signature() const;

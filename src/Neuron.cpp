@@ -150,8 +150,8 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
         }
     }
 
-    _activation->updateCoefs(learningRate);
-    _aggregation->updateCoefs(learningRate);
+    _activation->updateCoefs(automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
+    _aggregation->updateCoefs(automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
 
     for(eigen_size_t i = 0; i < _weights.rows(); i++)
     {

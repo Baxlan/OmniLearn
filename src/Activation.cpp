@@ -2,9 +2,10 @@
 
 #include "omnilearn/Activation.hh"
 #include "omnilearn/Exception.hh"
+#include "omnilearn/optimizer.h"
 
 
-#include <iostream>
+
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -40,7 +41,7 @@ void omnilearn::Linear::computeGradients([[maybe_unused]] double aggr, [[maybe_u
 }
 
 
-void omnilearn::Linear::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Linear::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -115,7 +116,7 @@ void omnilearn::Sigmoid::computeGradients([[maybe_unused]] double aggr, [[maybe_
 }
 
 
-void omnilearn::Sigmoid::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Sigmoid::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -188,7 +189,7 @@ void omnilearn::Tanh::computeGradients([[maybe_unused]] double aggr, [[maybe_unu
 }
 
 
-void omnilearn::Tanh::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Tanh::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -261,7 +262,7 @@ void omnilearn::Softplus::computeGradients([[maybe_unused]] double aggr, [[maybe
 }
 
 
-void omnilearn::Softplus::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Softplus::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -336,7 +337,7 @@ void omnilearn::Relu::computeGradients([[maybe_unused]] double aggr, [[maybe_unu
 }
 
 
-void omnilearn::Relu::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Relu::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -389,6 +390,10 @@ void omnilearn::Relu::release()
 omnilearn::Prelu::Prelu(Vector const& coefs):
 Relu(coefs),
 _coefGradient(0),
+_previousCoefGrad(0),
+_previousCoefGrad2(0),
+_optimalPreviousCoefGrad2(0),
+_previousCoefUpdate(0),
 _counter(0)
 {
 }
@@ -401,11 +406,11 @@ void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Prelu::updateCoefs(double learningRate)
+void omnilearn::Prelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     _coefGradient /= static_cast<double>(_counter);
 
-    _coef += learningRate * _coefGradient;
+    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
 
     _coefGradient = 0;
     _counter = 0;
@@ -456,7 +461,7 @@ void omnilearn::Elu::computeGradients([[maybe_unused]] double aggr, [[maybe_unus
 }
 
 
-void omnilearn::Elu::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Elu::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -518,7 +523,7 @@ void omnilearn::Pelu::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Pelu::updateCoefs(double learningRate)
+void omnilearn::Pelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
 
 }
@@ -585,7 +590,7 @@ void omnilearn::Srelu::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Srelu::updateCoefs(double learningRate)
+void omnilearn::Srelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
 
 }
@@ -680,7 +685,7 @@ void omnilearn::Gauss::computeGradients([[maybe_unused]] double aggr, [[maybe_un
 }
 
 
-void omnilearn::Gauss::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Gauss::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -751,7 +756,7 @@ void omnilearn::Pgauss::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Pgauss::updateCoefs(double learningRate)
+void omnilearn::Pgauss::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
 
 }
@@ -809,7 +814,7 @@ void omnilearn::Softexp::computeGradients([[maybe_unused]] double aggr, [[maybe_
 }
 
 
-void omnilearn::Softexp::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Softexp::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -871,7 +876,7 @@ void omnilearn::Psoftexp::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Psoftexp::updateCoefs(double learningRate)
+void omnilearn::Psoftexp::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
 
 }
@@ -919,7 +924,7 @@ void omnilearn::Sin::computeGradients([[maybe_unused]] double aggr, [[maybe_unus
 }
 
 
-void omnilearn::Sin::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Sin::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -998,7 +1003,7 @@ void omnilearn::Sinc::computeGradients([[maybe_unused]] double aggr, [[maybe_unu
 }
 
 
-void omnilearn::Sinc::updateCoefs([[maybe_unused]] double learningRate)
+void omnilearn::Sinc::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }

@@ -4,13 +4,13 @@
 
 
 
-void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool automaticLearningRate,
-                                bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool automaticLearningRate, bool adaptiveLearningRate,
+                                double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     gradient = gradient - (L2 * coefToUpdate) - (coefToUpdate > 0 ? L1 : -L1); // regularization
     previousGrad = (momentum * previousGrad) + ((1 - momentum) * gradient); // momentum
 
-    // We update with the actual gradient ((1 - momentum) * gradient) whose the momentum have been taken into account at the previous update,
+    // We update with the actual gradient ((1 - momentum) * gradient) whose the momentum have already been taken into account at the previous update,
     // and we apply the momentum of the next update now (nextMomentum * previousGrad) ==> nesterov acceletated gradient
     double gradientUpdate = ((1 - momentum) * gradient / (1 - cumulativeMomentum)) + (nextMomentum * previousGrad / (1 - (cumulativeMomentum * nextMomentum)));
     // the 1/(1-cumulativeMomentum) and 1/(1-(cumulativeMomentum * nextMomentum)) factors are here to unbias gradients at the first iterations

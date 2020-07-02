@@ -150,10 +150,9 @@ void mnist()
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
 
-    netp.automaticLearningRate = true;
     netp.adaptiveLearningRate = true;
     netp.momentum = 0.9;
-    netp.window = 0.9;
+    netp.window = 0.99;
 
 
 
@@ -167,7 +166,7 @@ void mnist()
     lay.size = 256;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Relu;
+    lay.activation = omnilearn::Activation::Prelu;
     net.addLayer(lay);
 
     lay.aggregation = omnilearn::Aggregation::Dot;
