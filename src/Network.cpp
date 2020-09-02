@@ -77,6 +77,7 @@ void omnilearn::Network::learn()
     _optimalEpoch = 0;
     *_io << "Epoch: 0" << "   Validation loss: " << _validLosses[0] << "   Training loss: " << _trainLosses[0] << "   First metric: " << _testMetric[0] << "   Second metric: " << _testSecondMetric[0] << "\n";
 
+    keep();
     _iteration = 0;
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {

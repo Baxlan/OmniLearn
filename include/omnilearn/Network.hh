@@ -44,7 +44,7 @@ struct NetworkParam
     L1(0),
     L2(0),
     weightDecay(0),
-    epoch(10000),
+    epoch(1000000),
     patience(5),
     dropout(0),
     dropconnect(0),

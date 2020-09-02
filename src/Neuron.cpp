@@ -124,8 +124,8 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
     _actGradient = _activation->prime(_aggregResult.first);
     Vector grad(_aggregation->prime(_input, _weights.row(_aggregResult.second)));
 
-    _aggregation->computeGradients(_input, _weights.row(_aggregResult.second), _actGradient * inputGradient);
     _activation->computeGradients(_aggregResult.first, inputGradient);
+    _aggregation->computeGradients(_input, _weights.row(_aggregResult.second), _actGradient * inputGradient);
 
     for(eigen_size_t i = 0; i < grad.size(); i++)
     {

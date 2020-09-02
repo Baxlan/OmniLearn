@@ -401,7 +401,7 @@ _counter(0)
 
 void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 {
-    _coefGradient += (aggr < 0 ? aggr * inputGrad : 0);
+    _coefGradient -= (aggr < 0 ? aggr * inputGrad : 0);
     _counter += 1;
 }
 
