@@ -16,7 +16,7 @@ namespace omnilearn
 
 
 
-enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Pgauss, Softexp, Psoftexp, Sin, Sinc};
+enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Pgauss, Softexp, Sin, Psin, Sinc, Psinc};
 
 
 
@@ -133,6 +133,7 @@ public:
     Prelu(Vector const& coefs = (Vector(1) << 0.01).finished());
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void setCoefs(Vector const& coefs);
     Activation signature() const;
 
 protected:
@@ -173,7 +174,16 @@ public:
     Pelu(Vector const& coefs = (Vector(1) << 0.01).finished());
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void setCoefs(Vector const& coefs);
     Activation signature() const;
+
+protected:
+    double _coefGradient;
+    double _previousCoefGrad;
+    double _previousCoefGrad2;
+    double _optimalPreviousCoefGrad2;
+    double _previousCoefUpdate;
+    double _counter;
 };
 
 
@@ -181,7 +191,7 @@ public:
 class Srelu : public IActivation
 {
 public:
-    Srelu(Vector const& coefs = (Vector(4) << 0.1, 0.1, -1.0, 1.0).finished());
+    Srelu(Vector const& coefs = (Vector(4) << 0.01, 1, 0, 1.0).finished());
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
@@ -202,6 +212,34 @@ protected:
     double _savedCoef2;
     double _savedHinge1;
     double _savedHinge2;
+
+    double _coef1Gradient;
+    double _coef2Gradient;
+    double _hinge1Gradient;
+    double _hinge2Gradient;
+
+    double _previousCoef1Grad;
+    double _previousCoef2Grad;
+    double _previousHinge1Grad;
+    double _previousHinge2Grad;
+
+    double _previousCoef1Grad2;
+    double _previousCoef2Grad2;
+    double _previousHinge1Grad2;
+    double _previousHinge2Grad2;
+
+    double _optimalPreviousCoef1Grad2;
+    double _optimalPreviousCoef2Grad2;
+    double _optimalPreviousHinge1Grad2;
+    double _optimalPreviousHinge2Grad2;
+
+    double _previousCoef1Update;
+    double _previousCoef2Update;
+    double _previousHinge1Update;
+    double _previousHinge2Update;
+
+    double _counter1;
+    double _counter2;
 };
 
 
@@ -209,7 +247,7 @@ protected:
 class Gauss : public IActivation
 {
 public:
-    Gauss(Vector const& coefs = (Vector(3) << 0.0, 1.0, 1.0).finished()); // should take mean and deviation, and make a parametric version
+    Gauss(Vector const& coefs = (Vector(2) << 0.0, 1.0).finished());
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
@@ -223,10 +261,8 @@ public:
 protected:
     double _center;
     double _dev;
-    double _coef;
     double _savedCenter;
     double _savedDev;
-    double _savedCoef;
 };
 
 
@@ -234,10 +270,26 @@ protected:
 class Pgauss : public Gauss
 {
 public:
-    Pgauss(Vector const& coefs = (Vector(3) << 0, 1, 1).finished());
+    Pgauss(Vector const& coefs = (Vector(2) << 0.0, 1.0).finished());
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void setCoefs(Vector const& coefs);
     Activation signature() const;
+
+protected:
+    double _centerGradient;
+    double _previousCenterGrad;
+    double _previousCenterGrad2;
+    double _optimalPreviousCenterGrad2;
+    double _previousCenterUpdate;
+
+    double _devGradient;
+    double _previousDevGrad;
+    double _previousDevGrad2;
+    double _optimalPreviousDevGrad2;
+    double _previousDevUpdate;
+
+    double _counter;
 };
 
 
@@ -259,17 +311,13 @@ public:
 protected:
     double _coef;
     double _savedCoef;
-};
 
-
-
-class Psoftexp : public Softexp
-{
-public:
-    Psoftexp(Vector const& coefs = (Vector(1) << 0.5).finished());
-    void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
-    Activation signature() const;
+    double _coefGradient;
+    double _previousCoefGrad;
+    double _previousCoefGrad2;
+    double _optimalPreviousCoefGrad2;
+    double _previousCoefUpdate;
+    double _counter;
 };
 
 
@@ -277,7 +325,7 @@ public:
 class Sin : public IActivation
 {
 public:
-    Sin(Vector const& coefs = Vector());
+    Sin(Vector const& coefs = (Vector(2) << 1.0, 0.0).finished());
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
@@ -287,6 +335,38 @@ public:
     Activation signature() const;
     void keep();
     void release();
+
+    double _pulsation;
+    double _phase;
+    double _savedPulsation;
+    double _savedPhase;
+};
+
+
+
+class Psin : public Sin
+{
+public:
+    Psin(Vector const& coefs = (Vector(2) << 1.0, 0.0).finished());
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void setCoefs(Vector const& coefs);
+    Activation signature() const;
+
+protected:
+    double _pulsationGradient;
+    double _previousPulsationGrad;
+    double _previousPulsationGrad2;
+    double _optimalPreviousPulsationGrad2;
+    double _previousPulsationUpdate;
+
+    double _phaseGradient;
+    double _previousPhaseGrad;
+    double _previousPhaseGrad2;
+    double _optimalPreviousPhaseGrad2;
+    double _previousPhaseUpdate;
+
+    double _counter;
 };
 
 
@@ -294,7 +374,7 @@ public:
 class Sinc : public IActivation
 {
 public:
-    Sinc(Vector const& coefs = Vector());
+    Sinc(Vector const& coefs = (Vector(2) << 1.0, 0.0).finished());
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
@@ -304,6 +384,38 @@ public:
     Activation signature() const;
     void keep();
     void release();
+
+    double _pulsation;
+    double _phase;
+    double _savedPulsation;
+    double _savedPhase;
+};
+
+
+
+class Psinc : public Sinc
+{
+public:
+    Psinc(Vector const& coefs = (Vector(2) << 1.0, 0.0).finished());
+    void computeGradients(double aggr, double inputGrad);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void setCoefs(Vector const& coefs);
+    Activation signature() const;
+
+protected:
+    double _pulsationGradient;
+    double _previousPulsationGrad;
+    double _previousPulsationGrad2;
+    double _optimalPreviousPulsationGrad2;
+    double _previousPulsationUpdate;
+
+    double _phaseGradient;
+    double _previousPhaseGrad;
+    double _previousPhaseGrad2;
+    double _optimalPreviousPhaseGrad2;
+    double _previousPhaseUpdate;
+
+    double _counter;
 };
 
 
@@ -326,9 +438,10 @@ static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activ
     {Activation::Gauss, []{return std::make_unique<Gauss>();}},
     {Activation::Pgauss, []{return std::make_unique<Pgauss>();}},
     {Activation::Softexp, []{return std::make_unique<Softexp>();}},
-    {Activation::Psoftexp, []{return std::make_unique<Psoftexp>();}},
     {Activation::Sin, []{return std::make_unique<Sin>();}},
-    {Activation::Sinc, []{return std::make_unique<Sinc>();}}
+    {Activation::Psin, []{return std::make_unique<Psin>();}},
+    {Activation::Sinc, []{return std::make_unique<Sinc>();}},
+    {Activation::Psinc, []{return std::make_unique<Psinc>();}}
 };
 
 
@@ -346,9 +459,10 @@ static std::map<std::string, Activation> stringToActivationMap = {
     {"gauss", Activation::Gauss},
     {"pgauss", Activation::Pgauss},
     {"softexp", Activation::Softexp},
-    {"psoftexp", Activation::Psoftexp},
     {"sin", Activation::Sin},
-    {"sinc", Activation::Sinc}
+    {"psin", Activation::Psin},
+    {"sinc", Activation::Sinc},
+    {"psinc", Activation::Psinc}
 };
 
 
@@ -366,9 +480,10 @@ static std::map<Activation, std::string> activationToStringMap = {
     {Activation::Gauss, "gauss"},
     {Activation::Pgauss, "pgauss"},
     {Activation::Softexp, "softexp"},
-    {Activation::Psoftexp, "psoftexp"},
     {Activation::Sin, "sin"},
-    {Activation::Sinc, "sinc"}
+    {Activation::Psin, "psin"},
+    {Activation::Sinc, "sinc"},
+    {Activation::Psinc, "psinc"}
 };
 
 

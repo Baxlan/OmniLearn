@@ -86,6 +86,7 @@ public:
     Pdistance(Vector const& coefs = (Vector(1) << 2).finished());
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void setCoefs(Vector const& coefs);
     Aggregation signature() const;
 
 protected:

@@ -401,18 +401,36 @@ _counter(0)
 
 void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 {
-    _coefGradient -= (aggr < 0 ? aggr * inputGrad : 0);
-    _counter += 1;
+    _coefGradient -= inputGrad * (aggr < 0 ? aggr : 0);
+    _counter += (aggr < 0 ? 1 : 0);
 }
 
 
 void omnilearn::Prelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
+    if(_counter == 0)
+        return;
+
     _coefGradient /= static_cast<double>(_counter);
 
     optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
 
     _coefGradient = 0;
+    _counter = 0;
+}
+
+
+void omnilearn::Prelu::setCoefs(Vector const& coefs)
+{
+    if(coefs.size() != 1)
+        throw Exception("Relu/Prelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _coef = coefs[0];
+    _savedCoef = 0;
+    _coefGradient = 0;
+    _previousCoefGrad = 0;
+    _previousCoefGrad2 = 0;
+    _optimalPreviousCoefGrad2 = 0;
+    _previousCoefUpdate = 0;
     _counter = 0;
 }
 
@@ -512,20 +530,50 @@ void omnilearn::Elu::release()
 
 
 omnilearn::Pelu::Pelu(Vector const& coefs):
-Elu(coefs)
+Elu(coefs),
+_coefGradient(0),
+_previousCoefGrad(0),
+_previousCoefGrad2(0),
+_optimalPreviousCoefGrad2(0),
+_previousCoefUpdate(0),
+_counter(0)
 {
 }
 
 
 void omnilearn::Pelu::computeGradients(double aggr, double inputGrad)
 {
-
+    _coefGradient -= inputGrad * (aggr < 0 ? std::exp(aggr)-1 : 0);
+    _counter += (aggr < 0 ? 1 : 0);
 }
 
 
 void omnilearn::Pelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
+    if(_counter == 0)
+        return;
 
+    _coefGradient /= static_cast<double>(_counter);
+
+    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+
+    _coefGradient = 0;
+    _counter = 0;
+}
+
+
+void omnilearn::Pelu::setCoefs(Vector const& coefs)
+{
+    if(coefs.size() != 1)
+        throw Exception("Elu/Pelu activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _coef = coefs[0];
+    _savedCoef = 0;
+    _coefGradient = 0;
+    _previousCoefGrad = 0;
+    _previousCoefGrad2 = 0;
+    _optimalPreviousCoefGrad2 = 0;
+    _previousCoefUpdate = 0;
+    _counter = 0;
 }
 
 
@@ -559,6 +607,34 @@ omnilearn::Srelu::Srelu(Vector const& coefs)
     _savedCoef2 = 0;
     _savedHinge1 = 0;
     _savedHinge2 = 0;
+
+    _coef1Gradient = 0;
+    _coef2Gradient = 0;
+    _hinge1Gradient = 0;
+    _hinge2Gradient = 0;
+
+    _previousCoef1Grad = 0;
+    _previousCoef2Grad = 0;
+    _previousHinge1Grad = 0;
+    _previousHinge2Grad = 0;
+
+    _previousCoef1Grad2 = 0;
+    _previousCoef2Grad2 = 0;
+    _previousHinge1Grad2 = 0;
+    _previousHinge2Grad2 = 0;
+
+    _optimalPreviousCoef1Grad2 = 0;
+    _optimalPreviousCoef2Grad2 = 0;
+    _optimalPreviousHinge1Grad2 = 0;
+    _optimalPreviousHinge2Grad2 = 0;
+
+    _previousCoef1Update = 0;
+    _previousCoef2Update = 0;
+    _previousHinge1Update = 0;
+    _previousHinge2Update = 0;
+
+    _counter1 = 0;
+    _counter2 = 0;
 }
 
 
@@ -586,13 +662,39 @@ double omnilearn::Srelu::prime(double val) const
 
 void omnilearn::Srelu::computeGradients(double aggr, double inputGrad)
 {
-
+    if(aggr <= _hinge1)
+    {
+        _coef1Gradient -= inputGrad * (aggr - _hinge1);
+        _hinge1Gradient -= inputGrad * (1 - _coef1);
+        _counter1 += 1;
+    }
+    else if(aggr >= _hinge2)
+    {
+        _coef2Gradient += inputGrad * (aggr - _hinge2);
+        _hinge2Gradient += inputGrad * (1 - _coef2);
+        _counter2 += 1;
+    }
 }
 
 
 void omnilearn::Srelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
+    _coef1Gradient /= static_cast<double>(_counter1);
+    _coef2Gradient /= static_cast<double>(_counter2);
+    _hinge1Gradient /= static_cast<double>(_counter1);
+    _hinge2Gradient /= static_cast<double>(_counter2);
 
+    optimizedUpdate(_coef1, _previousCoef1Grad, _previousCoef1Grad2, _optimalPreviousCoef1Grad2, _previousCoef1Update, _coef1Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_coef2, _previousCoef2Grad, _previousCoef2Grad2, _optimalPreviousCoef2Grad2, _previousCoef2Update, _coef2Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_hinge1, _previousHinge1Grad, _previousHinge1Grad2, _optimalPreviousHinge1Grad2, _previousHinge1Update, _hinge1Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_hinge2, _previousHinge2Grad, _previousHinge2Grad2, _optimalPreviousHinge2Grad2, _previousHinge2Update, _hinge2Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+
+    _coef1Gradient = 0;
+    _coef2Gradient = 0;
+    _hinge1Gradient = 0;
+    _hinge2Gradient = 0;
+    _counter1 = 0;
+    _counter2 = 0;
 }
 
 
@@ -609,6 +711,34 @@ void omnilearn::Srelu::setCoefs(Vector const& coefs)
     _savedCoef2 = 0;
     _savedHinge1 = 0;
     _savedHinge2 = 0;
+
+    _coef1Gradient = 0;
+    _coef2Gradient = 0;
+    _hinge1Gradient = 0;
+    _hinge2Gradient = 0;
+
+    _previousCoef1Grad = 0;
+    _previousCoef2Grad = 0;
+    _previousHinge1Grad = 0;
+    _previousHinge2Grad = 0;
+
+    _previousCoef1Grad2 = 0;
+    _previousCoef2Grad2 = 0;
+    _previousHinge1Grad2 = 0;
+    _previousHinge2Grad2 = 0;
+
+    _optimalPreviousCoef1Grad2 = 0;
+    _optimalPreviousCoef2Grad2 = 0;
+    _optimalPreviousHinge1Grad2 = 0;
+    _optimalPreviousHinge2Grad2 = 0;
+
+    _previousCoef1Update = 0;
+    _previousCoef2Update = 0;
+    _previousHinge1Update = 0;
+    _previousHinge2Update = 0;
+
+    _counter1 = 0;
+    _counter2 = 0;
 }
 
 
@@ -655,21 +785,19 @@ void omnilearn::Srelu::release()
 
 omnilearn::Gauss::Gauss(Vector const& coefs)
 {
-    if(coefs.size() != 3)
-        throw Exception("Gauss/Pgauss activation functions need 3 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 2)
+        throw Exception("Gauss/Pgauss activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
     _center = coefs[0];
     _dev = coefs[1];
-    _coef = coefs[2];
 
     _savedCenter = 0;
     _savedDev = 0;
-    _savedCoef = 0;
 }
 
 
 double omnilearn::Gauss::activate(double val) const
 {
-    return _coef * std::exp(-std::pow(val - _center, 2) / (2*std::pow(_dev, 2)));
+    return std::exp(-std::pow(val - _center, 2) / (2*std::pow(_dev, 2)));
 }
 
 
@@ -693,21 +821,19 @@ void omnilearn::Gauss::updateCoefs([[maybe_unused]] bool automaticLearningRate, 
 
 void omnilearn::Gauss::setCoefs(Vector const& coefs)
 {
-    if(coefs.size() != 3)
-        throw Exception("Gauss/Pgauss activation functions need 3 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 2)
+        throw Exception("Gauss/Pgauss activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
     _center = coefs[0];
     _dev = coefs[1];
-    _coef = coefs[2];
 
     _savedCenter = 0;
     _savedDev = 0;
-    _savedCoef = 0;
 }
 
 
 omnilearn::rowVector omnilearn::Gauss::getCoefs() const
 {
-    return (Vector(3) << _center, _dev, _coef).finished();
+    return (Vector(2) << _center, _dev).finished();
 }
 
 
@@ -721,7 +847,6 @@ void omnilearn::Gauss::keep()
 {
     _savedCenter = _center;
     _savedDev = _dev;
-    _savedCoef = _coef;
 }
 
 
@@ -729,7 +854,6 @@ void omnilearn::Gauss::release()
 {
     _center = _savedCenter;
     _dev = _savedDev;
-    _coef = _savedCoef;
 }
 
 
@@ -745,20 +869,71 @@ void omnilearn::Gauss::release()
 
 
 omnilearn::Pgauss::Pgauss(Vector const& coefs):
-Gauss(coefs)
+Gauss(coefs),
+_centerGradient(0),
+_previousCenterGrad(0),
+_previousCenterGrad2(0),
+_optimalPreviousCenterGrad2(0),
+_previousCenterUpdate(0),
+_devGradient(0),
+_previousDevGrad(0),
+_previousDevGrad2(0),
+_optimalPreviousDevGrad2(0),
+_previousDevUpdate(0),
+_counter(0)
 {
 }
 
 
 void omnilearn::Pgauss::computeGradients(double aggr, double inputGrad)
 {
-
+    _centerGradient += inputGrad * (activate(aggr) * (aggr - _center) / std::pow(_dev, 2));
+    _devGradient += inputGrad * (activate(aggr) * std::pow((aggr - _center), 2) / std::pow(_dev, 3));
+    _counter += 1;
 }
 
 
 void omnilearn::Pgauss::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
+    _centerGradient /= static_cast<double>(_counter);
+    _devGradient /= static_cast<double>(_counter);
 
+    optimizedUpdate(_center, _previousCenterGrad, _previousCenterGrad2, _optimalPreviousCenterGrad2, _previousCenterUpdate, _centerGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_dev, _previousDevGrad, _previousDevGrad2, _optimalPreviousDevGrad2, _previousDevUpdate, _devGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+
+    //avoid division by 0 in "computeGradients()"
+    if(std::abs(_dev) < 1e-3)
+        _dev = (_dev < 0 ? -1e-3 : 1e-3);
+
+    _centerGradient = 0;
+    _devGradient = 0;
+    _counter = 0;
+}
+
+
+void omnilearn::Pgauss::setCoefs(Vector const& coefs)
+{
+    if(coefs.size() != 2)
+        throw Exception("Gauss/Pgauss activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _center = coefs[0];
+    _dev = coefs[1];
+
+    _savedCenter = 0;
+    _savedDev = 0;
+
+    _centerGradient = 0;
+    _previousCenterGrad = 0;
+    _previousCenterGrad2 = 0;
+    _optimalPreviousCenterGrad2 = 0;
+    _previousCenterUpdate = 0;
+
+    _devGradient = 0;
+    _previousDevGrad = 0;
+    _previousDevGrad2 = 0;
+    _optimalPreviousDevGrad2 = 0;
+    _previousDevUpdate = 0;
+
+    _counter = 0;
 }
 
 
@@ -772,7 +947,7 @@ omnilearn::Activation omnilearn::Pgauss::signature() const
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== SOFTEXP ACTIVATION ======================================================
+//=== SOFTEXP ACTIVATION (PARAMETRIC) =========================================
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -782,9 +957,16 @@ omnilearn::Activation omnilearn::Pgauss::signature() const
 omnilearn::Softexp::Softexp(Vector const& coefs)
 {
     if(coefs.size() != 1)
-        throw Exception("Softexp/Psoftexp activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _coef = coefs[0];
     _savedCoef = 0;
+
+    _coefGradient = 0;
+    _previousCoefGrad = 0;
+    _previousCoefGrad2 = 0;
+    _optimalPreviousCoefGrad2 = 0;
+    _previousCoefUpdate = 0;
+    _counter = 0;
 }
 
 
@@ -808,24 +990,43 @@ double omnilearn::Softexp::prime(double val) const
 }
 
 
-void omnilearn::Softexp::computeGradients([[maybe_unused]] double aggr, [[maybe_unused]] double inputGrad)
+void omnilearn::Softexp::computeGradients(double aggr, double inputGrad)
 {
-    //nothing to do
+    if(_coef < -std::numeric_limits<double>::epsilon())
+        _coefGradient += inputGrad * (std::log(1-(_coef*(_coef+aggr))) - (_coef*(2*_coef + aggr)) / (_coef*(_coef+aggr)-1)) / std::pow(_coef, 2);
+    else if(_coef > std::numeric_limits<double>::epsilon())
+        _coefGradient += inputGrad * (std::pow(_coef, 2) + (_coef*aggr - 1)*std::exp(_coef*aggr) + 1) / std::pow(_coef, 2);
+    else
+        _coefGradient += inputGrad * (std::pow(aggr, 2) / 2) + 1;
+
+    _counter += 1;
 }
 
 
-void omnilearn::Softexp::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Softexp::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
-    //nothing to do
+    _coefGradient /= static_cast<double>(_counter);
+
+    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+
+    _coefGradient = 0;
+    _counter = 0;
 }
 
 
 void omnilearn::Softexp::setCoefs(Vector const& coefs)
 {
     if(coefs.size() != 1)
-        throw Exception("Softexp/Psoftexp activation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _coef = coefs[0];
     _savedCoef = 0;
+
+    _coefGradient = 0;
+    _previousCoefGrad = 0;
+    _previousCoefGrad2 = 0;
+    _optimalPreviousCoefGrad2 = 0;
+    _previousCoefUpdate = 0;
+    _counter = 0;
 }
 
 
@@ -857,41 +1058,6 @@ void omnilearn::Softexp::release()
 //=============================================================================
 //=============================================================================
 //=============================================================================
-//=== PARAMETRIC SOFTEXP ACTIVATION ===========================================
-//=============================================================================
-//=============================================================================
-//=============================================================================
-
-
-
-omnilearn::Psoftexp::Psoftexp(Vector const& coefs):
-Softexp(coefs)
-{
-}
-
-
-void omnilearn::Psoftexp::computeGradients(double aggr, double inputGrad)
-{
-
-}
-
-
-void omnilearn::Psoftexp::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
-{
-
-}
-
-
-omnilearn::Activation omnilearn::Psoftexp::signature() const
-{
-    return Activation::Psoftexp;
-}
-
-
-
-//=============================================================================
-//=============================================================================
-//=============================================================================
 //=== SINUS ACTIVATION ========================================================
 //=============================================================================
 //=============================================================================
@@ -901,20 +1067,24 @@ omnilearn::Activation omnilearn::Psoftexp::signature() const
 
 omnilearn::Sin::Sin(Vector const& coefs)
 {
-    if(coefs.size() != 0)
-        throw Exception("Sin activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 2)
+        throw Exception("Sin/Psin activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _pulsation = coefs[0];
+    _phase = coefs[1];
+    _savedPulsation = 0;
+    _savedPhase = 0;
 }
 
 
 double omnilearn::Sin::activate(double val) const
 {
-    return std::sin(val);
+    return std::sin(_pulsation*val + _phase);
 }
 
 
-double omnilearn::Sin::prime([[maybe_unused]] double val) const
+double omnilearn::Sin::prime(double val) const
 {
-    return std::cos(val);
+    return _pulsation * std::cos(_pulsation*val + _phase);
 }
 
 
@@ -932,14 +1102,18 @@ void omnilearn::Sin::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[
 
 void omnilearn::Sin::setCoefs(Vector const& coefs)
 {
-    if(coefs.size() != 0)
-        throw Exception("Sin activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 2)
+        throw Exception("Sin/Psin activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _pulsation = coefs[0];
+    _phase = coefs[1];
+    _savedPulsation = 0;
+    _savedPhase = 0;
 }
 
 
 omnilearn::rowVector omnilearn::Sin::getCoefs() const
 {
-    return Vector(0);
+    return (Vector(2) << _pulsation, _phase).finished();
 }
 
 //static function
@@ -951,13 +1125,91 @@ omnilearn::Activation omnilearn::Sin::signature() const
 
 void omnilearn::Sin::keep()
 {
-    //nothing to do
+    _savedPulsation = _pulsation;
+    _savedPhase = _phase;
 }
 
 
 void omnilearn::Sin::release()
 {
-    //nothing to do
+    _pulsation = _savedPulsation;
+    _phase = _savedPhase;
+}
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== PARAMETRIC SINUS ACTIVATION =============================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+omnilearn::Psin::Psin(Vector const& coefs):
+Sin(coefs),
+_pulsationGradient(0),
+_previousPulsationGrad(0),
+_previousPulsationGrad2(0),
+_optimalPreviousPulsationGrad2(0),
+_previousPulsationUpdate(0),
+_phaseGradient(0),
+_previousPhaseGrad(0),
+_previousPhaseGrad2(0),
+_optimalPreviousPhaseGrad2(0),
+_previousPhaseUpdate(0),
+_counter(0)
+{
+}
+
+
+void omnilearn::Psin::computeGradients(double aggr, double inputGrad)
+{
+    _pulsationGradient += inputGrad * aggr * std::cos(_pulsation*aggr + _phase);
+    _phaseGradient += inputGrad * std::cos(_pulsation*aggr + _phase);
+    _counter++;
+}
+
+
+void omnilearn::Psin::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+{
+    _pulsationGradient /= static_cast<double>(_counter);
+    _phaseGradient /= static_cast<double>(_counter);
+
+    optimizedUpdate(_pulsation, _previousPulsationGrad, _previousPulsationGrad2, _optimalPreviousPulsationGrad2, _previousPulsationUpdate, _pulsationGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_phase, _previousPhaseGrad, _previousPhaseGrad2, _optimalPreviousPhaseGrad2, _previousPhaseUpdate, _phaseGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+
+    _pulsationGradient = 0;
+    _phaseGradient = 0;
+    _counter = 0;
+}
+
+
+void omnilearn::Psin::setCoefs(Vector const& coefs)
+{
+    if(coefs.size() != 2)
+        throw Exception("Sin/Psin activation functions need 2 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _pulsation = coefs[0];
+    _phase = coefs[1];
+    _pulsationGradient = 0;
+    _previousPulsationGrad = 0;
+    _previousPulsationGrad2 = 0;
+    _optimalPreviousPulsationGrad2 = 0;
+    _previousPulsationUpdate = 0;
+    _phaseGradient = 0;
+    _previousPhaseGrad = 0;
+    _previousPhaseGrad2 = 0;
+    _optimalPreviousPhaseGrad2 = 0;
+    _previousPhaseUpdate = 0;
+    _counter = 0;
+}
+
+
+omnilearn::Activation omnilearn::Psin::signature() const
+{
+    return Activation::Psin;
 }
 
 
@@ -974,8 +1226,12 @@ void omnilearn::Sin::release()
 
 omnilearn::Sinc::Sinc(Vector const& coefs)
 {
-    if(coefs.size() != 0)
-        throw Exception("Sinc activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 2)
+        throw Exception("Sinc/Psinc activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _pulsation = coefs[0];
+    _phase = coefs[1];
+    _savedPulsation = 0;
+    _savedPhase = 0;
 }
 
 
@@ -984,16 +1240,16 @@ double omnilearn::Sinc::activate(double val) const
     if(val > -std::numeric_limits<double>::epsilon() && val < std::numeric_limits<double>::epsilon())
         return 1;
     else
-        return std::sin(val)/val;
+        return std::sin(_pulsation*val + _phase)/(_pulsation*val + _phase);
 }
 
 
-double omnilearn::Sinc::prime([[maybe_unused]] double val) const
+double omnilearn::Sinc::prime(double val) const
 {
     if(val > -std::numeric_limits<double>::epsilon() && val < std::numeric_limits<double>::epsilon())
         return 0;
     else
-        return (std::cos(val)/val) - (std::sin(val)/std::pow(val, 2));
+        return _pulsation * (std::cos(_pulsation*val + _phase)*(_pulsation*val + _phase) - std::sin(_pulsation*val + _phase)) / std::pow(_pulsation*val + _phase, 2);
 }
 
 
@@ -1011,14 +1267,18 @@ void omnilearn::Sinc::updateCoefs([[maybe_unused]] bool automaticLearningRate, [
 
 void omnilearn::Sinc::setCoefs(Vector const& coefs)
 {
-    if(coefs.size() != 0)
-        throw Exception("Sinc activation function doesn't need coefficients. " + std::to_string(coefs.size()) + " provided.");
+    if(coefs.size() != 2)
+        throw Exception("Sinc/Psinc activation functions need 2 coefficients. " + std::to_string(coefs.size()) + " provided.");
+    _pulsation = coefs[0];
+    _phase = coefs[1];
+    _savedPulsation = 0;
+    _savedPhase = 0;
 }
 
 
 omnilearn::rowVector omnilearn::Sinc::getCoefs() const
 {
-    return Vector(0);
+    return (Vector(2) << _pulsation, _phase).finished();
 }
 
 //static function
@@ -1030,13 +1290,91 @@ omnilearn::Activation omnilearn::Sinc::signature() const
 
 void omnilearn::Sinc::keep()
 {
-    //nothing to do
+    _savedPulsation = _pulsation;
+    _savedPhase = _phase;
 }
 
 
 void omnilearn::Sinc::release()
 {
-    //nothing to do
+    _pulsation = _savedPulsation;
+    _phase = _savedPhase;
+}
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//=== PARAMETRIC CARDINAL SINUS ACTIVATION ====================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+omnilearn::Psinc::Psinc(Vector const& coefs):
+Sinc(coefs),
+_pulsationGradient(0),
+_previousPulsationGrad(0),
+_previousPulsationGrad2(0),
+_optimalPreviousPulsationGrad2(0),
+_previousPulsationUpdate(0),
+_phaseGradient(0),
+_previousPhaseGrad(0),
+_previousPhaseGrad2(0),
+_optimalPreviousPhaseGrad2(0),
+_previousPhaseUpdate(0),
+_counter(0)
+{
+}
+
+
+void omnilearn::Psinc::computeGradients(double aggr, double inputGrad)
+{
+    _pulsationGradient += inputGrad * aggr * (std::cos(_pulsation*aggr + _phase)*(_pulsation*aggr + _phase) - std::sin(_pulsation*aggr + _phase)) / std::pow(_pulsation*aggr + _phase, 2);
+    _phaseGradient += inputGrad * (std::cos(_pulsation*aggr + _phase) * (_pulsation*aggr + _phase) - sin(_pulsation*aggr + _phase)) / std::pow(_pulsation*aggr + _phase, 2);
+    _counter++;
+}
+
+
+void omnilearn::Psinc::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+{
+    _pulsationGradient /= static_cast<double>(_counter);
+    _phaseGradient /= static_cast<double>(_counter);
+
+    optimizedUpdate(_pulsation, _previousPulsationGrad, _previousPulsationGrad2, _optimalPreviousPulsationGrad2, _previousPulsationUpdate, _pulsationGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_phase, _previousPhaseGrad, _previousPhaseGrad2, _optimalPreviousPhaseGrad2, _previousPhaseUpdate, _phaseGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+
+    _pulsationGradient = 0;
+    _phaseGradient = 0;
+    _counter = 0;
+}
+
+
+void omnilearn::Psinc::setCoefs(Vector const& coefs)
+{
+    if(coefs.size() != 2)
+        throw Exception("Sin/Psin activation functions need 2 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _pulsation = coefs[0];
+    _phase = coefs[1];
+    _pulsationGradient = 0;
+    _previousPulsationGrad = 0;
+    _previousPulsationGrad2 = 0;
+    _optimalPreviousPulsationGrad2 = 0;
+    _previousPulsationUpdate = 0;
+    _phaseGradient = 0;
+    _previousPhaseGrad = 0;
+    _previousPhaseGrad2 = 0;
+    _optimalPreviousPhaseGrad2 = 0;
+    _previousPhaseUpdate = 0;
+    _counter = 0;
+}
+
+
+omnilearn::Activation omnilearn::Psinc::signature() const
+{
+    return Activation::Psinc;
 }
 
 

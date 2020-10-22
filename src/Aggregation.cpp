@@ -103,15 +103,16 @@ const omnilearn::Vector omnilearn::Distance::_bias = (Vector(1) << 0).finished()
 omnilearn::Distance::Distance(Vector const& coefs)
 {
     if(coefs.size() != 1)
-        throw Exception("Distance aggregation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        throw Exception("Distance/Pdistance aggregation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _order = coefs[0];
+    _savedOrder = 0;
 }
 
 
 std::pair<double, size_t> omnilearn::Distance::aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const
 {
     if(weights.rows() > 1)
-        throw Exception("Distance aggregation only requires one weight set. " + std::to_string(weights.rows()) + " provided.");
+        throw Exception("Distance/Pdistance aggregation only require one weight set. " + std::to_string(weights.rows()) + " provided.");
     return {norm(inputs.transpose() - weights.row(0), _order) + bias[0], 0};
 }
 
@@ -154,11 +155,12 @@ void omnilearn::Distance::updateCoefs([[maybe_unused]] bool automaticLearningRat
 }
 
 
-void omnilearn::Distance::setCoefs([[maybe_unused]] Vector const& coefs)
+void omnilearn::Distance::setCoefs(Vector const& coefs)
 {
     if(coefs.size() != 1)
-        throw Exception("Distance aggregation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+        throw Exception("Distance/Pdistance aggregation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
     _order = coefs[0];
+    _savedOrder = 0;
 }
 
 
@@ -200,6 +202,10 @@ void omnilearn::Distance::release()
 omnilearn::Pdistance::Pdistance(Vector const& coefs):
 Distance(coefs),
 _orderGradient(0),
+_previousOrderGrad(0),
+_previousOrderGrad2(0),
+_optimalPreviousOrderGrad2(0),
+_previousOrderUpdate(0),
 _counter(0)
 {
 }
@@ -227,6 +233,22 @@ void omnilearn::Pdistance::updateCoefs(bool automaticLearningRate, bool adaptive
     optimizedUpdate(_order, _previousOrderGrad, _previousOrderGrad2, _optimalPreviousOrderGrad2, _previousOrderUpdate, _orderGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
 
     _orderGradient = 0;
+    _counter = 0;
+}
+
+
+void omnilearn::Pdistance::setCoefs(Vector const& coefs)
+{
+    if(coefs.size() != 1)
+        throw Exception("Distance/Pdistance aggregation functions need 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
+    _order = coefs[0];
+    _savedOrder = 0;
+
+    _orderGradient = 0;
+    _previousOrderGrad = 0;
+    _previousOrderGrad2 = 0;
+    _optimalPreviousOrderGrad2 = 0;
+    _previousOrderUpdate = 0;
     _counter = 0;
 }
 

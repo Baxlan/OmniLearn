@@ -422,7 +422,7 @@ void omnilearn::Network::shuffleData()
   double test = _param.testRatio * static_cast<double>(_trainInputs.rows());
   double nbBatch = std::trunc(static_cast<double>(_trainInputs.rows()) - validation - test) / static_cast<double>(_param.batchSize);
   if(_param.batchSize == 0)
-    nbBatch = 1; // if batch size == 0, then is batch gradient descend
+    nbBatch = 1; // if batch size == 0, then it is batch gradient descend
 
   //add a batch if an incomplete batch has more than 0.5*batchsize data
   if(nbBatch - std::trunc(nbBatch) >= 0.5)
