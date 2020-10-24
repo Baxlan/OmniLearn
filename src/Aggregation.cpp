@@ -113,7 +113,7 @@ std::pair<double, size_t> omnilearn::Distance::aggregate(Vector const& inputs, M
 {
     if(weights.rows() > 1)
         throw Exception("Distance/Pdistance aggregation only require one weight set. " + std::to_string(weights.rows()) + " provided.");
-    return {norm(inputs.transpose() - weights.row(0), _order) + bias[0], 0};
+    return {norm((inputs.transpose() - weights.row(0)).cwiseAbs(), _order) + bias[0], 0};
 }
 
 
@@ -124,7 +124,7 @@ omnilearn::Vector omnilearn::Distance::prime(Vector const& inputs, Vector const&
 
     for(eigen_size_t i = 0; i < weights.size(); i++)
     {
-        result[i] = (-std::pow((inputs[i] - weights[i]), _order-1) * a);
+        result[i] = (-std::pow(std::abs(inputs[i] - weights[i]), _order-1) * a);
     }
     return result;
 }
@@ -137,7 +137,7 @@ omnilearn::Vector omnilearn::Distance::primeInput(Vector const& inputs, Vector c
 
     for(eigen_size_t i = 0; i < weights.size(); i++)
     {
-        result[i] = (std::pow((inputs[i] - weights[i]), _order-1) * a);
+        result[i] = (std::pow(std::abs(inputs[i] - weights[i]), _order-1) * a);
     }
     return result;
 }
@@ -213,7 +213,7 @@ _counter(0)
 
 void omnilearn::Pdistance::computeGradients(Vector const& inputs, Vector const& weights, double inputGrad)
 {
-    Vector diff(inputs - weights);
+    Vector diff((inputs - weights).cwiseAbs());
     double calc = 0;
 
     for(eigen_size_t i = 0; i < inputs.size(); i++)
@@ -221,7 +221,7 @@ void omnilearn::Pdistance::computeGradients(Vector const& inputs, Vector const& 
         calc += std::log(diff[i]) * std::pow(diff[i], _order);
     }
 
-    _orderGradient += (calc * inputGrad * std::pow(aggregate(inputs, weights.transpose(), _bias).first, (1-_order))) / _order;
+    _orderGradient -= inputGrad * (calc * std::pow(aggregate(inputs, weights.transpose(), _bias).first, (1-_order))) / _order;
     _counter += 1;
 }
 

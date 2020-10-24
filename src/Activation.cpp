@@ -670,8 +670,8 @@ void omnilearn::Srelu::computeGradients(double aggr, double inputGrad)
     }
     else if(aggr >= _hinge2)
     {
-        _coef2Gradient += inputGrad * (aggr - _hinge2);
-        _hinge2Gradient += inputGrad * (1 - _coef2);
+        _coef2Gradient -= inputGrad * (aggr - _hinge2);
+        _hinge2Gradient -= inputGrad * (1 - _coef2);
         _counter2 += 1;
     }
 }
@@ -940,117 +940,6 @@ void omnilearn::Pgauss::setCoefs(Vector const& coefs)
 omnilearn::Activation omnilearn::Pgauss::signature() const
 {
     return Activation::Pgauss;
-}
-
-
-
-//=============================================================================
-//=============================================================================
-//=============================================================================
-//=== SOFTEXP ACTIVATION (PARAMETRIC) =========================================
-//=============================================================================
-//=============================================================================
-//=============================================================================
-
-
-
-omnilearn::Softexp::Softexp(Vector const& coefs)
-{
-    if(coefs.size() != 1)
-        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
-    _coef = coefs[0];
-    _savedCoef = 0;
-
-    _coefGradient = 0;
-    _previousCoefGrad = 0;
-    _previousCoefGrad2 = 0;
-    _optimalPreviousCoefGrad2 = 0;
-    _previousCoefUpdate = 0;
-    _counter = 0;
-}
-
-
-double omnilearn::Softexp::activate(double val) const
-{
-    if(_coef < -std::numeric_limits<double>::epsilon())
-        return -std::log(1-(_coef*(val + _coef))) / _coef;
-    else if(_coef > std::numeric_limits<double>::epsilon())
-        return ((std::exp(_coef * val) - 1) / _coef) + _coef;
-    else
-        return val;
-}
-
-
-double omnilearn::Softexp::prime(double val) const
-{
-    if(_coef < 0)
-        return 1 / (1 - (_coef * (_coef + val)));
-    else
-       return std::exp(_coef * val);
-}
-
-
-void omnilearn::Softexp::computeGradients(double aggr, double inputGrad)
-{
-    if(_coef < -std::numeric_limits<double>::epsilon())
-        _coefGradient += inputGrad * (std::log(1-(_coef*(_coef+aggr))) - (_coef*(2*_coef + aggr)) / (_coef*(_coef+aggr)-1)) / std::pow(_coef, 2);
-    else if(_coef > std::numeric_limits<double>::epsilon())
-        _coefGradient += inputGrad * (std::pow(_coef, 2) + (_coef*aggr - 1)*std::exp(_coef*aggr) + 1) / std::pow(_coef, 2);
-    else
-        _coefGradient += inputGrad * (std::pow(aggr, 2) / 2) + 1;
-
-    _counter += 1;
-}
-
-
-void omnilearn::Softexp::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
-{
-    _coefGradient /= static_cast<double>(_counter);
-
-    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-
-    _coefGradient = 0;
-    _counter = 0;
-}
-
-
-void omnilearn::Softexp::setCoefs(Vector const& coefs)
-{
-    if(coefs.size() != 1)
-        throw Exception("Softexp activation function needs 1 coefficient. " + std::to_string(coefs.size()) + " provided.");
-    _coef = coefs[0];
-    _savedCoef = 0;
-
-    _coefGradient = 0;
-    _previousCoefGrad = 0;
-    _previousCoefGrad2 = 0;
-    _optimalPreviousCoefGrad2 = 0;
-    _previousCoefUpdate = 0;
-    _counter = 0;
-}
-
-
-omnilearn::rowVector omnilearn::Softexp::getCoefs() const
-{
-    return (Vector(1) << _coef).finished();
-}
-
-
-omnilearn::Activation omnilearn::Softexp::signature() const
-{
-    return Activation::Softexp;
-}
-
-
-void omnilearn::Softexp::keep()
-{
-    _savedCoef = _coef;
-}
-
-
-void omnilearn::Softexp::release()
-{
-    _coef = _savedCoef;
 }
 
 

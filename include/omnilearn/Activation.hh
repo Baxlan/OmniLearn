@@ -16,7 +16,7 @@ namespace omnilearn
 
 
 
-enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Pgauss, Softexp, Sin, Psin, Sinc, Psinc};
+enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Srelu, Gauss, Pgauss, Sin, Psin, Sinc, Psinc};
 
 
 
@@ -297,7 +297,7 @@ protected:
 class Softexp : public IActivation
 {
 public:
-    Softexp(Vector const& coefs = (Vector(1) << 0.5).finished());
+    Softexp(Vector const& coefs = (Vector(1) << 0).finished());
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
@@ -437,7 +437,6 @@ static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activ
     {Activation::Srelu, []{return std::make_unique<Srelu>();}},
     {Activation::Gauss, []{return std::make_unique<Gauss>();}},
     {Activation::Pgauss, []{return std::make_unique<Pgauss>();}},
-    {Activation::Softexp, []{return std::make_unique<Softexp>();}},
     {Activation::Sin, []{return std::make_unique<Sin>();}},
     {Activation::Psin, []{return std::make_unique<Psin>();}},
     {Activation::Sinc, []{return std::make_unique<Sinc>();}},
@@ -458,7 +457,6 @@ static std::map<std::string, Activation> stringToActivationMap = {
     {"srelu", Activation::Srelu},
     {"gauss", Activation::Gauss},
     {"pgauss", Activation::Pgauss},
-    {"softexp", Activation::Softexp},
     {"sin", Activation::Sin},
     {"psin", Activation::Psin},
     {"sinc", Activation::Sinc},
@@ -479,7 +477,6 @@ static std::map<Activation, std::string> activationToStringMap = {
     {Activation::Srelu, "srelu"},
     {Activation::Gauss, "gauss"},
     {Activation::Pgauss, "pgauss"},
-    {Activation::Softexp, "softexp"},
     {Activation::Sin, "sin"},
     {Activation::Psin, "psin"},
     {Activation::Sinc, "sinc"},

@@ -94,7 +94,7 @@ void iris()
     netp.batchSize = 10;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
-    netp.patience = 200;
+    netp.patience = 100;
     netp.plateau = 0.99;
     //netp.decay = omnilearn::Decay::Plateau;
     netp.decayValue = 2;
@@ -115,12 +115,12 @@ void iris()
     net.setData(data);
 
     omnilearn::LayerParam lay;
-    lay.size = 64;
+    lay.size = 32;
     lay.lockBias = true;
     lay.lockWeights = true;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Srelu;
+    lay.activation = omnilearn::Activation::Psin;
     net.addLayer(lay);
 
     lay.aggregation = omnilearn::Aggregation::Dot;

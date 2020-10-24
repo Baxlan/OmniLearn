@@ -360,8 +360,8 @@ void omnilearn::NetworkIO::saveTest(Network const& net, json& jObj) const
   Matrix testRes(net.process(net._testRawInputs));
   for(size_t i = 0; i < net._outputLabels.size(); i++)
   {
-    jObj[jObj.size()][i]["label"] = net._outputLabels[i];
-    jObj[jObj.size()][i]["expected"] = net._testRawOutputs.col(i);
-    jObj[jObj.size()][i]["predicted"] = testRes.col(i);
+    jObj[i]["label"] = net._outputLabels[i];
+    jObj[i]["expected"] = net._testRawOutputs.col(i);
+    jObj[i]["predicted"] = testRes.col(i);
   }
 }
