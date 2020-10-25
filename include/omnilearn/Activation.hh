@@ -150,7 +150,7 @@ protected:
 class Elu : public IActivation
 {
 public:
-    Elu(Vector const& coefs = (Vector(1) << 0.01).finished());
+    Elu(Vector const& coefs = (Vector(2) << 1., 1.).finished());
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
@@ -163,7 +163,9 @@ public:
 
 protected:
     double _coef;
+    double _coef2;
     double _savedCoef;
+    double _savedCoef2;
 };
 
 
@@ -171,7 +173,7 @@ protected:
 class Pelu : public Elu
 {
 public:
-    Pelu(Vector const& coefs = (Vector(1) << 0.01).finished());
+    Pelu(Vector const& coefs = (Vector(2) << 1., 1.).finished());
     void computeGradients(double aggr, double inputGrad);
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
@@ -183,6 +185,11 @@ protected:
     double _previousCoefGrad2;
     double _optimalPreviousCoefGrad2;
     double _previousCoefUpdate;
+    double _coef2Gradient;
+    double _previousCoef2Grad;
+    double _previousCoef2Grad2;
+    double _optimalPreviousCoef2Grad2;
+    double _previousCoef2Update;
     double _counter;
 };
 

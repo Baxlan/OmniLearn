@@ -5,7 +5,7 @@
 
 
 void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool automaticLearningRate, bool adaptiveLearningRate,
-                                double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+                                double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay, bool avoidZero)
 {
     gradient = gradient - (L2 * coefToUpdate) - (coefToUpdate > 0 ? L1 : -L1); // regularization
     previousGrad = (momentum * previousGrad) + ((1 - momentum) * gradient); // momentum
@@ -27,6 +27,10 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
     double oldCoef = coefToUpdate;
     coefToUpdate += learningRate * (gradientUpdate - (decay * coefToUpdate));
     // decay is decoupled from gradient. See AdamW optimizer
+
+    // avoid coefToUpdate being 0 if it is used as denominator somewhere
+    if(avoidZero && std::abs(coefToUpdate) < 1e-4)
+        coefToUpdate = (coefToUpdate < 0 ? -1e-4: 1e-3);
 
     // the update of previousUpdate is performed after (because we don't have it before ...)
     previousUpdate = (window * previousUpdate) + ((1 - window) * std::pow(oldCoef - coefToUpdate, 2));

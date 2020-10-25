@@ -120,7 +120,7 @@ void iris()
     lay.lockWeights = true;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Psin;
+    lay.activation = omnilearn::Activation::Pelu;
     net.addLayer(lay);
 
     lay.aggregation = omnilearn::Aggregation::Dot;
