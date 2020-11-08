@@ -15,6 +15,13 @@ omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::string const& te
   return io;
 }
 
+omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::_Setw const& setw)
+{
+  io._listing << setw;
+  if(io._verbose)
+    std::cout << setw;
+  return io;
+}
 
 omnilearn::NetworkIO::NetworkIO(fs::path const& path, bool verbose):
 _path(path),

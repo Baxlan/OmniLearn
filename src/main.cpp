@@ -91,7 +91,7 @@ void iris()
 
     omnilearn::NetworkParam netp;
     netp.threads = 4;
-    netp.batchSize = 10;
+    netp.batchSize = 5;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 100;
@@ -116,11 +116,11 @@ void iris()
 
     omnilearn::LayerParam lay;
     lay.size = 32;
-    lay.lockBias = true;
-    lay.lockWeights = true;
+    //lay.lockBias = true;
+    //lay.lockWeights = true;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Pelu;
+    lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
 
     lay.aggregation = omnilearn::Aggregation::Dot;

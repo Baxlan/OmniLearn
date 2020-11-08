@@ -75,7 +75,13 @@ void omnilearn::Network::learn()
     computeLoss();
     double lowestLoss = _validLosses[0];
     _optimalEpoch = 0;
-    *_io << "Epoch: 0" << "   Validation loss: " << _validLosses[0] << "   Training loss: " << _trainLosses[0] << "   First metric: " << _testMetric[0] << "   Second metric: " << _testSecondMetric[0] << "\n";
+
+    //*_io << "Epoch: 0" << "   Validation loss: " << _validLosses[0] << "   Training loss: " << _trainLosses[0] << "   First metric: " << _testMetric[0] << "   Second metric: " << _testSecondMetric[0] << "\n";
+    *_io << "Epoch   Validation   Training   Gap from Last   Overfitting     First        Second    Remaining\n";
+    *_io << "           Loss        Loss        Optimal                      Metric       Metric     Epochs\n\n";
+    *_io << std::setw(5) << "0" << "   " << std::setw(9) << _validLosses[0] << "   " << std::setw(9) << _trainLosses[0];
+    *_io << "   " << std::setw(10) << "0%" << "     " << std::setw(10) << (_validLosses[0]-_trainLosses[0])/_trainLosses[0] << "%   ";
+    *_io << std::setw(10) << _testMetric[0] << "   " << std::setw(10) << _testSecondMetric[0] << "   " << std::setw(6) << _param.patience << "\n";
 
     keep();
     _iteration = 0;
@@ -85,6 +91,17 @@ void omnilearn::Network::learn()
 
       computeLoss();
       double gap = 100 * _validLosses[_epoch] / lowestLoss;
+      //*_io << "Epoch: " << _epoch << "   Validation loss: " << _validLosses[_epoch] << "   Training loss: " << _trainLosses[_epoch] << "   First metric: " << _testMetric[_epoch] << "   Second metric: " << _testSecondMetric[_epoch] << "   LR: " << _actualLearningRate << "   gap: " << gap << "%   Remaining: " << _optimalEpoch + _param.patience - _epoch << "\n";
+
+      if(_epoch % 100 == 0)
+      {
+        *_io << "\nEpoch   Validation   Training   Gap from Last   Overfitting     First        Second    Remaining\n";
+        *_io << "           Loss        Loss        Optimal                      Metric       Metric     Epochs\n\n";
+      }
+
+      *_io << std::setw(5) << _epoch << "   " << std::setw(9) << _validLosses[_epoch] << "   " << std::setw(9) << _trainLosses[_epoch];
+      *_io << "   " << std::setw(10) << gap << "%    " << std::setw(10) << (_validLosses[_epoch]-_trainLosses[_epoch])/_trainLosses[_epoch] << "%   ";
+      *_io << std::setw(10) << _testMetric[_epoch] << "   " << std::setw(10) << _testSecondMetric[_epoch] << "   " << std::setw(6) << _optimalEpoch + _param.patience - _epoch << "\n";
 
       //if validation loss is inferior to (_param.plateau * optimal loss), save current weights
       if(_validLosses[_epoch] < lowestLoss * _param.plateau)
@@ -94,7 +111,6 @@ void omnilearn::Network::learn()
         _optimalEpoch = _epoch;
       }
 
-      *_io << "Epoch: " << _epoch << "   Validation loss: " << _validLosses[_epoch] << "   Training loss: " << _trainLosses[_epoch] << "   First metric: " << _testMetric[_epoch] << "   Second metric: " << _testSecondMetric[_epoch] << "   LR: " << _actualLearningRate << "   gap: " << gap << "%   Remaining: " << _optimalEpoch + _param.patience - _epoch << "\n";
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
         throw Exception("The last train, validation or test loss is NaN. The issue probably comes from too large weights.");
 
@@ -709,7 +725,6 @@ omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult
 }
 
 
-//return validation loss
 void omnilearn::Network::computeLoss()
 {
   //L1 and L2 regularization loss

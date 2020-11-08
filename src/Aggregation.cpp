@@ -230,7 +230,7 @@ void omnilearn::Pdistance::updateCoefs(bool automaticLearningRate, bool adaptive
 {
     _orderGradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_order, _previousOrderGrad, _previousOrderGrad2, _optimalPreviousOrderGrad2, _previousOrderUpdate, _orderGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_order, _previousOrderGrad, _previousOrderGrad2, _optimalPreviousOrderGrad2, _previousOrderUpdate, _orderGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
 
     _orderGradient = 0;
     _counter = 0;

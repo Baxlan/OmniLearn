@@ -5,6 +5,7 @@
 
 #include "json.hh"
 
+#include <iomanip>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -38,6 +39,7 @@ class NetworkIO
 {
   template<typename T, typename> friend NetworkIO& operator<<(NetworkIO& io, T const& text);
   friend NetworkIO& operator<<(NetworkIO& io, std::string const& text);
+  friend NetworkIO& operator<<(NetworkIO& io, std::_Setw const& setw);
 
 public:
   NetworkIO(fs::path const& path, bool verbose);
@@ -83,6 +85,7 @@ NetworkIO& operator<<(NetworkIO& io, T text[N])
 
 // not template, implemented in .cpp
 NetworkIO& operator<<(NetworkIO& io, std::string const& text);
+NetworkIO& operator<<(NetworkIO& io, std::_Setw const& setw);
 
 
 
