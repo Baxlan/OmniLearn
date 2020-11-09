@@ -157,11 +157,12 @@ private:
   void adaptLearningRate();
   void adaptBatchSize();
   void check() const;
+  void list(double lowestLoss, bool initial) const;
 
 private:
   //parameters
   NetworkParam _param;
-  double _actualLearningRate;
+  double _currentLearningRate;
 
   //random generators
   std::mt19937 _generator;

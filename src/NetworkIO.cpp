@@ -17,9 +17,9 @@ omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::string const& te
 
 omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::_Setw const& setw)
 {
-  io._listing << setw;
+  io._listing << setw << std::left;
   if(io._verbose)
-    std::cout << setw;
+    std::cout << setw << std::left;
   return io;
 }
 
