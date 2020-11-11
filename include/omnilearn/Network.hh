@@ -22,6 +22,8 @@ enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
 enum class Decay {None, Inverse, Exp, Step, Plateau};
+enum class MomentumGrowth {None, Inverse, Exp, Step};
+enum class BatchSizeGrowth {None, Inverse, Exp, Step, Plateau};
 
 
 
@@ -59,7 +61,11 @@ struct NetworkParam
     automaticLearningRate(false),
     adaptiveLearningRate(false),
     momentum(0),
-    window(0.9),
+    maxMomentum(0.9),
+    momentumDelay(1),
+    momentumGrowthValue(2),
+    momentumGrowth(MomentumGrowth::None),
+    window(0.99),
     plateau(0.99),
     preprocessInputs(),
     preprocessOutputs(),
@@ -93,7 +99,11 @@ struct NetworkParam
     bool automaticLearningRate;
     bool adaptiveLearningRate;
     double momentum; //momentum
-    double window; //window effect on grads
+    double maxMomentum; //asymptotic value the momentum tries to reach in case of momentum shedule
+    size_t momentumDelay;
+    double momentumGrowthValue;
+    MomentumGrowth momentumGrowth;
+    double window; //b2 in the second moment of gradients (and of updates)
     double plateau;
     std::vector<Preprocess> preprocessInputs;
     std::vector<Preprocess> preprocessOutputs;
@@ -144,25 +154,25 @@ public:
 
 private:
   void initLayers();
-  void shuffleData(); // shuffle data then split them into train/validation/test data
+  void splitData(); // shuffle data then split them into train/validation/test data
   void shuffleTrainData(); // shuffle train data each epoch
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void performeOneEpoch();
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;
   Vector computeGradVector(Vector const& realResult, Vector const& predicted) const; // calculate error between expected and predicted outputs
-  void computeLoss(); //returns validation loss
+  void computeLoss();
   void keep(); // store weights, bias and other coefs when optimal loss is found
-  void release(); // returns weights, bias and other coefs when learning is done
+  void release(); // release weights, bias and other coefs when learning is done
   void adaptLearningRate();
   void adaptBatchSize();
+  void adaptMomentum();
   void check() const;
   void list(double lowestLoss, bool initial) const;
 
 private:
   //parameters
   NetworkParam _param;
-  double _currentLearningRate;
 
   //random generators
   std::mt19937 _generator;
@@ -187,10 +197,16 @@ private:
   Matrix _testNormalizedOutputsForMetric;
 
   //learning infos
-  size_t _nbBatch;
   size_t _epoch;
   size_t _optimalEpoch;
   size_t _iteration;
+  double _currentLearningRate;
+  double _currentMomentum;
+  double _previousMomentum;
+  double _nextMomentum;
+  double _cumulativeMomentum;
+  double _currentBatchSize;
+  size_t _nbBatch;
   Vector _trainLosses;
   Vector _validLosses;
   Vector _testMetric;

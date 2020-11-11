@@ -12,9 +12,13 @@ namespace omnilearn
 
 
 
-double inverse(double initialLR, size_t epoch, double decayValue);
-double exp(double initialLR, size_t epoch, double decayValue);
-double step(double initialLR, size_t epoch, double decayValue, size_t delay);
+double inverse(double initialValue, size_t epoch, double decayValue);
+double exp(double initialValue, size_t epoch, double decayValue);
+double step(double initialValue, size_t epoch, double decayValue, size_t delay);
+
+double growingInverse(double initialValue, double maxValue, size_t epoch, double growthValue);
+double growingExp(double initialValue, double maxValue, size_t epoch, double growthValue);
+double growingStep(double initialValue, double maxValue, size_t epoch, double growthValue, size_t delay);
 
 
 

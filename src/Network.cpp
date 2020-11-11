@@ -59,29 +59,36 @@ void omnilearn::Network::learn()
 
   try
   {
+    *_io << "\nChecking parameters...\n";
     check();
-    shuffleData();
+    *_io << "Shuffling and splitting data...\n";
+    splitData();
+    *_io << "Preprocessing data...\n";
     initPreprocess();
+    *_io << "Initializing layer and neuron parameters...\n";
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
-    _currentLearningRate = _param.learningRate;
+
+    *_io << "Inputs: " << _trainInputs.cols() << " / " << _testRawInputs.cols() << " (" <<  _testRawInputs.cols() - _trainInputs.cols() << " discarded after reduction)\n";
+    *_io << "Outputs: " << _trainOutputs.cols() << " / " << _testRawOutputs.cols() << " (" <<  _testRawOutputs.cols() - _trainOutputs.cols() << " discarded after reduction)\n";
 
     _testNormalizedOutputsForMetric = _testRawOutputs;
     _metricNormalization = normalize(_testNormalizedOutputsForMetric);
 
-    *_io << "inputs: " << _trainInputs.cols() << "/" << _testRawInputs.cols()<<"\n";
-    *_io << "outputs: " << _trainOutputs.cols() << "/" << _testRawOutputs.cols()<<"\n";
-
     computeLoss();
     double lowestLoss = _validLosses[0];
     _optimalEpoch = 0;
-
     list(lowestLoss, true);
-
     keep();
+
     _iteration = 0;
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
+      shuffleTrainData();
+      adaptLearningRate(); // sets _currentLearningRate
+      adaptBatchSize(); // sets _currentBatchSize and _nbBatch
+      adaptMomentum(); // sets _currentMomentum, _previousMomentum and _nextMomentum
+
       performeOneEpoch();
       computeLoss();
       list(lowestLoss, false);
@@ -100,20 +107,6 @@ void omnilearn::Network::learn()
       //EARLY STOPPING
       if(_epoch - _optimalEpoch >= _param.patience)
         break;
-
-      shuffleTrainData();
-      adaptLearningRate();
-      adaptBatchSize();
-
-      if(_param.decay == Decay::Inverse)
-        _currentLearningRate = inverse(_param.learningRate, _epoch, _param.decayValue);
-      else if(_param.decay == Decay::Exp)
-        _currentLearningRate = exp(_param.learningRate, _epoch, _param.decayValue);
-      else if(_param.decay == Decay::Step)
-        _currentLearningRate = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
-      else if(_param.decay == Decay::Plateau)
-        if(_epoch - _optimalEpoch >= _param.decayDelay)
-            _currentLearningRate /= _param.decayValue;
     }
     release();
     *_io << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
@@ -410,7 +403,7 @@ void omnilearn::Network::initLayers()
 }
 
 
-void omnilearn::Network::shuffleData()
+void omnilearn::Network::splitData()
 {
   shuffleTrainData();
 
@@ -655,12 +648,23 @@ void omnilearn::Network::performeOneEpoch()
       }
     }
 
+    // because momentum is constant within an epoch, _nextMomentum is only valid at the last iteration of the epoch (it equals _currentMomentum otherwise)
+    double mom = 0;
+    if(batch != _nbBatch - 1)
+      mom = _currentMomentum;
+    else
+      mom = _nextMomentum;
+
+    if(_epoch == 1 && _iteration == 1)
+      _cumulativeMomentum = _currentMomentum;
+    else
+      _cumulativeMomentum *= _currentMomentum;
+
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      // BE CAREFUL, MOMENTUM IS USED 3 TIMES BUT THE PREVIOUS AND NEXT MOMENTUM MUST BE USED IN THE SECOND AND THIRD OCCURENCES (bad implementation here in case of adaptive momentum)
-      // also, the 4th momentum term should be the product of momentums (bad implementation here in case of adaptive momentum)
-      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.momentum, _param.momentum, _param.momentum, std::pow(_param.momentum, _iteration), _param.window, _param.optimizerBias, _iteration, *_pool);
+      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.automaticLearningRate, _param.adaptiveLearningRate, _currentMomentum, _previousMomentum, mom, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
     }
+    _previousMomentum = _currentMomentum; // because momentum is constant within an epoch, _previousMomentum was only valid at the first iteration of the epoch
   }
 }
 
@@ -772,13 +776,43 @@ void omnilearn::Network::release()
 
 void omnilearn::Network::adaptLearningRate()
 {
-
+  if(_param.decay == Decay::Inverse)
+    _currentLearningRate = inverse(_param.learningRate, _epoch, _param.decayValue);
+  else if(_param.decay == Decay::Exp)
+    _currentLearningRate = exp(_param.learningRate, _epoch, _param.decayValue);
+  else if(_param.decay == Decay::Step)
+    _currentLearningRate = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
+  else if(_param.decay == Decay::Plateau)
+    if(_epoch - _optimalEpoch >= _param.decayDelay)
+        _currentLearningRate /= _param.decayValue;
 }
 
 
 void omnilearn::Network::adaptBatchSize()
 {
+// calculate _nbBatch and _currentBatchSize
+}
 
+
+void omnilearn::Network::adaptMomentum()
+{
+  _previousMomentum = _currentMomentum;
+  if(_param.momentumGrowth == MomentumGrowth::Inverse)
+  {
+    _currentMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch, _param.momentumGrowthValue);
+    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumGrowthValue);
+  }
+  else if(_param.momentumGrowth == MomentumGrowth::Exp)
+  {
+    _currentMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumGrowthValue);
+    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumGrowthValue);
+  }
+  else if(_param.momentumGrowth == MomentumGrowth::Step)
+  {
+    _currentMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumGrowthValue, _param.momentumDelay);
+    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumGrowthValue);
+  }
+  // there is no plateau growth because we wouldn't be able to predict _nextMomentum
 }
 
 
@@ -796,8 +830,14 @@ void omnilearn::Network::check() const
   if(_param.dropconnect < 0 || _param.dropconnect >= 1 || _param.dropout < 0 || _param.dropout >= 1)
     throw Exception("Dropout and dropconnect must be in [0, 1[.");
 
-  if(_param.momentum < 0 || _param.momentum >= 1 || _param.window < 0 || _param.window >= 1)
-    throw Exception("Momentum and window must be in [0, 1[.");
+  if(_param.window < 0 || _param.window >= 1)
+    throw Exception("Window must be in [0, 1[.");
+
+  if(_param.momentum < 0 || _param.momentum >= 1 || _param.maxMomentum < 0 || _param.maxMomentum >= 1)
+    throw Exception("Momentum and maxMomentum must be in [0, 1[.");
+
+  if(_param.momentum > _param.maxMomentum)
+    throw Exception("Momentum cannot be superior to maxMomentum.");
 }
 
 
@@ -819,8 +859,8 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
   {
     double gap = 100 * _validLosses[_epoch] / lowestLoss;
     *_io << std::setw(9) << _epoch << "   " << std::setw(12) << _validLosses[_epoch] << "   " << std::setw(12) << _trainLosses[_epoch];
-    *_io << "     " << std::setw(12) << gap << "%           " << std::setw(12) << (_validLosses[_epoch]-_trainLosses[_epoch])/_trainLosses[_epoch] << "%   ";
-    *_io << std::setw(12) << _testMetric[_epoch] << "   " << std::setw(12) << _testSecondMetric[_epoch] << "   " << std::setw(12) << (_param.automaticLearningRate ? "-" : std::to_string(_currentLearningRate));
-    *_io << "   " << std::setw(12) << "-" << "   " << std::setw(12) << "-" << "   " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << "\n";
+    *_io << "     " << std::setw(12) << gap << "%           " << std::setw(12) << 100*(_validLosses[_epoch]-_trainLosses[_epoch])/_trainLosses[_epoch] << "%   ";
+    *_io << std::setw(12) << _testMetric[_epoch] << "   " << std::setw(12) << _testSecondMetric[_epoch] << "   " << std::setw(12) << (_currentLearningRate ? "-" : std::to_string(_param.learningRate));
+    *_io << "   " << std::setw(12) << _currentBatchSize << "   " << std::setw(12) << _currentMomentum << "   " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << "\n";
   }
 }

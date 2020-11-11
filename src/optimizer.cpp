@@ -8,20 +8,29 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
                                 double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay, bool avoidZero)
 {
     gradient = gradient - (L2 * coefToUpdate) - (coefToUpdate > 0 ? L1 : -L1); // regularization
-    previousGrad = (momentum * previousGrad) + ((1 - momentum) * gradient); // momentum
+    previousGrad = (momentum * previousGrad) + ((1 - momentum) * gradient); // momentum (FIRST MOMENT OF GRADIENT)
 
-    // We update with the actual gradient ((1 - momentum) * gradient) whose the momentum have already been taken into account at the previous update,
-    // and we apply the momentum of the next update now (nextMomentum * previousGrad) ==> nesterov acceletated gradient
+    // We update with the current gradient ((1 - momentum) * gradient) whose the momentum have already been taken into account at the previous update,
+    // and we apply the momentum of the next update now (nextMomentum * previousGrad) ==> it's the nesterov acceletated gradient
     double gradientUpdate = ((1 - momentum) * gradient / (1 - cumulativeMomentum)) + (nextMomentum * previousGrad / (1 - (cumulativeMomentum * nextMomentum)));
     // the 1/(1-cumulativeMomentum) and 1/(1-(cumulativeMomentum * nextMomentum)) factors are here to unbias gradients at the first iterations
 
-    previousGrad2 = (window * previousGrad2) + ((1 - window) * std::pow(gradient, 2)); // adaptive learning rate (window effect) on the denominator of the learning rate
+    // adaptive learning rate by exponential decay of past squared GRADIENTS (SECOND MOMENT OF GRADIENT)
+    previousGrad2 = (window * previousGrad2) + ((1 - window) * std::pow(gradient, 2));
     optimalPreviousGrad2 = std::max(previousGrad2, optimalPreviousGrad2 * (iteration > 1 ? std::pow((1-momentum) / (1-previousMomentum), 2) : 1));
-    // the max operator is used to get the AMSGrad optimizer advantage on sparse data (i.e. if informative data are infrequent, this max operator gives them more power)
-    // the std::pow((1-momentum) / (1-previousMomentum), 2) factor is here to get the AdamX optimizer behavior (AdamX is a slight correction of AMSGrad for mathematical purposes)
+    // the max operator is used to get AMSGrad : it forbids the LR to grow up (unlike RMSProp/Adam, leading to non convergence),
+    // and the LR doesn't become infinitesimal thank to the winow effect of exponential decay (unlike Agadrad)
+    // the std::pow((1-momentum) / (1-previousMomentum), 2) factor is here to get AdamX (it corrects the convergence proof of AMSGrad)
 
-    learningRate = (automaticLearningRate ? std::sqrt(previousUpdate + optimizerBias) : learningRate); // adaptive learning rate (window effect) on the numerator of the learning rate
-    learningRate /= (adaptiveLearningRate ? std::sqrt((optimalPreviousGrad2 / (1-std::pow(window, iteration))) + optimizerBias) : 1); // apply the denominator calculated previously
+    // adaptive learning rate by exponential decay of past squared UPDATES (SECOND MOMENT OF UPDATES) ==> Adadelta
+    // (this is based on a second order method : the Newton's method with Hessian approximation)
+    learningRate = (automaticLearningRate ? std::sqrt((previousUpdate / (1-std::pow(window, iteration))) + optimizerBias) : learningRate);
+    // we must use the previous update, not the current one, because we don't know the curent one yet...
+    // this is an approximation where we assume that the curvature is locally smooth
+    // the 1/(1-std::pow(window, iteration)) is here to unbias the second moment of updates. That haven't been found in any paper so this is an innovation here.
+
+    // then applying the exponential decay previously calculated
+    learningRate /= (adaptiveLearningRate ? std::sqrt((optimalPreviousGrad2 / (1-std::pow(window, iteration))) + optimizerBias) : 1);
     // the 1/(1-std::pow(window, iteration)) factor is here to unbias optimalPreviousGrad2 at the first iterations
 
     double oldCoef = coefToUpdate;
@@ -30,8 +39,8 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
 
     // avoid coefToUpdate being 0 if it is used as denominator somewhere
     if(avoidZero && std::abs(coefToUpdate) < 1e-4)
-        coefToUpdate = (coefToUpdate < 0 ? -1e-4: 1e-3);
+        coefToUpdate = (coefToUpdate < 0 ? -1e-4: 1e-4);
 
-    // the update of previousUpdate is performed after (because we don't have it before ...)
+    // now we know the current update, so we can update "previousUpdate"
     previousUpdate = (window * previousUpdate) + ((1 - window) * std::pow(oldCoef - coefToUpdate, 2));
 }

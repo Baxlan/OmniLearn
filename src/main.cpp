@@ -94,7 +94,7 @@ void iris()
     netp.batchSize = 5;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
-    netp.patience = 100;
+    netp.patience = 10;
     netp.plateau = 0.99;
     //netp.decay = omnilearn::Decay::Plateau;
     netp.decayValue = 2;
@@ -106,7 +106,13 @@ void iris()
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
+
     netp.momentum = 0;
+    netp.maxMomentum = 0.99;
+    netp.momentumGrowth = omnilearn::MomentumGrowth::Exp;
+    netp.momentumDelay = 1;
+    netp.momentumGrowthValue = 0.3;
+
     netp.adaptiveLearningRate = true;
     netp.automaticLearningRate = true;
 
