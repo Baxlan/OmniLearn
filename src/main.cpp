@@ -16,9 +16,9 @@ void boston()
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 5;
     netp.plateau = 1.00;
-    netp.decay = omnilearn::Decay::Plateau;
-    netp.decayValue = 2;
-    netp.decayDelay = 2;
+    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
+    netp.learningRateShedulerValue = 2;
+    netp.learningRateSchedulerDelay = 2;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
@@ -54,9 +54,9 @@ void vesta()
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 5;
     netp.plateau = 0.99;
-    netp.decay = omnilearn::Decay::Plateau;
-    netp.decayValue = 2;
-    netp.decayDelay = 1;
+    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
+    netp.learningRateShedulerValue = 2;
+    netp.learningRateSchedulerDelay = 1;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
@@ -96,22 +96,16 @@ void iris()
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 10;
     netp.plateau = 0.99;
-    //netp.decay = omnilearn::Decay::Plateau;
-    netp.decayValue = 2;
-    netp.decayDelay = 2;
-    netp.classValidity = 0.50;
+    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
+    netp.learningRateShedulerValue = 2;
+    netp.learningRateSchedulerDelay = 2;
+    netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
-
-    netp.momentum = 0;
-    netp.maxMomentum = 0.99;
-    netp.momentumGrowth = omnilearn::MomentumGrowth::Exp;
-    netp.momentumDelay = 1;
-    netp.momentumGrowthValue = 0.3;
 
     netp.adaptiveLearningRate = true;
     netp.automaticLearningRate = true;
@@ -150,10 +144,10 @@ void mnist()
     netp.epoch = 500;
     netp.patience = 5;
     netp.plateau = 0.99;
-    netp.decay = omnilearn::Decay::Plateau;
-    netp.decayValue = 2;
-    netp.decayDelay = 1;
-    netp.classValidity = 0.50;
+    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
+    netp.learningRateShedulerValue = 2;
+    netp.learningRateSchedulerDelay = 1;
+    netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.0;
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};

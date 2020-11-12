@@ -115,7 +115,7 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
   jObj["test second metrics"] = net._testSecondMetric;
   if(jObj["loss"] == "binary cross entropy" || jObj["loss"] == "cross entropy")
   {
-    jObj["classification threshold"] = net._param.classValidity;
+    jObj["classification threshold"] = net._param.classificationThreshold;
   }
   jObj["optimal epoch"] = net._optimalEpoch;
 }
@@ -256,7 +256,7 @@ void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
   jObj.at("output labels").get_to(net._outputLabels);
   if(net._param.loss == Loss::BinaryCrossEntropy || net._param.loss == Loss::CrossEntropy)
   {
-    net._param.classValidity = jObj.at("classification threshold");
+    net._param.classificationThreshold = jObj.at("classification threshold");
   }
   net._optimalEpoch = jObj.at("optimal epoch");
 }

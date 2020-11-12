@@ -21,9 +21,7 @@ namespace omnilearn
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
-enum class Decay {None, Inverse, Exp, Step, Plateau};
-enum class MomentumGrowth {None, Inverse, Exp, Step};
-enum class BatchSizeGrowth {None, Inverse, Exp, Step, Plateau};
+enum class Scheduler {None, Inverse, Exp, Step, Plateau};
 
 
 
@@ -42,10 +40,13 @@ struct NetworkParam
     NetworkParam():
     seed(0),
     batchSize(1),
+    batchSizeSchedulerValue(1),
+    batchSizeSchedulerDelay(1),
+    batchSizeScheduler(Scheduler::None),
     learningRate(0.01),
     L1(0),
     L2(0),
-    weightDecay(0),
+    decay(0), // weight decay
     epoch(1000000),
     patience(5),
     dropout(0),
@@ -53,18 +54,19 @@ struct NetworkParam
     validationRatio(0.2),
     testRatio(0.2),
     loss(Loss::L2),
-    decayValue(2),
-    decayDelay(1),
-    decay(Decay::None),
-    classValidity(0.5),
+    learningRateShedulerValue(1),
+    learningRateSchedulerDelay(1),
+    learningRateScheduler(Scheduler::None),
+    waitMaxBatchSize(false),
+    classificationThreshold(0.5),
     threads(1),
     automaticLearningRate(false),
     adaptiveLearningRate(false),
     momentum(0),
     maxMomentum(0.9),
-    momentumDelay(1),
-    momentumGrowthValue(2),
-    momentumGrowth(MomentumGrowth::None),
+    momentumSchedulerDelay(1),
+    momentumeShedulerValue(1),
+    momentumScheduler(Scheduler::None),
     window(0.99),
     plateau(0.99),
     preprocessInputs(),
@@ -80,10 +82,13 @@ struct NetworkParam
 
     unsigned seed;
     size_t batchSize;
+    double batchSizeSchedulerValue;
+    size_t batchSizeSchedulerDelay;
+    Scheduler batchSizeScheduler;
     double learningRate;
     double L1;
     double L2;
-    double weightDecay;
+    double decay;
     size_t epoch;
     size_t patience;
     double dropout;
@@ -91,18 +96,19 @@ struct NetworkParam
     double validationRatio;
     double testRatio;
     Loss loss;
-    double decayValue;
-    size_t decayDelay;
-    Decay decay;
-    double classValidity;
+    double learningRateShedulerValue;
+    size_t learningRateSchedulerDelay;
+    Scheduler learningRateScheduler;
+    bool waitMaxBatchSize;
+    double classificationThreshold;
     size_t threads;
     bool automaticLearningRate;
     bool adaptiveLearningRate;
     double momentum; //momentum
     double maxMomentum; //asymptotic value the momentum tries to reach in case of momentum shedule
-    size_t momentumDelay;
-    double momentumGrowthValue;
-    MomentumGrowth momentumGrowth;
+    size_t momentumSchedulerDelay;
+    double momentumeShedulerValue;
+    Scheduler momentumScheduler;
     double window; //b2 in the second moment of gradients (and of updates)
     double plateau;
     std::vector<Preprocess> preprocessInputs;
@@ -205,8 +211,10 @@ private:
   double _previousMomentum;
   double _nextMomentum;
   double _cumulativeMomentum;
-  double _currentBatchSize;
+  size_t _currentBatchSize;
   size_t _nbBatch;
+  size_t _missedData; // # of data ignored because the minibatch would be incomplete
+  size_t _epochWhenBatchSizeReachedMax;
   Vector _trainLosses;
   Vector _validLosses;
   Vector _testMetric;

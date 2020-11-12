@@ -19,7 +19,7 @@ SRCS =  $(SRCDIR)/Activation.cpp \
 $(SRCDIR)/Aggregation.cpp \
 $(SRCDIR)/cost.cpp \
 $(SRCDIR)/csv.cpp \
-$(SRCDIR)/decay.cpp \
+$(SRCDIR)/scheduler.cpp \
 $(SRCDIR)/Exception.cpp \
 $(SRCDIR)/Interpreter.cpp \
 $(SRCDIR)/Layer.cpp \

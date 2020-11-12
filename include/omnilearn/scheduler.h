@@ -1,7 +1,7 @@
 // decay.h
 
-#ifndef OMNILEARN_ANNEALING_H_
-#define OMNILEARN_ANNEALING_H_
+#ifndef OMNILEARN_SCHEDULER_H_
+#define OMNILEARN_SCHEDULER_H_
 
 #include <cmath>
 
@@ -26,4 +26,4 @@ double growingStep(double initialValue, double maxValue, size_t epoch, double gr
 
 
 
-#endif // OMNILEARN_ANNEALING_H_
+#endif // OMNILEARN_SCHEDULER_H_

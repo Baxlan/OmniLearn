@@ -1,7 +1,7 @@
 // Network.cpp
 
 #include "omnilearn/cost.h"
-#include "omnilearn/decay.h"
+#include "omnilearn/scheduler.h"
 #include "omnilearn/Exception.hh"
 #include "omnilearn/metric.h"
 #include "omnilearn/Network.hh"
@@ -88,11 +88,10 @@ void omnilearn::Network::learn()
       adaptLearningRate(); // sets _currentLearningRate
       adaptBatchSize(); // sets _currentBatchSize and _nbBatch
       adaptMomentum(); // sets _currentMomentum, _previousMomentum and _nextMomentum
-
       performeOneEpoch();
       computeLoss();
-      list(lowestLoss, false);
 
+      double low = lowestLoss;
       //if validation loss is inferior to (_param.plateau * optimal loss), save current weights
       if(_validLosses[_epoch] < lowestLoss * _param.plateau)
       {
@@ -100,6 +99,7 @@ void omnilearn::Network::learn()
         lowestLoss = _validLosses[_epoch];
         _optimalEpoch = _epoch;
       }
+      list(low, false);
 
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
         throw Exception("The last train, validation or test loss is NaN. The issue probably comes from too large weights.");
@@ -114,7 +114,7 @@ void omnilearn::Network::learn()
   }
   catch(Exception const& e)
   {
-    *_io << e.what();
+    *_io << e.what() << "\n";
     _io.reset();
     throw;
   }
@@ -405,47 +405,41 @@ void omnilearn::Network::initLayers()
 
 void omnilearn::Network::splitData()
 {
-  shuffleTrainData();
-
   if(_testInputs.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
     throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
-  double validation = _param.validationRatio * static_cast<double>(_trainInputs.rows());
-  double test = _param.testRatio * static_cast<double>(_trainInputs.rows());
-  double nbBatch = std::trunc(static_cast<double>(_trainInputs.rows()) - validation - test) / static_cast<double>(_param.batchSize);
+  size_t validation = static_cast<size_t>(std::round(_param.validationRatio * static_cast<double>(_trainInputs.rows())));
+  size_t test = static_cast<size_t>(std::round(_param.testRatio * static_cast<double>(_trainInputs.rows())));
+
+  if(_param.batchSize > static_cast<size_t>(_trainInputs.rows()) - validation - test)
+    throw Exception("The batch size is greater than the number of training data. Decrease the batch size, the validation ratio or the test ratio.");
+
   if(_param.batchSize == 0)
-    nbBatch = 1; // if batch size == 0, then it is batch gradient descend
+    _param.batchSize = static_cast<size_t>(_trainInputs.rows()) - validation - test; // if batch size == 0, then it is batch gradient descend
 
-  //add a batch if an incomplete batch has more than 0.5*batchsize data
-  if(nbBatch - std::trunc(nbBatch) >= 0.5)
-    nbBatch = std::trunc(nbBatch) + 1;
+  shuffleTrainData();
 
-  size_t noTrain = _trainInputs.rows() - (static_cast<size_t>(nbBatch)*_param.batchSize);
-  validation = std::round(static_cast<double>(noTrain)*_param.validationRatio/(_param.validationRatio + _param.testRatio));
-  test = std::round(static_cast<double>(noTrain)*_param.testRatio/(_param.validationRatio + _param.testRatio));
-
-  _validationInputs = Matrix(static_cast<size_t>(validation), _trainInputs.cols());
-  _validationOutputs = Matrix(static_cast<size_t>(validation), _trainOutputs.cols());
-  if(_testInputs.rows() == 0)
-  {
-    _testInputs = Matrix(static_cast<size_t>(test), _trainInputs.cols());
-    _testOutputs = Matrix(static_cast<size_t>(test), _trainOutputs.cols());
-  }
-  for(size_t i = 0; i < static_cast<size_t>(validation); i++)
+  _validationInputs = Matrix(validation, _trainInputs.cols());
+  _validationOutputs = Matrix(validation, _trainOutputs.cols());
+  for(eigen_size_t i = 0; i < static_cast<eigen_size_t>(validation); i++)
   {
     _validationInputs.row(i) = _trainInputs.row(_trainInputs.rows()-1-i);
     _validationOutputs.row(i) = _trainOutputs.row(_trainOutputs.rows()-1-i);
   }
-  for(size_t i = 0; i < static_cast<size_t>(test); i++)
+  if(_testInputs.rows() == 0)
   {
-    _testInputs.row(i) = _trainInputs.row(_trainInputs.rows()-1-i-static_cast<size_t>(validation));
-    _testOutputs.row(i) = _trainOutputs.row(_trainOutputs.rows()-1-i-static_cast<size_t>(validation));
+    _testInputs = Matrix(test, _trainInputs.cols());
+    _testOutputs = Matrix(test, _trainOutputs.cols());
+    for(eigen_size_t i = 0; i < static_cast<eigen_size_t>(test); i++)
+    {
+      _testInputs.row(i) = _trainInputs.row(_trainInputs.rows()-1-i-static_cast<eigen_size_t>(validation));
+      _testOutputs.row(i) = _trainOutputs.row(_trainOutputs.rows()-1-i-static_cast<eigen_size_t>(validation));
+    }
   }
-  _testRawInputs = _testInputs;
-  _testRawOutputs = _testOutputs;
+  _testRawInputs = _testInputs; // testInputs will be preprocessed later
+  _testRawOutputs = _testOutputs; // idem
   _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
-  _nbBatch = static_cast<size_t>(nbBatch);
 }
 
 
@@ -630,10 +624,10 @@ void omnilearn::Network::performeOneEpoch()
   for(size_t batch = 0; batch < _nbBatch; batch++)
   {
     _iteration += 1;
-    for(size_t feature = 0; feature < _param.batchSize; feature++)
+    for(size_t feature = 0; feature < _currentBatchSize; feature++)
     {
-      Vector featureInput = _trainInputs.row(batch*_param.batchSize + feature);
-      Vector featureOutput = _trainOutputs.row(batch*_param.batchSize + feature);
+      Vector featureInput = _trainInputs.row(batch*_currentBatchSize + feature);
+      Vector featureOutput = _trainOutputs.row(batch*_currentBatchSize + feature);
 
       for(size_t i = 0; i < _layers.size(); i++)
       {
@@ -662,7 +656,7 @@ void omnilearn::Network::performeOneEpoch()
 
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.weightDecay, _param.automaticLearningRate, _param.adaptiveLearningRate, _currentMomentum, _previousMomentum, mom, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
+      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.decay, _param.automaticLearningRate, _param.adaptiveLearningRate, _currentMomentum, _previousMomentum, mom, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
     }
     _previousMomentum = _currentMomentum; // because momentum is constant within an epoch, _previousMomentum was only valid at the first iteration of the epoch
   }
@@ -743,7 +737,7 @@ void omnilearn::Network::computeLoss()
   if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
     testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization);
   else
-    testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classValidity);
+    testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
 
   _trainLosses.conservativeResize(_trainLosses.size() + 1);
   _trainLosses[_trainLosses.size()-1] = trainLoss;
@@ -776,41 +770,85 @@ void omnilearn::Network::release()
 
 void omnilearn::Network::adaptLearningRate()
 {
-  if(_param.decay == Decay::Inverse)
-    _currentLearningRate = inverse(_param.learningRate, _epoch, _param.decayValue);
-  else if(_param.decay == Decay::Exp)
-    _currentLearningRate = exp(_param.learningRate, _epoch, _param.decayValue);
-  else if(_param.decay == Decay::Step)
-    _currentLearningRate = step(_param.learningRate, _epoch, _param.decayValue, _param.decayDelay);
-  else if(_param.decay == Decay::Plateau)
-    if(_epoch - _optimalEpoch >= _param.decayDelay)
-        _currentLearningRate /= _param.decayValue;
+  if(_epoch == 1)
+    _currentLearningRate = _param.learningRate;
+  else
+  {
+    size_t epochToUse = _epoch;
+    if(_param.waitMaxBatchSize && _param.batchSizeScheduler != Scheduler::None)
+    {
+      if(_currentBatchSize != static_cast<size_t>(_trainInputs.rows()))
+        return;
+      else
+        epochToUse = _epoch - _epochWhenBatchSizeReachedMax;
+    }
+
+    if(_param.learningRateScheduler == Scheduler::Inverse)
+      _currentLearningRate = inverse(_param.learningRate, epochToUse, _param.learningRateShedulerValue);
+    else if(_param.learningRateScheduler == Scheduler::Exp)
+      _currentLearningRate = exp(_param.learningRate, epochToUse, _param.learningRateShedulerValue);
+    else if(_param.learningRateScheduler == Scheduler::Step)
+      _currentLearningRate = step(_param.learningRate, epochToUse, _param.learningRateShedulerValue, _param.learningRateSchedulerDelay);
+    else if(_param.learningRateScheduler == Scheduler::Plateau)
+      if(epochToUse - _optimalEpoch > _param.learningRateSchedulerDelay)
+          _currentLearningRate /= _param.learningRateShedulerValue;
+  }
 }
 
 
 void omnilearn::Network::adaptBatchSize()
 {
-// calculate _nbBatch and _currentBatchSize
+  if(_epoch == 1)
+  {
+    _currentBatchSize = _param.batchSize;
+    _epochWhenBatchSizeReachedMax = 1;
+  }
+  else if(_currentBatchSize != static_cast<size_t>(_trainInputs.rows()))
+  {
+    if(_param.batchSizeScheduler == Scheduler::Inverse)
+      _currentBatchSize = static_cast<size_t>(std::round(growingInverse(static_cast<double>(_param.batchSize), static_cast<double>(_trainInputs.rows()), _epoch, _param.batchSizeSchedulerValue)));
+    else if(_param.batchSizeScheduler == Scheduler::Exp)
+      _currentBatchSize = static_cast<size_t>(std::round(growingExp(static_cast<double>(_param.batchSize), static_cast<double>(_trainInputs.rows()), _epoch, _param.batchSizeSchedulerValue)));
+    else if(_param.batchSizeScheduler == Scheduler::Step)
+      _currentBatchSize = static_cast<size_t>(std::round(growingStep(static_cast<double>(_param.batchSize), static_cast<double>(_trainInputs.rows()), _epoch, _param.batchSizeSchedulerValue, _param.batchSizeSchedulerDelay)));
+    else if(_param.batchSizeScheduler == Scheduler::Plateau)
+      if(_epoch - _optimalEpoch > _param.batchSizeSchedulerDelay)
+      {
+        size_t update = static_cast<size_t>(std::round((static_cast<double>(_trainInputs.rows()) - static_cast<double>(_currentBatchSize)) * _param.batchSizeSchedulerValue));
+        if(update == 0)
+          _currentBatchSize += 1;
+        else
+          _currentBatchSize += update;
+      }
+    _epochWhenBatchSizeReachedMax = _epoch;
+  }
+  _nbBatch = static_cast<size_t>(std::floor(_trainInputs.rows() / _currentBatchSize));
+  _missedData = _trainInputs.rows() % _currentBatchSize;
 }
 
 
 void omnilearn::Network::adaptMomentum()
 {
   _previousMomentum = _currentMomentum;
-  if(_param.momentumGrowth == MomentumGrowth::Inverse)
+  if(_param.momentumScheduler == Scheduler::Inverse)
   {
-    _currentMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch, _param.momentumGrowthValue);
-    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumGrowthValue);
+    _currentMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch, _param.momentumeShedulerValue);
+    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumeShedulerValue);
   }
-  else if(_param.momentumGrowth == MomentumGrowth::Exp)
+  else if(_param.momentumScheduler == Scheduler::Exp)
   {
-    _currentMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumGrowthValue);
-    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumGrowthValue);
+    _currentMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumeShedulerValue);
+    _nextMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumeShedulerValue);
   }
-  else if(_param.momentumGrowth == MomentumGrowth::Step)
+  else if(_param.momentumScheduler == Scheduler::Step)
   {
-    _currentMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumGrowthValue, _param.momentumDelay);
-    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumGrowthValue);
+    _currentMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumeShedulerValue, _param.momentumSchedulerDelay);
+    _nextMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumeShedulerValue, _param.momentumSchedulerDelay);
+  }
+  else
+  {
+    _currentMomentum = _param.momentum;
+    _nextMomentum = _param.momentum;
   }
   // there is no plateau growth because we wouldn't be able to predict _nextMomentum
 }
@@ -824,7 +862,7 @@ void omnilearn::Network::check() const
   if(_param.adaptiveLearningRate && _param.window < 0.9)
     throw Exception("When using adaptive learning rate, the window parameter must be superior to 0.9 (because of Nesterov approximation).");
 
-  if(_param.L1 < 0 || _param.L2 < 0 || _param.weightDecay < 0)
+  if(_param.L1 < 0 || _param.L2 < 0 || _param.decay < 0)
     throw Exception("L1 / L2 regularization and weight decay cannot be negative.");
 
   if(_param.dropconnect < 0 || _param.dropconnect >= 1 || _param.dropout < 0 || _param.dropout >= 1)
@@ -838,6 +876,15 @@ void omnilearn::Network::check() const
 
   if(_param.momentum > _param.maxMomentum)
     throw Exception("Momentum cannot be superior to maxMomentum.");
+
+  if(_param.momentumScheduler == Scheduler::Plateau)
+    throw Exception("Momentum cannot use the plateau scheduler.");
+
+  if(_param.batchSizeScheduler == Scheduler::Plateau && _param.batchSizeSchedulerValue >= 1)
+    throw Exception("The batch size sheduler value must be in [0, 1[ when the plateau scheduler is used.");
+
+  if(_param.learningRateSchedulerDelay <= 0 || _param.momentumSchedulerDelay <= 0 || _param.batchSizeSchedulerDelay <= 0)
+    throw Exception("The different scheduler delays must be strictly positive.");
 }
 
 
@@ -860,7 +907,7 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
     double gap = 100 * _validLosses[_epoch] / lowestLoss;
     *_io << std::setw(9) << _epoch << "   " << std::setw(12) << _validLosses[_epoch] << "   " << std::setw(12) << _trainLosses[_epoch];
     *_io << "     " << std::setw(12) << gap << "%           " << std::setw(12) << 100*(_validLosses[_epoch]-_trainLosses[_epoch])/_trainLosses[_epoch] << "%   ";
-    *_io << std::setw(12) << _testMetric[_epoch] << "   " << std::setw(12) << _testSecondMetric[_epoch] << "   " << std::setw(12) << (_currentLearningRate ? "-" : std::to_string(_param.learningRate));
-    *_io << "   " << std::setw(12) << _currentBatchSize << "   " << std::setw(12) << _currentMomentum << "   " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << "\n";
+    *_io << std::setw(12) << _testMetric[_epoch] << "   " << std::setw(12) << _testSecondMetric[_epoch] << "   " << std::setw(12) << (_param.automaticLearningRate ? "-" : std::to_string(_currentLearningRate));
+    *_io << "   " << std::setw(12) << _currentBatchSize << "   " << std::setw(12) << _currentMomentum << "   " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << "   (" << _missedData << " data have been ignored)\n";
   }
 }
