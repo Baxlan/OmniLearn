@@ -784,14 +784,14 @@ void omnilearn::Network::adaptLearningRate()
     }
 
     if(_param.learningRateScheduler == Scheduler::Inverse)
-      _currentLearningRate = inverse(_param.learningRate, epochToUse, _param.learningRateShedulerValue);
+      _currentLearningRate = inverse(_param.learningRate, epochToUse, _param.learningRateSchedulerValue);
     else if(_param.learningRateScheduler == Scheduler::Exp)
-      _currentLearningRate = exp(_param.learningRate, epochToUse, _param.learningRateShedulerValue);
+      _currentLearningRate = exp(_param.learningRate, epochToUse, _param.learningRateSchedulerValue);
     else if(_param.learningRateScheduler == Scheduler::Step)
-      _currentLearningRate = step(_param.learningRate, epochToUse, _param.learningRateShedulerValue, _param.learningRateSchedulerDelay);
+      _currentLearningRate = step(_param.learningRate, epochToUse, _param.learningRateSchedulerValue, _param.learningRateSchedulerDelay);
     else if(_param.learningRateScheduler == Scheduler::Plateau)
       if(epochToUse - _optimalEpoch > _param.learningRateSchedulerDelay)
-          _currentLearningRate /= _param.learningRateShedulerValue;
+          _currentLearningRate /= _param.learningRateSchedulerValue;
   }
 }
 
@@ -832,18 +832,18 @@ void omnilearn::Network::adaptMomentum()
   _previousMomentum = _currentMomentum;
   if(_param.momentumScheduler == Scheduler::Inverse)
   {
-    _currentMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch, _param.momentumeShedulerValue);
-    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumeShedulerValue);
+    _currentMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue);
+    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue);
   }
   else if(_param.momentumScheduler == Scheduler::Exp)
   {
-    _currentMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumeShedulerValue);
-    _nextMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumeShedulerValue);
+    _currentMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue);
+    _nextMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue);
   }
   else if(_param.momentumScheduler == Scheduler::Step)
   {
-    _currentMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumeShedulerValue, _param.momentumSchedulerDelay);
-    _nextMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumeShedulerValue, _param.momentumSchedulerDelay);
+    _currentMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
+    _nextMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
   }
   else
   {
@@ -885,6 +885,15 @@ void omnilearn::Network::check() const
 
   if(_param.learningRateSchedulerDelay <= 0 || _param.momentumSchedulerDelay <= 0 || _param.batchSizeSchedulerDelay <= 0)
     throw Exception("The different scheduler delays must be strictly positive.");
+
+  if(_param.learningRateScheduler == Scheduler::Step && (_param.learningRateSchedulerValue < 0 || _param.learningRateSchedulerValue >=1))
+    throw Exception("The learning rate scheduler value must be in [0, 1[ when the step scheduler is used.");
+
+  if(_param.momentumScheduler == Scheduler::Step && (_param.momentumSchedulerValue < 0 || _param.momentumSchedulerValue >=1))
+    throw Exception("The momentum scheduler value must be in [0, 1[ when the step scheduler is used.");
+
+  if(_param.batchSizeScheduler == Scheduler::Step && (_param.batchSizeSchedulerValue < 0 || _param.batchSizeSchedulerValue >=1))
+    throw Exception("The batch size scheduler value must be in [0, 1[ when the step scheduler is used.");
 }
 
 

@@ -22,6 +22,7 @@ enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
 enum class Scheduler {None, Inverse, Exp, Step, Plateau};
+enum class SecondOrder {None, Univariate, Multivariate};
 
 
 
@@ -54,7 +55,7 @@ struct NetworkParam
     validationRatio(0.2),
     testRatio(0.2),
     loss(Loss::L2),
-    learningRateShedulerValue(1),
+    learningRateSchedulerValue(1),
     learningRateSchedulerDelay(1),
     learningRateScheduler(Scheduler::None),
     waitMaxBatchSize(false),
@@ -65,7 +66,7 @@ struct NetworkParam
     momentum(0),
     maxMomentum(0.9),
     momentumSchedulerDelay(1),
-    momentumeShedulerValue(1),
+    momentumSchedulerValue(1),
     momentumScheduler(Scheduler::None),
     window(0.99),
     plateau(0.99),
@@ -96,7 +97,7 @@ struct NetworkParam
     double validationRatio;
     double testRatio;
     Loss loss;
-    double learningRateShedulerValue;
+    double learningRateSchedulerValue;
     size_t learningRateSchedulerDelay;
     Scheduler learningRateScheduler;
     bool waitMaxBatchSize;
@@ -107,7 +108,7 @@ struct NetworkParam
     double momentum; //momentum
     double maxMomentum; //asymptotic value the momentum tries to reach in case of momentum shedule
     size_t momentumSchedulerDelay;
-    double momentumeShedulerValue;
+    double momentumSchedulerValue;
     Scheduler momentumScheduler;
     double window; //b2 in the second moment of gradients (and of updates)
     double plateau;
