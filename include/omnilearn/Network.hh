@@ -21,7 +21,7 @@ namespace omnilearn
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
-enum class Scheduler {None, Inverse, Exp, Step, Plateau};
+enum class Scheduler {None, Exp, Step, Plateau};
 enum class SecondOrder {None, Univariate, Multivariate};
 
 
@@ -41,24 +41,22 @@ struct NetworkParam
     NetworkParam():
     seed(0),
     batchSize(1),
-    batchSizeSchedulerValue(1),
-    batchSizeSchedulerDelay(1),
-    batchSizeScheduler(Scheduler::None),
+    useBatchSizeScheduler(false),
+    maxBatchSizeRatio(0.1),
     learningRate(0.01),
     L1(0),
     L2(0),
     decay(0), // weight decay
-    epoch(1000000),
+    epoch(1000),
     patience(5),
     dropout(0),
     dropconnect(0),
     validationRatio(0.2),
     testRatio(0.2),
     loss(Loss::L2),
-    learningRateSchedulerValue(1),
-    learningRateSchedulerDelay(1),
-    learningRateScheduler(Scheduler::None),
-    waitMaxBatchSize(false),
+    schedulerValue(2),
+    schedulerDelay(2),
+    scheduler(Scheduler::None),
     classificationThreshold(0.5),
     threads(1),
     automaticLearningRate(false),
@@ -83,9 +81,8 @@ struct NetworkParam
 
     unsigned seed;
     size_t batchSize;
-    double batchSizeSchedulerValue;
-    size_t batchSizeSchedulerDelay;
-    Scheduler batchSizeScheduler;
+    bool useBatchSizeScheduler; // use the same scheduler, delay and value than LR ones
+    double maxBatchSizeRatio;
     double learningRate;
     double L1;
     double L2;
@@ -97,10 +94,9 @@ struct NetworkParam
     double validationRatio;
     double testRatio;
     Loss loss;
-    double learningRateSchedulerValue;
-    size_t learningRateSchedulerDelay;
-    Scheduler learningRateScheduler;
-    bool waitMaxBatchSize;
+    double schedulerValue;
+    size_t schedulerDelay;
+    Scheduler scheduler;
     double classificationThreshold;
     size_t threads;
     bool automaticLearningRate;

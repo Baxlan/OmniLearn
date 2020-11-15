@@ -16,9 +16,9 @@ void boston()
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 5;
     netp.plateau = 1.00;
-    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
-    netp.learningRateSchedulerValue = 2;
-    netp.learningRateSchedulerDelay = 2;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 2;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
@@ -52,24 +52,21 @@ void vesta()
 
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.batchSize = 10;
-    netp.batchSizeScheduler = omnilearn::Scheduler::None;
-    netp.batchSizeSchedulerDelay = 1;
-    netp.batchSizeSchedulerValue = 0.9;
+    netp.batchSize = 1;
+    netp.maxBatchSizeRatio = 0.1;
+    netp.useBatchSizeScheduler = true;
+    netp.learningRate = 0.01;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 2;
 
     netp.momentum = 0;
-    netp.maxMomentum = 0.95;
+    netp.maxMomentum = 0.90;
     netp.momentumScheduler = omnilearn::Scheduler::Exp;
-    netp.momentumSchedulerValue = 0.3;
-
-    netp.learningRate = 0.001;
-    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
-    netp.learningRateSchedulerValue = 2;
-    netp.learningRateSchedulerDelay = 1;
-    netp.waitMaxBatchSize = false;
+    netp.momentumSchedulerValue = 0.1;
 
     netp.loss = omnilearn::Loss::L2;
-    netp.patience = 5;
+    netp.patience = 10;
     netp.plateau = 0.99;
 
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
@@ -110,9 +107,9 @@ void iris()
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 10;
     netp.plateau = 0.99;
-    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
-    netp.learningRateSchedulerValue = 2;
-    netp.learningRateSchedulerDelay = 2;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 2;
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
@@ -152,25 +149,35 @@ void mnist()
 
     omnilearn::NetworkParam netp;
     netp.threads = 4;
-    netp.batchSize = 100;
-    netp.learningRate = 0.01;
-    netp.loss = omnilearn::Loss::CrossEntropy;
-    netp.epoch = 500;
-    netp.patience = 5;
-    netp.plateau = 0.99;
-    netp.learningRateScheduler = omnilearn::Scheduler::Plateau;
-    netp.learningRateSchedulerValue = 2;
-    netp.learningRateSchedulerDelay = 1;
-    netp.classificationThreshold = 0.50;
+
     netp.validationRatio = 0.20;
-    netp.testRatio = 0.0;
+    netp.testRatio = 0.00;
+    netp.batchSize = 1;
+    netp.maxBatchSizeRatio = 0.1;
+    netp.useBatchSizeScheduler = true;
+    netp.learningRate = 0.1;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 2;
+
+    netp.momentum = 0;
+    netp.maxMomentum = 0.90;
+    netp.momentumScheduler = omnilearn::Scheduler::Exp;
+    netp.momentumSchedulerValue = 0.2;
+
+    netp.loss = omnilearn::Loss::CrossEntropy;
+    netp.patience = 10;
+    netp.plateau = 0.99;
+
+    netp.classificationThreshold = 0.50;
+
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
-    netp.verbose = true;
 
+    netp.verbose = true;
     netp.adaptiveLearningRate = true;
-    netp.momentum = 0.9;
+    netp.automaticLearningRate = false;
     netp.window = 0.99;
 
 
@@ -232,8 +239,8 @@ void generate()
 
 int main()
 {
-    //mnist();
-    vesta();
+    mnist();
+    //vesta();
     //iris();
     //testLoader();
     //generate();

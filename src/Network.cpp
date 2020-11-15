@@ -775,23 +775,21 @@ void omnilearn::Network::adaptLearningRate()
   else
   {
     size_t epochToUse = _epoch;
-    if(_param.waitMaxBatchSize && _param.batchSizeScheduler != Scheduler::None)
+    if(_param.useBatchSizeScheduler)
     {
-      if(_currentBatchSize != static_cast<size_t>(_trainInputs.rows()))
-        return;
-      else
+      if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
         epochToUse = _epoch - _epochWhenBatchSizeReachedMax;
+      else
+        return;
     }
 
-    if(_param.learningRateScheduler == Scheduler::Inverse)
-      _currentLearningRate = inverse(_param.learningRate, epochToUse, _param.learningRateSchedulerValue);
-    else if(_param.learningRateScheduler == Scheduler::Exp)
-      _currentLearningRate = exp(_param.learningRate, epochToUse, _param.learningRateSchedulerValue);
-    else if(_param.learningRateScheduler == Scheduler::Step)
-      _currentLearningRate = step(_param.learningRate, epochToUse, _param.learningRateSchedulerValue, _param.learningRateSchedulerDelay);
-    else if(_param.learningRateScheduler == Scheduler::Plateau)
-      if(epochToUse - _optimalEpoch > _param.learningRateSchedulerDelay)
-          _currentLearningRate /= _param.learningRateSchedulerValue;
+    if(_param.scheduler == Scheduler::Exp)
+      _currentLearningRate = LRexp(_param.learningRate, epochToUse, _param.schedulerValue);
+    else if(_param.scheduler == Scheduler::Step)
+      _currentLearningRate = LRstep(_param.learningRate, epochToUse, _param.schedulerValue, _param.schedulerDelay);
+    else if(_param.scheduler == Scheduler::Plateau)
+      if(epochToUse - _optimalEpoch > _param.schedulerDelay)
+          _currentLearningRate /= _param.schedulerValue;
   }
 }
 
@@ -803,23 +801,22 @@ void omnilearn::Network::adaptBatchSize()
     _currentBatchSize = _param.batchSize;
     _epochWhenBatchSizeReachedMax = 1;
   }
-  else if(_currentBatchSize != static_cast<size_t>(_trainInputs.rows()))
+  else if(_param.useBatchSizeScheduler && _currentBatchSize != static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
   {
-    if(_param.batchSizeScheduler == Scheduler::Inverse)
-      _currentBatchSize = static_cast<size_t>(std::round(growingInverse(static_cast<double>(_param.batchSize), static_cast<double>(_trainInputs.rows()), _epoch, _param.batchSizeSchedulerValue)));
-    else if(_param.batchSizeScheduler == Scheduler::Exp)
-      _currentBatchSize = static_cast<size_t>(std::round(growingExp(static_cast<double>(_param.batchSize), static_cast<double>(_trainInputs.rows()), _epoch, _param.batchSizeSchedulerValue)));
-    else if(_param.batchSizeScheduler == Scheduler::Step)
-      _currentBatchSize = static_cast<size_t>(std::round(growingStep(static_cast<double>(_param.batchSize), static_cast<double>(_trainInputs.rows()), _epoch, _param.batchSizeSchedulerValue, _param.batchSizeSchedulerDelay)));
-    else if(_param.batchSizeScheduler == Scheduler::Plateau)
-      if(_epoch - _optimalEpoch > _param.batchSizeSchedulerDelay)
-      {
-        size_t update = static_cast<size_t>(std::round((static_cast<double>(_trainInputs.rows()) - static_cast<double>(_currentBatchSize)) * _param.batchSizeSchedulerValue));
-        if(update == 0)
-          _currentBatchSize += 1;
-        else
-          _currentBatchSize += update;
-      }
+    if(_param.scheduler == Scheduler::Exp)
+      _currentBatchSize = static_cast<size_t>(std::round(BSexp(static_cast<double>(_param.batchSize), _epoch, _param.schedulerValue)));
+    else if(_param.scheduler == Scheduler::Step)
+      _currentBatchSize = static_cast<size_t>(std::round(BSstep(static_cast<double>(_param.batchSize), _epoch, _param.schedulerValue, _param.schedulerDelay)));
+    else if(_param.scheduler == Scheduler::Plateau)
+      if(_epoch - _optimalEpoch > _param.schedulerDelay)
+          _currentBatchSize = static_cast<size_t>(std::round(static_cast<double>(_currentBatchSize) * _param.schedulerValue));
+
+    size_t before = _currentBatchSize;
+    if(_currentBatchSize > static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
+      _currentBatchSize = static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows())));
+
+    _param.learningRate = static_cast<double>(_currentBatchSize)/static_cast<double>(before);
+    _currentLearningRate /= _param.learningRate;
     _epochWhenBatchSizeReachedMax = _epoch;
   }
   _nbBatch = static_cast<size_t>(std::floor(_trainInputs.rows() / _currentBatchSize));
@@ -830,20 +827,15 @@ void omnilearn::Network::adaptBatchSize()
 void omnilearn::Network::adaptMomentum()
 {
   _previousMomentum = _currentMomentum;
-  if(_param.momentumScheduler == Scheduler::Inverse)
+  if(_param.momentumScheduler == Scheduler::Exp)
   {
-    _currentMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue);
-    _nextMomentum = growingInverse(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue);
-  }
-  else if(_param.momentumScheduler == Scheduler::Exp)
-  {
-    _currentMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue);
-    _nextMomentum = growingExp(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue);
+    _currentMomentum = Mexp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue);
+    _nextMomentum = Mexp(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue);
   }
   else if(_param.momentumScheduler == Scheduler::Step)
   {
-    _currentMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
-    _nextMomentum = growingStep(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
+    _currentMomentum = Mstep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
+    _nextMomentum = Mstep(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
   }
   else
   {
@@ -878,22 +870,22 @@ void omnilearn::Network::check() const
     throw Exception("Momentum cannot be superior to maxMomentum.");
 
   if(_param.momentumScheduler == Scheduler::Plateau)
-    throw Exception("Momentum cannot use the plateau scheduler.");
+    throw Exception("Momentum cannot use the plateau scheduler, the next momentum needed for Nesterov wouldn't be predictible.");
 
-  if(_param.batchSizeScheduler == Scheduler::Plateau && _param.batchSizeSchedulerValue >= 1)
-    throw Exception("The batch size sheduler value must be in [0, 1[ when the plateau scheduler is used.");
+  if(_param.useBatchSizeScheduler && _param.scheduler == Scheduler::None)
+    throw Exception("The batch size cannot be scheduled with the None scheduler.");
 
-  if(_param.learningRateSchedulerDelay <= 0 || _param.momentumSchedulerDelay <= 0 || _param.batchSizeSchedulerDelay <= 0)
+  if((_param.scheduler == Scheduler::Plateau || _param.scheduler == Scheduler::Step) && _param.schedulerValue < 1)
+    throw Exception("The scheduler value must be in greater than 1 when the plateau or the step scheduler is used.");
+
+  if(_param.momentumScheduler == Scheduler::Step && _param.momentumSchedulerValue < 1)
+    throw Exception("The momentum scheduler value must be in greater than 1 when the step scheduler is used.");
+
+  if(_param.schedulerDelay <= 0 || _param.momentumSchedulerDelay <= 0)
     throw Exception("The different scheduler delays must be strictly positive.");
 
-  if(_param.learningRateScheduler == Scheduler::Step && (_param.learningRateSchedulerValue < 0 || _param.learningRateSchedulerValue >=1))
-    throw Exception("The learning rate scheduler value must be in [0, 1[ when the step scheduler is used.");
-
-  if(_param.momentumScheduler == Scheduler::Step && (_param.momentumSchedulerValue < 0 || _param.momentumSchedulerValue >=1))
-    throw Exception("The momentum scheduler value must be in [0, 1[ when the step scheduler is used.");
-
-  if(_param.batchSizeScheduler == Scheduler::Step && (_param.batchSizeSchedulerValue < 0 || _param.batchSizeSchedulerValue >=1))
-    throw Exception("The batch size scheduler value must be in [0, 1[ when the step scheduler is used.");
+  if(_param.schedulerValue <= 0 || _param.momentumSchedulerValue <= 0)
+    throw Exception("The different scheduler values must be strictly positive.");
 }
 
 
