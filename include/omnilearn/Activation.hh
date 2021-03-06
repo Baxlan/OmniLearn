@@ -34,6 +34,7 @@ public:
     virtual Activation signature() const = 0;
     virtual void keep() = 0;
     virtual void release() = 0;
+    virtual size_t getNbParameters() const = 0;
 };
 
 
@@ -51,6 +52,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 };
 
 
@@ -68,6 +70,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 };
 
 
@@ -85,6 +88,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 };
 
 
@@ -102,6 +106,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 };
 
 
@@ -119,6 +124,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
 protected:
     double _coef;
@@ -135,6 +141,9 @@ public:
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
+    void keep();
+    void release();
+    size_t getNbParameters() const;
 
 protected:
     double _coefGradient;
@@ -160,6 +169,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
 protected:
     double _coef;
@@ -178,6 +188,9 @@ public:
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
+    void keep();
+    void release();
+    size_t getNbParameters() const;
 
 protected:
     double _coefGradient;
@@ -208,6 +221,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
 protected:
     double _coef1;
@@ -264,6 +278,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
 protected:
     double _center;
@@ -282,6 +297,9 @@ public:
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
+    void keep();
+    void release();
+    size_t getNbParameters() const;
 
 protected:
     double _centerGradient;
@@ -314,6 +332,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
 protected:
     double _coef;
@@ -342,6 +361,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
     double _pulsation;
     double _phase;
@@ -359,6 +379,9 @@ public:
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
+    void keep();
+    void release();
+    size_t getNbParameters() const;
 
 protected:
     double _pulsationGradient;
@@ -391,6 +414,7 @@ public:
     Activation signature() const;
     void keep();
     void release();
+    size_t getNbParameters() const;
 
     double _pulsation;
     double _phase;
@@ -408,6 +432,9 @@ public:
     void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
+    void keep();
+    void release();
+    size_t getNbParameters() const;
 
 protected:
     double _pulsationGradient;

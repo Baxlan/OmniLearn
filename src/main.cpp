@@ -239,8 +239,8 @@ void generate()
 
 int main()
 {
-    mnist();
-    //vesta();
+    //mnist();
+    vesta();
     //iris();
     //testLoader();
     //generate();

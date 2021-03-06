@@ -71,8 +71,8 @@ struct NetworkParam
     preprocessInputs(),
     preprocessOutputs(),
     optimizerBias(1e-6),
-    inputReductionThreshold(0.99),
-    outputReductionThreshold(0.99),
+    inputReductionThreshold(0.9995),
+    outputReductionThreshold(0.9995),
     inputWhiteningBias(1e-5),
     name("omnilearn_network"),
     verbose(false)

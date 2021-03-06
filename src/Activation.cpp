@@ -78,6 +78,12 @@ void omnilearn::Linear::release()
 }
 
 
+size_t omnilearn::Linear::getNbParameters() const
+{
+    return 0;
+}
+
+
 
 //=============================================================================
 //=============================================================================
@@ -134,7 +140,7 @@ omnilearn::rowVector omnilearn::Sigmoid::getCoefs() const
     return Vector(0);
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Sigmoid::signature() const
 {
     return Activation::Sigmoid;
@@ -150,6 +156,12 @@ void omnilearn::Sigmoid::keep()
 void omnilearn::Sigmoid::release()
 {
     //nothing to do
+}
+
+
+size_t omnilearn::Sigmoid::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -207,7 +219,7 @@ omnilearn::rowVector omnilearn::Tanh::getCoefs() const
     return Vector(0);
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Tanh::signature() const
 {
     return Activation::Tanh;
@@ -223,6 +235,12 @@ void omnilearn::Tanh::keep()
 void omnilearn::Tanh::release()
 {
     //nothing to do
+}
+
+
+size_t omnilearn::Tanh::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -280,7 +298,7 @@ omnilearn::rowVector omnilearn::Softplus::getCoefs() const
     return Vector(0);
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Softplus::signature() const
 {
     return Activation::Softplus;
@@ -296,6 +314,12 @@ void omnilearn::Softplus::keep()
 void omnilearn::Softplus::release()
 {
     //nothing to do
+}
+
+
+size_t omnilearn::Softplus::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -357,7 +381,7 @@ omnilearn::rowVector omnilearn::Relu::getCoefs() const
     return (Vector(1) << _coef).finished();
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Relu::signature() const
 {
     return Activation::Relu;
@@ -366,13 +390,19 @@ omnilearn::Activation omnilearn::Relu::signature() const
 
 void omnilearn::Relu::keep()
 {
-    _savedCoef = _coef;
+    //nothing to do
 }
 
 
 void omnilearn::Relu::release()
 {
-    _coef = _savedCoef;
+    //nothing to do
+}
+
+
+size_t omnilearn::Relu::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -431,10 +461,28 @@ void omnilearn::Prelu::setCoefs(Vector const& coefs)
     _counter = 0;
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Prelu::signature() const
 {
     return Activation::Prelu;
+}
+
+
+void omnilearn::Prelu::keep()
+{
+    _savedCoef = _coef;
+}
+
+
+void omnilearn::Prelu::release()
+{
+    _coef = _savedCoef;
+}
+
+
+size_t omnilearn::Prelu::getNbParameters() const
+{
+    return 1;
 }
 
 
@@ -500,7 +548,7 @@ omnilearn::rowVector omnilearn::Elu::getCoefs() const
     return (Vector(2) << _coef, _coef2).finished();
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Elu::signature() const
 {
     return Activation::Elu;
@@ -509,15 +557,19 @@ omnilearn::Activation omnilearn::Elu::signature() const
 
 void omnilearn::Elu::keep()
 {
-    _savedCoef = _coef;
-    _savedCoef2 = _coef2;
+    //nothing to do
 }
 
 
 void omnilearn::Elu::release()
 {
-    _coef = _savedCoef;
-    _coef2 = _savedCoef2;
+    //nothing to do
+}
+
+
+size_t omnilearn::Elu::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -588,10 +640,30 @@ void omnilearn::Pelu::setCoefs(Vector const& coefs)
     _counter = 0;
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Pelu::signature() const
 {
     return Activation::Pelu;
+}
+
+
+void omnilearn::Pelu::keep()
+{
+    _savedCoef = _coef;
+    _savedCoef2 = _coef2;
+}
+
+
+void omnilearn::Pelu::release()
+{
+    _coef = _savedCoef;
+    _coef2 = _savedCoef2;
+}
+
+
+size_t omnilearn::Pelu::getNbParameters() const
+{
+    return 2;
 }
 
 
@@ -764,7 +836,7 @@ omnilearn::rowVector omnilearn::Srelu::getCoefs() const
     return (Vector(4) << _coef1, _coef2, _hinge1, _hinge2).finished();
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Srelu::signature() const
 {
     return Activation::Srelu;
@@ -786,6 +858,12 @@ void omnilearn::Srelu::release()
     _coef2 = _savedCoef2;
     _hinge1 = _savedHinge1;
     _hinge2 = _savedHinge2;
+}
+
+
+size_t omnilearn::Srelu::getNbParameters() const
+{
+    return 4;
 }
 
 
@@ -853,7 +931,7 @@ omnilearn::rowVector omnilearn::Gauss::getCoefs() const
     return (Vector(2) << _center, _dev).finished();
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Gauss::signature() const
 {
     return Activation::Gauss;
@@ -862,15 +940,19 @@ omnilearn::Activation omnilearn::Gauss::signature() const
 
 void omnilearn::Gauss::keep()
 {
-    _savedCenter = _center;
-    _savedDev = _dev;
+    //nothing to do
 }
 
 
 void omnilearn::Gauss::release()
 {
-    _center = _savedCenter;
-    _dev = _savedDev;
+    //nothing to do
+}
+
+
+size_t omnilearn::Gauss::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -943,10 +1025,30 @@ void omnilearn::Pgauss::setCoefs(Vector const& coefs)
     _counter = 0;
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Pgauss::signature() const
 {
     return Activation::Pgauss;
+}
+
+
+void omnilearn::Pgauss::keep()
+{
+    _savedCenter = _center;
+    _savedDev = _dev;
+}
+
+
+void omnilearn::Pgauss::release()
+{
+    _center = _savedCenter;
+    _dev = _savedDev;
+}
+
+
+size_t omnilearn::Pgauss::getNbParameters() const
+{
+    return 2;
 }
 
 
@@ -1021,15 +1123,19 @@ omnilearn::Activation omnilearn::Sin::signature() const
 
 void omnilearn::Sin::keep()
 {
-    _savedPulsation = _pulsation;
-    _savedPhase = _phase;
+    //nothing to do
 }
 
 
 void omnilearn::Sin::release()
 {
-    _pulsation = _savedPulsation;
-    _phase = _savedPhase;
+    //nothing to do
+}
+
+
+size_t omnilearn::Sin::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -1100,10 +1206,30 @@ void omnilearn::Psin::setCoefs(Vector const& coefs)
     _counter = 0;
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Psin::signature() const
 {
     return Activation::Psin;
+}
+
+
+void omnilearn::Psin::keep()
+{
+    _savedPulsation = _pulsation;
+    _savedPhase = _phase;
+}
+
+
+void omnilearn::Psin::release()
+{
+    _pulsation = _savedPulsation;
+    _phase = _savedPhase;
+}
+
+
+size_t omnilearn::Psin::getNbParameters() const
+{
+    return 2;
 }
 
 
@@ -1184,15 +1310,19 @@ omnilearn::Activation omnilearn::Sinc::signature() const
 
 void omnilearn::Sinc::keep()
 {
-    _savedPulsation = _pulsation;
-    _savedPhase = _phase;
+    //nothing to do
 }
 
 
 void omnilearn::Sinc::release()
 {
-    _pulsation = _savedPulsation;
-    _phase = _savedPhase;
+    //nothing to do
+}
+
+
+size_t omnilearn::Sinc::getNbParameters() const
+{
+    return 0;
 }
 
 
@@ -1263,10 +1393,30 @@ void omnilearn::Psinc::setCoefs(Vector const& coefs)
     _counter = 0;
 }
 
-
+//static function
 omnilearn::Activation omnilearn::Psinc::signature() const
 {
     return Activation::Psinc;
+}
+
+
+void omnilearn::Psinc::keep()
+{
+    _savedPulsation = _pulsation;
+    _savedPhase = _phase;
+}
+
+
+void omnilearn::Psinc::release()
+{
+    _pulsation = _savedPulsation;
+    _phase = _savedPhase;
+}
+
+
+size_t omnilearn::Psinc::getNbParameters() const
+{
+    return 2;
 }
 
 
