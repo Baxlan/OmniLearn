@@ -16,7 +16,7 @@ namespace omnilearn
 
 struct Exception : public std::exception
 {
-    Exception(std::string const& msg);
+    explicit Exception(std::string const& msg) noexcept;
     virtual const char* what() const noexcept;
 
 protected:

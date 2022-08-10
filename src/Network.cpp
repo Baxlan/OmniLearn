@@ -72,8 +72,11 @@ void omnilearn::Network::learn()
     *_io << "Inputs: " << _trainInputs.cols() << " / " << _testRawInputs.cols() << " (" <<  _testRawInputs.cols() - _trainInputs.cols() << " discarded after reduction)\n";
     *_io << "Outputs: " << _trainOutputs.cols() << " / " << _testRawOutputs.cols() << " (" <<  _testRawOutputs.cols() - _trainOutputs.cols() << " discarded after reduction)\n";
 
-    _testNormalizedOutputsForMetric = _testRawOutputs;
-    _metricNormalization = normalize(_testNormalizedOutputsForMetric);
+    if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
+    {
+      _testNormalizedOutputsForMetric = _testRawOutputs;
+      _metricNormalization = normalize(_testNormalizedOutputsForMetric);
+    }
 
     computeLoss();
     double lowestLoss = _validLosses[0];
@@ -101,7 +104,7 @@ void omnilearn::Network::learn()
       }
       list(low, false);
 
-      if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
+      if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]) || std::isnan(_testSecondMetric[_epoch]))
         throw Exception("The last train, validation or test loss is NaN. The issue probably comes from too large weights.");
 
       //EARLY STOPPING
@@ -579,7 +582,7 @@ void omnilearn::Network::initPreprocess()
       if(decorrelated == true)
         throw Exception("Outputs are decorrelated multiple times.");
       if(centered == false && standardized == false)
-        throw Exception("Inputs cannot be decorrelated before centering.");
+        throw Exception("Outputs cannot be decorrelated before centering.");
       _outputDecorrelation = decorrelate(_trainOutputs);
       decorrelate(_validationOutputs, _outputDecorrelation);
       decorrelate(_testOutputs, _outputDecorrelation);

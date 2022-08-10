@@ -237,13 +237,62 @@ void generate()
 }
 
 
+
+void cryptoBot()
+{
+    omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 3);
+
+    omnilearn::NetworkParam netp;
+    netp.threads = 3;
+    netp.batchSize = 0;
+    netp.learningRate = 0.01;
+    netp.loss = omnilearn::Loss::BinaryCrossEntropy;
+    netp.patience = 10;
+    netp.plateau = 0.99;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 2;
+    netp.classificationThreshold = 0.50;
+    netp.validationRatio = 0.15;
+    netp.testRatio = 0.15;
+    netp.verbose = true;
+
+    netp.adaptiveLearningRate = true;
+    netp.automaticLearningRate = true;
+
+    omnilearn::Network net;
+    net.setParam(netp);
+    net.setData(data);
+
+    omnilearn::LayerParam lay;
+    lay.size = 128;
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Sigmoid;
+    net.addLayer(lay);
+
+    net.learn();
+}
+
+
 int main()
 {
+    //boston();
     //mnist();
-    vesta();
+    //vesta();
     //iris();
     //testLoader();
     //generate();
+
+    cryptoBot();
 
     return 0;
 }

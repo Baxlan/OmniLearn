@@ -45,7 +45,10 @@ std::pair<double, double> omnilearn::classificationMetrics(Matrix const& real, M
             }
         }
     }
-    fp = 100*fp/(validated + fp);
+    if(validated + fp != 0)
+    {
+        fp = 100*fp/(validated + fp);
+    }
     validated = 100*validated/count;
     return {validated, fp};
 }

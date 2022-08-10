@@ -4,13 +4,13 @@
 
 
 
-omnilearn::Exception::Exception(std::string const& msg):
-_msg(msg)
+omnilearn::Exception::Exception(std::string const& msg) noexcept:
+_msg("[OmniLearn.Exception : " + msg + "]")
 {
 }
 
 
 const char* omnilearn::Exception::what() const noexcept
 {
-    return std::string("[OmniLearn.Exception : " + _msg + "]").c_str();
+    return _msg.c_str();
 }

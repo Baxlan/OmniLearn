@@ -41,6 +41,7 @@ Thumbs.db
 .vscode/*
 mnist_test.csv
 mnist_train.csv
+crypto_bot.csv
 *.listing
 *.save
 *.test
