@@ -15,7 +15,7 @@ void boston()
     netp.learningRate = 0.005;
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 5;
-    netp.plateau = 1.00;
+    netp.improvement = 0.01;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
     netp.schedulerDelay = 2;
@@ -29,7 +29,7 @@ void boston()
     net.setParam(netp);
     net.setData(data);
 
-    omnilearn::LayerParam lay;
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.size = 32;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -67,7 +67,7 @@ void vesta()
 
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 10;
-    netp.plateau = 0.99;
+    netp.improvement = 0.01;
 
     netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
     netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
@@ -81,7 +81,7 @@ void vesta()
     net.setParam(netp);
     net.setData(data);
 
-    omnilearn::LayerParam lay;
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.size = 32;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -106,7 +106,7 @@ void iris()
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 10;
-    netp.plateau = 0.99;
+    netp.improvement = 0.01;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
     netp.schedulerDelay = 2;
@@ -125,7 +125,7 @@ void iris()
     net.setParam(netp);
     net.setData(data);
 
-    omnilearn::LayerParam lay;
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.size = 32;
     //lay.lockBias = true;
     //lay.lockWeights = true;
@@ -167,7 +167,7 @@ void mnist()
 
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 10;
-    netp.plateau = 0.99;
+    netp.improvement = 0.01;
 
     netp.classificationThreshold = 0.50;
 
@@ -187,7 +187,7 @@ void mnist()
     net.setData(data);
     net.setTestData(testdata);
 
-    omnilearn::LayerParam lay;
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.maxNorm = 100;
     lay.size = 256;
 
@@ -208,8 +208,8 @@ void testLoader()
     omnilearn::Network genNet;
     genNet.load("omnilearn_network", 4);
     omnilearn::Data data = omnilearn::loadData("dataset/mnist_test.csv", ',', 4);
-    std::pair<double, double> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
-    std::cout << metric.first << " " << metric.second << "\n";
+    std::array<double, 4> metric = omnilearn::monoClassificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
+    std::cout << metric[0] << " " << metric[1] << "\n";
 }
 
 
@@ -244,11 +244,11 @@ void cryptoBot()
 
     omnilearn::NetworkParam netp;
     netp.threads = 3;
-    netp.batchSize = 0;
+    netp.batchSize = 1;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
     netp.patience = 10;
-    netp.plateau = 0.99;
+    netp.improvement = 0.01;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
     netp.schedulerDelay = 2;
@@ -258,13 +258,13 @@ void cryptoBot()
     netp.verbose = true;
 
     netp.adaptiveLearningRate = true;
-    netp.automaticLearningRate = true;
+    netp.automaticLearningRate = false;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
-    omnilearn::LayerParam lay;
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.size = 128;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -287,12 +287,12 @@ int main()
 {
     //boston();
     //mnist();
-    //vesta();
+    vesta();
     //iris();
     //testLoader();
     //generate();
 
-    cryptoBot();
+    //cryptoBot();
 
     return 0;
 }

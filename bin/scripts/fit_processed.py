@@ -26,7 +26,7 @@ predicted = np.matrix(predicted[:-1])
 
 # get metric type
 metric_t = content[content.index("loss:")+1]
-if metric_t in ["mse", "mae"]:
+if metric_t in ["rmse", "mae"]:
   metric_t = "regression"
 else:
   metric_t = "classification"
@@ -77,7 +77,7 @@ for proc in process:
 # REGRESSION PROBLEM
 if metric_t == "regression":
   mae = []
-  mse = []
+  rmse = []
 
   for lab in range(len(outLabels)):
     if wantedLabels != "" and lab != int(wantedLabels)-1:

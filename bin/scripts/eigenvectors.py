@@ -27,10 +27,10 @@ loss_t = content[content.index("loss:")+1]
 # get metric type
 metric_t = "regression"
 metricLabel1 = "mae metric (normalized)"
-metricLabel2 = "mse metric (normalized)"
+metricLabel2 = "rmse metric (normalized)"
 if loss_t in ["cross entropy", "binary cross entropy"]:
   metric_t = "classification"
-  metricLabel1 = "accuracy"
+  metricLabel1 = "likelihood"
   metricLabel2 = "false prediction rate"
 
 
@@ -100,7 +100,7 @@ for proc in process:
 if metric_t == "regression":
 
   if len(sys.argv) < 3:
-    print("ERROR: the detailed metric type to plot must be entered (mae or mse).")
+    print("ERROR: the detailed metric type to plot must be entered (mae or rmse).")
     sys.exit()
 
   metric = []
@@ -112,8 +112,8 @@ if metric_t == "regression":
     if sys.argv[2] == "mae":
       metric.append(np.mean(np.abs(error[i])))
       dev.append(np.std(error[i]))
-    elif sys.argv[2] == "mse":
-      metric.append(np.mean(np.square(error[i])))
+    elif sys.argv[2] == "rmse":
+      metric.append(sqrt(np.mean(np.square(error[i]))))
       dev.append(np.std(np.square(error[i])))
     err.append(dev[i]/math.sqrt(len(np.asarray(predicted)[i])))
 
@@ -169,8 +169,8 @@ if metric_t == "regression":
     if sys.argv[2] == "mae":
       metric.append(np.mean(np.abs(error[i])))
       dev.append(np.std(error[i]))
-    elif sys.argv[2] == "mse":
-      metric.append(np.mean(np.square(error[i])))
+    elif sys.argv[2] == "rmse":
+      metric.append(sqrt(np.mean(np.square(error[i]))))
       dev.append(np.std(np.square(error[i])))
     err.append(dev[i]/math.sqrt(len(np.asarray(predicted)[i])))
 

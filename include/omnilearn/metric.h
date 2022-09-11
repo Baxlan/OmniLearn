@@ -15,9 +15,10 @@ namespace omnilearn
 // the inputs are loss, the output is average loss
 double averageLoss(Matrix const& loss);
 //first is "accuracy", second is "false prediction"
-std::pair<double, double> classificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity);
+std::array<double, 4> monoClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity);
+std::array<double, 4> multipleClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity);
 //first is L1, second is L2, with normalized outputs
-std::pair<double, double> regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization);
+std::array<double, 4> regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization, size_t inputVariables);
 
 
 

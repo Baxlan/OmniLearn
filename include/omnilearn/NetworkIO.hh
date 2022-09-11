@@ -40,6 +40,7 @@ class NetworkIO
   template<typename T, typename> friend NetworkIO& operator<<(NetworkIO& io, T const& text);
   friend NetworkIO& operator<<(NetworkIO& io, std::string const& text);
   friend NetworkIO& operator<<(NetworkIO& io, std::_Setw const& setw);
+  friend NetworkIO& operator<<(NetworkIO& io, std::_Setprecision const& setp);
 
 public:
   NetworkIO(fs::path const& path, bool verbose);
@@ -86,6 +87,7 @@ NetworkIO& operator<<(NetworkIO& io, T text[N])
 // not template, implemented in .cpp
 NetworkIO& operator<<(NetworkIO& io, std::string const& text);
 NetworkIO& operator<<(NetworkIO& io, std::_Setw const& setw);
+NetworkIO& operator<<(NetworkIO& io, std::_Setprecision const& setp);
 
 
 

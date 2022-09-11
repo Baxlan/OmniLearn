@@ -2,6 +2,37 @@
 
 #include "omnilearn/Layer.hh"
 
+omnilearn::LayerParam omnilearn::Layer::generateLinearLayerParam()
+{
+    LayerParam param = LayerParam();
+    param.distrib = Distrib::Uniform;
+    param.deviation_boundary = 1;
+    param.useOutput = false;
+
+    return param;
+}
+
+
+omnilearn::LayerParam omnilearn::Layer::generateLinearNormalizedLayerParam()
+{
+    LayerParam param = LayerParam();
+    param.distrib = Distrib::Uniform;
+    param.deviation_boundary = 6;
+    param.useOutput = true;
+
+    return param;
+}
+
+
+omnilearn::LayerParam omnilearn::Layer::generateNonLinearLayerParam()
+{
+    LayerParam param = LayerParam();
+    param.distrib = Distrib::Normal;
+    param.deviation_boundary = 2;
+    param.useOutput = false;
+
+    return param;
+}
 
 
 omnilearn::Layer::Layer(LayerParam const& param):
@@ -14,12 +45,12 @@ _neurons(std::vector<Neuron>(param.size))
 }
 
 
-void omnilearn::Layer::init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator)
+void omnilearn::Layer::init(size_t nbInputs, std::mt19937& generator)
 {
     _inputSize = nbInputs;
     for(size_t i = 0; i < _neurons.size(); i++)
     {
-        _neurons[i].init(_param.distrib, _param.mean_boundary, _param.deviation, nbInputs, nbOutputs, _param.k, generator, _param.useOutput);
+        _neurons[i].init(_param.distrib, _param.mean, _param.deviation_boundary, nbInputs, _neurons.size(), _param.k, generator, _param.useOutput);
     }
 }
 

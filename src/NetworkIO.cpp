@@ -23,6 +23,14 @@ omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::_Setw const& set
   return io;
 }
 
+omnilearn::NetworkIO& omnilearn::operator<<(NetworkIO& io, std::_Setprecision const& setp)
+{
+  io._listing << setp << std::left;
+  if(io._verbose)
+    std::cout << setp << std::left;
+  return io;
+}
+
 omnilearn::NetworkIO::NetworkIO(fs::path const& path, bool verbose):
 _path(path),
 _verbose(verbose)
@@ -105,7 +113,7 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
   else if(net._param.loss == Loss::L1)
     jObj["loss"] = "mae";
   else if(net._param.loss == Loss::L2)
-    jObj["loss"] = "mse";
+    jObj["loss"] = "rmse";
 
   jObj["input labels"] = net._inputLabels;
   jObj["output labels"] = net._outputLabels;
@@ -113,6 +121,8 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
   jObj["validation losses"] = net._validLosses;
   jObj["test first metrics"] = net._testMetric;
   jObj["test second metrics"] = net._testSecondMetric;
+  jObj["test third metrics"] = net._testThirdMetric;
+  jObj["test fourth metrics"] = net._testFourthMetric;
   if(jObj["loss"] == "binary cross entropy" || jObj["loss"] == "cross entropy")
   {
     jObj["classification threshold"] = net._param.classificationThreshold;
@@ -249,7 +259,7 @@ void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
     net._param.loss = Loss::CrossEntropy;
   else if(jObj.at("loss") == "mae")
     net._param.loss = Loss::L1;
-  else if(jObj.at("loss") == "mse")
+  else if(jObj.at("loss") == "rmse")
     net._param.loss = Loss::L2;
 
   jObj.at("input labels").get_to(net._inputLabels);

@@ -96,7 +96,7 @@ void omnilearn::Network::learn()
 
       double low = lowestLoss;
       //if validation loss is inferior to (_param.plateau * optimal loss), save current weights
-      if(_validLosses[_epoch] < lowestLoss * _param.plateau)
+      if(1-(_validLosses[_epoch] / lowestLoss) > _param.improvement)
       {
         keep();
         lowestLoss = _validLosses[_epoch];
@@ -104,7 +104,8 @@ void omnilearn::Network::learn()
       }
       list(low, false);
 
-      if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]) || std::isnan(_testSecondMetric[_epoch]))
+      if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
+      // the 2nd and 4rd metric could be NaN without problem
         throw Exception("The last train, validation or test loss is NaN. The issue probably comes from too large weights.");
 
       //EARLY STOPPING
@@ -112,7 +113,7 @@ void omnilearn::Network::learn()
         break;
     }
     release();
-    *_io << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "\n";
+    *_io << "\nOptimal epoch: " << _optimalEpoch << "   First metric: " << _testMetric[_optimalEpoch] << "   Second metric: " << _testSecondMetric[_optimalEpoch] << "   Third metric: " << _testThirdMetric[_optimalEpoch] << "   Fourth metric: " << _testFourthMetric[_optimalEpoch] << "\n";
     _io->save(*this);
   }
   catch(Exception const& e)
@@ -399,9 +400,7 @@ void omnilearn::Network::initLayers()
 {
   for(size_t i = 0; i < _layers.size(); i++)
   {
-      _layers[i].init((i == 0 ? _trainInputs.cols() : _layers[i-1].size()),
-                      (i == _layers.size()-1 ? 0 : _layers[i+1].size()),
-                      _generator);
+      _layers[i].init((i == 0 ? _trainInputs.cols() : _layers[i-1].size()), _generator);
   }
 }
 
@@ -736,20 +735,26 @@ void omnilearn::Network::computeLoss()
   double validationLoss = averageLoss(computeLossMatrix(_validationOutputs, processForLoss(_validationInputs))) + L1 + L2;
 
   //test metric
-  std::pair<double, double> testMetric;
+  std::array<double, 4> testMetric;
   if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-    testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization);
+    testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization, _trainInputs.cols());
+  else if(_param.loss == Loss::CrossEntropy)
+    testMetric = monoClassificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
   else
-    testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
+    testMetric = multipleClassificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
 
   _trainLosses.conservativeResize(_trainLosses.size() + 1);
   _trainLosses[_trainLosses.size()-1] = trainLoss;
   _validLosses.conservativeResize(_validLosses.size() + 1);
   _validLosses[_validLosses.size()-1] = validationLoss;
   _testMetric.conservativeResize(_testMetric.size() + 1);
-  _testMetric[_testMetric.size()-1] = testMetric.first;
+  _testMetric[_testMetric.size()-1] = testMetric[0];
   _testSecondMetric.conservativeResize(_testSecondMetric.size() + 1);
-  _testSecondMetric[_testSecondMetric.size()-1] = testMetric.second;
+  _testSecondMetric[_testSecondMetric.size()-1] = testMetric[1];
+  _testThirdMetric.conservativeResize(_testThirdMetric.size() + 1);
+  _testThirdMetric[_testThirdMetric.size()-1] = testMetric[2];
+  _testFourthMetric.conservativeResize(_testFourthMetric.size() + 1);
+  _testFourthMetric[_testFourthMetric.size()-1] = testMetric[3];
 }
 
 
@@ -889,29 +894,56 @@ void omnilearn::Network::check() const
 
   if(_param.schedulerValue <= 0 || _param.momentumSchedulerValue <= 0)
     throw Exception("The different scheduler values must be strictly positive.");
+
+  if(_param.classificationThreshold < 0.5 || _param.classificationThreshold >= 1)
+    throw Exception("The classification threshold must be in [0.5, 1[.");
 }
 
 
 void omnilearn::Network::list(double lowestLoss, bool initial) const
 {
-  if(initial || _epoch % 50 == 0)
+  std::ostringstream oss;
+  std::string currentLearningRate;
+
+  if(_currentLearningRate >= 1e-6 && _currentLearningRate < 1e3)
   {
-    *_io << "\nEpoch       Validation     Training         current validation      Overfitting     First          Second         Global         Batch Size     Momentum       Remaining\n";
-    *_io <<   "               Loss          Loss         compared to optimal one                   Metric         Metric      Learning rate                                     Epochs\n\n";
-  }
-  if(initial)
-  {
-    *_io << std::setw(9) << "0" << "   " << std::setw(12) << _validLosses[0] << "   " << std::setw(12) << _trainLosses[0];
-    *_io << "     " << std::setw(12) << "0" << "%           " << std::setw(12) << (_validLosses[0]-_trainLosses[0])/_trainLosses[0] << "%   ";
-    *_io << std::setw(12) << _testMetric[0] << "   " << std::setw(12) << _testSecondMetric[0] << "   ";
-    *_io << std::setw(12) << "-" << "   " << std::setw(12) << "-" << "   " << std::setw(12) << "-" << "   " << std::setw(9) << _param.patience << "\n";
+    oss << std::fixed << std::setprecision(6) << _currentLearningRate;
+    currentLearningRate = oss.str();
+
+    //formating the learning rate (that must be e string because of the ? operator (see below))
+    for(size_t i=currentLearningRate.size()-1; i > 0; i--)
+      if(currentLearningRate[i] == '0')
+        currentLearningRate[i] = ' ';
+      else
+        break;
   }
   else
   {
-    double gap = 100 * _validLosses[_epoch] / lowestLoss;
-    *_io << std::setw(9) << _epoch << "   " << std::setw(12) << _validLosses[_epoch] << "   " << std::setw(12) << _trainLosses[_epoch];
-    *_io << "     " << std::setw(12) << gap << "%           " << std::setw(12) << 100*(_validLosses[_epoch]-_trainLosses[_epoch])/_trainLosses[_epoch] << "%   ";
-    *_io << std::setw(12) << _testMetric[_epoch] << "   " << std::setw(12) << _testSecondMetric[_epoch] << "   " << std::setw(12) << (_param.automaticLearningRate ? "-" : std::to_string(_currentLearningRate));
-    *_io << "   " << std::setw(12) << _currentBatchSize << "   " << std::setw(12) << _currentMomentum << "   " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << "   (" << _missedData << " data have been ignored)\n";
+    oss << std::scientific << std::setprecision(4) << _currentLearningRate;
+    currentLearningRate = oss.str();
+  }
+
+
+  if(initial || _epoch % 50 == 0)
+  {
+    *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |  First   |  Second  |  Third   |  Fourth  |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
+    *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |  metric  |  metric  |  metric  |  metric  |     LR     |   size    |          |   data    |   epochs  |\n";
+    *_io <<   "|           |            |            |                   |             |          |          |          |          |            |           |          |           |           |\n";
+  }
+  if(initial)
+  {
+    *_io << "| " << std::setw(9) << "0*" << " |  " << std::setw(9) << _validLosses[0] << " |  " << std::setw(9) << _trainLosses[0];
+    *_io << " |     " << "   -    " << " %    |  " << std::setw(8) << std::round(100*(_validLosses[0]-_trainLosses[0])/_validLosses[0] *1e3)/1e3 << " % | ";
+    *_io << std::setw(8) << _testMetric[0] << " | " << std::setw(8) << _testSecondMetric[0] << " | " << std::setw(8) << _testThirdMetric[0] << " | " << std::setw(8) << _testFourthMetric[0] << " | ";
+    *_io << std::setw(10) << "    -   " << " | " << std::setw(9) << "    -    " << " | " << std::setw(8) << "   -    " << " | " << std::setw(9) << "    -    " << " | " << std::setw(9) << _param.patience << " |\n";
+  }
+  else
+  {
+    double gap = 100 * (1-(_validLosses[_epoch] / lowestLoss));
+    *_io << "| " << std::setw(9) << std::to_string(_epoch) + (_epoch==_optimalEpoch ? "*": "") << " |  " << std::setw(9) << _validLosses[_epoch] << " |  " << std::setw(9) << _trainLosses[_epoch];
+    *_io << " |     " << std::setw(8) << std::round(gap*1e3)/1e3 << " %    |  " << std::setw(8) << std::round(100*(_validLosses[_epoch]-_trainLosses[_epoch])/_validLosses[_epoch] * 1e3)/1e3 << " % | ";
+    *_io << std::setw(8) << _testMetric[_epoch] << " | " << std::setw(8) << _testSecondMetric[_epoch] << " | " << std::setw(8) << _testThirdMetric[_epoch] << " | " << std::setw(8) << _testFourthMetric[_epoch] << " | ";
+    *_io << std::setw(10) << (_param.automaticLearningRate ? "    -   " : currentLearningRate);
+    *_io << " | " << std::setw(9) << _currentBatchSize << " | " << std::setw(8) << _currentMomentum << " | " << std::setw(9) << _missedData << " | " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << " |\n";
   }
 }

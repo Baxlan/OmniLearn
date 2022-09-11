@@ -19,12 +19,22 @@ namespace omnilearn
 struct LayerParam
 {
     LayerParam():
-    size(8),
+    size(16),
     maxNorm(0),
     distrib(Distrib::Normal),
-    mean_boundary(distrib == Distrib::Normal ? 0 : 6),
-    deviation(2),
-    useOutput(true),
+    mean(0), //only used if distrib==normal
+
+    //if activation is linear around x=0 (such as sigmoid or tanh):
+        //use UNIFORM distrubution and:
+        //if using Xavier Weight Initialization:
+            //set useOutput to false and deviation_boundary to 1.
+        //else, use normalized version of Xavier Weight Initialization:
+            //set useOutput to true and deviation_boundary to 6.
+
+    //else if activation is not linear around x=0 (such as relu):
+        // use NORMAL distribution, set useOutput to false and set deviation_boundary to 2
+    deviation_boundary(2),
+    useOutput(false),
     k(1),
     aggregation(Aggregation::Dot),
     activation(Activation::Relu),
@@ -36,8 +46,8 @@ struct LayerParam
     size_t size; //number of neurons
     double maxNorm;
     Distrib distrib;
-    double mean_boundary; //mean (if normal), boundary (if uniform)
-    double deviation; //deviation (if normal) or useless (if uniform)
+    double mean; //mean (if normal), nor used (if uniform)
+    double deviation_boundary; //deviation (if normal) or boundary (if uniform)
     bool useOutput; // calculate boundary/deviation by taking output number into account
     size_t k; //number of weight set for each neuron (for maxout)
     Aggregation aggregation;
@@ -54,9 +64,13 @@ class Layer
     friend void from_json(json const& jObj, Layer& layer);
 
 public:
+    static LayerParam generateLinearLayerParam();
+    static LayerParam generateLinearNormalizedLayerParam();
+    static LayerParam generateNonLinearLayerParam();
+
     Layer() = default; // only used in NetworkIO::loadCoefs(). DO NOT USE MANUALLY
     Layer(LayerParam const& param);
-    void init(size_t nbInputs, size_t nbOutputs, std::mt19937& generator);
+    void init(size_t nbInputs, std::mt19937& generator);
     void init(size_t nbInputs);
     Matrix process(Matrix const& inputs, ThreadPool& t) const;
     Vector processToLearn(Vector const& input, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t);

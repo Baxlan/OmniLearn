@@ -67,7 +67,7 @@ struct NetworkParam
     momentumSchedulerValue(1),
     momentumScheduler(Scheduler::None),
     window(0.99),
-    plateau(0.99),
+    improvement(0.01),
     preprocessInputs(),
     preprocessOutputs(),
     optimizerBias(1e-6),
@@ -107,7 +107,7 @@ struct NetworkParam
     double momentumSchedulerValue;
     Scheduler momentumScheduler;
     double window; //b2 in the second moment of gradients (and of updates)
-    double plateau;
+    double improvement; // minimum validation loss improvement nedeed to become the new optimal
     std::vector<Preprocess> preprocessInputs;
     std::vector<Preprocess> preprocessOutputs;
     double optimizerBias;
@@ -216,6 +216,8 @@ private:
   Vector _validLosses;
   Vector _testMetric;
   Vector _testSecondMetric;
+  Vector _testThirdMetric;
+  Vector _testFourthMetric;
 
   //labels
   std::vector<std::string> _inputLabels;
