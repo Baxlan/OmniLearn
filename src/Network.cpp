@@ -728,8 +728,7 @@ void omnilearn::Network::computeLoss()
 
   //training loss
   Matrix input = _trainInputs;
-  Matrix output = _trainOutputs;
-  double trainLoss = averageLoss(computeLossMatrix(output, processForLoss(input))) + L1 + L2;
+  double trainLoss = averageLoss(computeLossMatrix(_trainOutputs, processForLoss(input))) + L1 + L2;
 
   //validation loss
   double validationLoss = averageLoss(computeLossMatrix(_validationOutputs, processForLoss(_validationInputs))) + L1 + L2;
@@ -737,7 +736,7 @@ void omnilearn::Network::computeLoss()
   //test metric
   std::array<double, 4> testMetric;
   if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-    testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization, _trainInputs.cols());
+    testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization);
   else if(_param.loss == Loss::CrossEntropy)
     testMetric = monoClassificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
   else

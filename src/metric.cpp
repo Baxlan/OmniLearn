@@ -2,7 +2,7 @@
 
 #include "omnilearn/metric.h"
 
-
+#include <iostream>
 
 // the inputs are loss, the output is average loss
 double omnilearn::averageLoss(Matrix const& loss)
@@ -19,42 +19,61 @@ double omnilearn::averageLoss(Matrix const& loss)
 //first is "accuracy", second is "false prediction"
 std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
 {
-    double validated = 0;
-    double fp = 0; //false positive prediction
-    double fn = 0; //false negative prediction
+    Vector predictionLikelihood = Vector::Constant(real.cols(), 0);
+    Vector rejectionLikelihood = Vector::Constant(real.cols(), 0);
+    Vector predictionCount = Vector::Constant(real.cols(), 0);
+    Vector rejectionCount = Vector::Constant(real.cols(), 0);
+
+    Vector falsePrediction = Vector::Constant(real.cols(), 0);
+    Vector falseRejection = Vector::Constant(real.cols(), 0);
 
     for(eigen_size_t i = 0; i < real.rows(); i++)
     {
-        for(eigen_size_t j = 0; j < real.cols(); j++)
+        for(eigen_size_t j = 0; j < predicted.cols(); j++)
         {
             if(std::abs(real(i, j) - 1) <= std::numeric_limits<double>::epsilon())
             {
+                predictionCount(j)++;
                 if(predicted(i, j) >= classValidity)
                 {
-                    validated++;
+                    predictionLikelihood(j)++;
                 }
                 else
                 {
-                    fn++;
+                    falseRejection(j)++;
                 }
-                break;
             }
             else
             {
+                rejectionCount(j)++;
                 if(predicted(i, j) >= classValidity)
                 {
-                    fp++;
-                    break;
+                    falsePrediction(j)++;
+                }
+                else
+                {
+                    rejectionLikelihood(j)++;
                 }
             }
         }
     }
-    // because it is mono labeled date, true positive likelihood = true negative likelihood
-    fp = 100*fp/(validated + fp);
-    fn = 100*fn/(validated + fn);
-    validated = 100*validated/static_cast<double>(real.rows());
+    double accuracy = predictionLikelihood.array().sum()/static_cast<double>(real.rows());
 
-    return {validated, fp, validated, fn};
+    // cohen Kappa metric indicate that:
+    // 0 = model output is similar than random output
+    // 1 = model is perfect
+    // inferior to 0 = model is worse than random
+    double cohenKappa = 0;
+    for(eigen_size_t i = 0; i < real.cols(); i++)
+    {
+        cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
+    }
+    cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
+
+    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array();
+    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();
+
+    return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
 }
 
 
@@ -108,15 +127,17 @@ std::array<double, 4> omnilearn::multipleClassificationMetrics(Matrix const& rea
 
 
 //first is L1 (MAE), second is L2(RMSE), with normalized outputs
-std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization, size_t inputVariables)
+std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization)
 {
     //"real" are already normalized
     normalize(predicted, normalization);
 
+    //ROW WISE !
     Vector mae = Vector::Constant(real.rows(), 0);
     Vector rmse = Vector::Constant(real.rows(), 0);
-    Vector adjR2 = Vector::Constant(real.rows(), 0);
-    Vector correlation = Vector::Constant(real.rows(), 0);
+
+    //COLUMN WIZE !
+    Vector correlation = Vector::Constant(real.cols(), 0);
 
     Vector realMeans = Vector::Constant(real.rows(), 0);
     Vector predictedMeans = Vector::Constant(real.rows(), 0);
@@ -131,20 +152,21 @@ std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted
     {
         for(eigen_size_t j = 0; j < real.cols(); j++)
         {
+            //ROW WISE !
             mae[i] += std::abs(real(i, j) - predicted(i, j));
             rmse[i] += std::pow(real(i, j) - predicted(i, j), 2);
-            adjR2[i] += std::pow(realMeans(i, j) - predicted(i, j), 2);
-            correlation[i] += (predicted(i, j)-predictedMeans(i))*(real(i, j)-realMeans(i));
+
+            //COLUMN WIZE !
+            correlation[j] += (predicted(i, j)-predictedMeans(j))*(real(i, j)-realMeans(j));
         }
     }
 
     for(eigen_size_t i = 0; i < real.cols(); i++)
     {
-        adjR2[i] = 1 - (rmse[i] / adjR2[i]);
-        adjR2[i] = 1 - ((1-adjR2[i]) * static_cast<double>((real.rows()-1)) / static_cast<double>(real.rows()-inputVariables-1));
-
-        correlation[i] /= std::sqrt((real.array() - realMeans(i)).square().sum()) * std::sqrt((predicted.array() - predictedMeans(i)).square().sum());
+        correlation[i] /= std::sqrt((real.col(i).array() - realMeans(i)).square().sum()) * std::sqrt((predicted.col(i).array() - predictedMeans(i)).square().sum());
     }
 
-    return {mae.mean(), std::sqrt(rmse.mean()), adjR2.mean(), correlation.mean()};
+    mae = mae.array()/real.cols();
+
+    return {mae.mean(), std::sqrt((rmse.array()/real.cols()).mean()), median(mae), correlation.array().abs().mean()};
 }

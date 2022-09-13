@@ -101,7 +101,7 @@ void iris()
     omnilearn::Data data = omnilearn::loadData("dataset/iris.csv", ',', 4);
 
     omnilearn::NetworkParam netp;
-    netp.threads = 4;
+    netp.threads = 3;
     netp.batchSize = 5;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
@@ -209,7 +209,7 @@ void testLoader()
     genNet.load("omnilearn_network", 4);
     omnilearn::Data data = omnilearn::loadData("dataset/mnist_test.csv", ',', 4);
     std::array<double, 4> metric = omnilearn::monoClassificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
-    std::cout << metric[0] << " " << metric[1] << "\n";
+    std::cout << metric[0] << " " << metric[1] << " " << metric[2] << " " << metric[3] << "\n";
 }
 
 
