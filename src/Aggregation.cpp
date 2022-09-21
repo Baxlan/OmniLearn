@@ -49,7 +49,7 @@ void omnilearn::Dot::computeGradients([[maybe_unused]] Vector const& inputs, [[m
 }
 
 
-void omnilearn::Dot::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Dot::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -85,6 +85,11 @@ void omnilearn::Dot::release()
     //nothing to do
 }
 
+
+size_t omnilearn::Dot::getNbParameters() const
+{
+    return 0;
+}
 
 
 //=============================================================================
@@ -149,7 +154,7 @@ void omnilearn::Distance::computeGradients([[maybe_unused]] Vector const& inputs
 }
 
 
-void omnilearn::Distance::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Distance::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -187,6 +192,11 @@ void omnilearn::Distance::release()
     _order = _savedOrder;
 }
 
+
+size_t omnilearn::Distance::getNbParameters() const
+{
+    return 0;
+}
 
 
 //=============================================================================
@@ -226,11 +236,11 @@ void omnilearn::Pdistance::computeGradients(Vector const& inputs, Vector const& 
 }
 
 
-void omnilearn::Pdistance::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Pdistance::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     _orderGradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_order, _previousOrderGrad, _previousOrderGrad2, _optimalPreviousOrderGrad2, _previousOrderUpdate, _orderGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
+    optimizedUpdate(_order, _previousOrderGrad, _previousOrderGrad2, _optimalPreviousOrderGrad2, _previousOrderUpdate, _orderGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
 
     _orderGradient = 0;
     _counter = 0;
@@ -258,6 +268,11 @@ omnilearn::Aggregation omnilearn::Pdistance::signature() const
     return Aggregation::Pdistance;
 }
 
+
+size_t omnilearn::Pdistance::getNbParameters() const
+{
+    return 1;
+}
 
 
 //=============================================================================
@@ -311,7 +326,7 @@ void omnilearn::Maxout::computeGradients([[maybe_unused]] Vector const& inputs, 
 }
 
 
-void omnilearn::Maxout::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Maxout::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -345,4 +360,10 @@ void omnilearn::Maxout::keep()
 void omnilearn::Maxout::release()
 {
     //nothing to do
+}
+
+
+size_t omnilearn::Maxout::getNbParameters() const
+{
+    return 0;
 }

@@ -113,7 +113,7 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
   else if(net._param.loss == Loss::L1)
     jObj["loss"] = "mae";
   else if(net._param.loss == Loss::L2)
-    jObj["loss"] = "rmse";
+    jObj["loss"] = "mse";
 
   jObj["input labels"] = net._inputLabels;
   jObj["output labels"] = net._outputLabels;
@@ -259,7 +259,7 @@ void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
     net._param.loss = Loss::CrossEntropy;
   else if(jObj.at("loss") == "mae")
     net._param.loss = Loss::L1;
-  else if(jObj.at("loss") == "rmse")
+  else if(jObj.at("loss") == "mse")
     net._param.loss = Loss::L2;
 
   jObj.at("input labels").get_to(net._inputLabels);

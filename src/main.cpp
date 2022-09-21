@@ -54,7 +54,7 @@ void vesta()
     netp.testRatio = 0.20;
     netp.batchSize = 1;
     netp.maxBatchSizeRatio = 0.1;
-    netp.useBatchSizeScheduler = true;
+    netp.scheduleBatchSize = true;
     netp.learningRate = 0.01;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
@@ -73,8 +73,7 @@ void vesta()
     netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
 
     netp.verbose = true;
-    netp.adaptiveLearningRate = true;
-    netp.automaticLearningRate = false;
+    netp.optimizer = omnilearn::Optimizer::NadamX;
     netp.window = 0.99;
 
     omnilearn::Network net;
@@ -118,8 +117,7 @@ void iris()
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
 
-    netp.adaptiveLearningRate = true;
-    netp.automaticLearningRate = true;
+    netp.optimizer = omnilearn::Optimizer::Adadelta;
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -154,7 +152,8 @@ void mnist()
     netp.testRatio = 0.00;
     netp.batchSize = 1;
     netp.maxBatchSizeRatio = 0.1;
-    netp.useBatchSizeScheduler = true;
+    netp.scheduleBatchSize = true;
+    netp.scheduleLearningRate = true;
     netp.learningRate = 0.1;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
@@ -176,8 +175,7 @@ void mnist()
     netp.inputReductionThreshold = 0.99;
 
     netp.verbose = true;
-    netp.adaptiveLearningRate = true;
-    netp.automaticLearningRate = false;
+    netp.optimizer = omnilearn::Optimizer::NadamX;
     netp.window = 0.99;
 
 
@@ -257,20 +255,25 @@ void cryptoBot()
     netp.testRatio = 0.15;
     netp.verbose = true;
 
-    netp.adaptiveLearningRate = true;
-    netp.automaticLearningRate = false;
+    netp.optimizer = omnilearn::Optimizer::NadamX;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.size = 128;
+    lay.size = 256;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Softplus;
     net.addLayer(lay);
 
+    lay.size = 128;
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.size = 64;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Softplus;
     net.addLayer(lay);
@@ -287,8 +290,8 @@ int main()
 {
     //boston();
     //mnist();
-    vesta();
-    //iris();
+    //vesta();
+    iris();
     //testLoader();
     //generate();
 

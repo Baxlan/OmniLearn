@@ -28,7 +28,7 @@ public:
     virtual double activate(double val) const = 0;
     virtual double prime(double val) const = 0;
     virtual void computeGradients(double aggr, double inputGrad) = 0;
-    virtual void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay) = 0;
+    virtual void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay) = 0;
     virtual void setCoefs(Vector const& coefs) = 0;
     virtual rowVector getCoefs() const = 0;
     virtual Activation signature() const = 0;
@@ -46,7 +46,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -64,7 +64,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -82,7 +82,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -100,7 +100,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -118,7 +118,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -138,7 +138,7 @@ class Prelu : public Relu
 public:
     Prelu(Vector const& coefs = (Vector(1) << 0.01).finished());
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
     void keep();
@@ -163,7 +163,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -185,7 +185,7 @@ class Pelu : public Elu
 public:
     Pelu(Vector const& coefs = (Vector(2) << 1., 1.).finished());
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
     void keep();
@@ -215,7 +215,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -272,7 +272,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -294,7 +294,7 @@ class Pgauss : public Gauss
 public:
     Pgauss(Vector const& coefs = (Vector(2) << 0.0, 1.0).finished());
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
     void keep();
@@ -326,7 +326,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -355,7 +355,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -376,7 +376,7 @@ class Psin : public Sin
 public:
     Psin(Vector const& coefs = (Vector(2) << 1.0, 0.0).finished());
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
     void keep();
@@ -408,7 +408,7 @@ public:
     double activate(double val) const;
     double prime(double val) const;
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     rowVector getCoefs() const;
     Activation signature() const;
@@ -429,7 +429,7 @@ class Psinc : public Sinc
 public:
     Psinc(Vector const& coefs = (Vector(2) << 1.0, 0.0).finished());
     void computeGradients(double aggr, double inputGrad);
-    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
+    void updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay);
     void setCoefs(Vector const& coefs);
     Activation signature() const;
     void keep();
@@ -459,7 +459,8 @@ Matrix softmax(Matrix inputs);
 
 
 
-static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activationMap = {
+static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activationMap =
+{
     {Activation::Linear, []{return std::make_unique<Linear>();}},
     {Activation::Sigmoid, []{return std::make_unique<Sigmoid>();}},
     {Activation::Tanh, []{return std::make_unique<Tanh>();}},
@@ -479,7 +480,8 @@ static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activ
 
 
 
-static std::map<std::string, Activation> stringToActivationMap = {
+static std::map<std::string, Activation> stringToActivationMap =
+{
     {"linear", Activation::Linear},
     {"sigmoid", Activation::Sigmoid},
     {"tanh", Activation::Tanh},
@@ -499,7 +501,8 @@ static std::map<std::string, Activation> stringToActivationMap = {
 
 
 
-static std::map<Activation, std::string> activationToStringMap = {
+static std::map<Activation, std::string> activationToStringMap =
+{
     {Activation::Linear, "linear"},
     {Activation::Sigmoid, "sigmoid"},
     {Activation::Tanh, "tanh"},

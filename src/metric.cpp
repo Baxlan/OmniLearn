@@ -19,13 +19,12 @@ double omnilearn::averageLoss(Matrix const& loss)
 //first is "accuracy", second is "false prediction"
 std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
 {
-    Vector predictionLikelihood = Vector::Constant(real.cols(), 0);
-    Vector rejectionLikelihood = Vector::Constant(real.cols(), 0);
+    Vector predictionLikelihood = Vector::Constant(real.cols(), 0); //P(score>=threshold | label=1)
+    Vector rejectionLikelihood = Vector::Constant(real.cols(), 0);  //P(score<threshold | label=0)
     Vector predictionCount = Vector::Constant(real.cols(), 0);
     Vector rejectionCount = Vector::Constant(real.cols(), 0);
 
     Vector falsePrediction = Vector::Constant(real.cols(), 0);
-    Vector falseRejection = Vector::Constant(real.cols(), 0);
 
     for(eigen_size_t i = 0; i < real.rows(); i++)
     {
@@ -37,10 +36,6 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
                 if(predicted(i, j) >= classValidity)
                 {
                     predictionLikelihood(j)++;
-                }
-                else
-                {
-                    falseRejection(j)++;
                 }
             }
             else
@@ -70,8 +65,8 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
     }
     cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
 
-    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array();
-    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();
+    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(score>=threshold | label=1)
+    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(score<threshold | label=0)
 
     return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
 }
@@ -80,49 +75,63 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
 //first is "accuracy", second is "false prediction"
 std::array<double, 4> omnilearn::multipleClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
 {
-    double validated = 0;
-    double rejected = 0;
-    double actualPositives = 0;
-    double actualNegatves = 0;
-    double fp = 0; //false positive prediction
-    double fn = 0; //false negative prediction
+     Vector predictionLikelihood = Vector::Constant(real.cols(), 0); //P(score>=threshold | label=1)
+    Vector rejectionLikelihood = Vector::Constant(real.cols(), 0);  //P(score<threshold | label=0)
+    Vector predictionCount = Vector::Constant(real.cols(), 0);
+    Vector rejectionCount = Vector::Constant(real.cols(), 0);
+
+    Vector falsePrediction = Vector::Constant(real.cols(), 0);
 
     for(eigen_size_t i = 0; i < real.rows(); i++)
     {
-        for(eigen_size_t j = 0; j < real.cols(); j++)
+        for(eigen_size_t j = 0; j < predicted.cols(); j++)
         {
             if(std::abs(real(i, j) - 1) <= std::numeric_limits<double>::epsilon())
             {
-                actualPositives++;
+                predictionCount(j)++;
                 if(predicted(i, j) >= classValidity)
                 {
-                    validated++;
-                }
-                else
-                {
-                    fn++;
+                    predictionLikelihood(j)++;
                 }
             }
             else
             {
-                actualNegatves++;
+                rejectionCount(j)++;
                 if(predicted(i, j) >= classValidity)
                 {
-                    fp++;
+                    falsePrediction(j)++;
                 }
                 else
                 {
-                    rejected++;
+                    rejectionLikelihood(j)++;
                 }
             }
         }
     }
-    fp = 100*fp/(validated + fp);
-    fn = 100*fn/(rejected + fn);
-    validated = 100*validated/actualPositives;
-    rejected = 100*rejected/actualNegatves;
+    double accuracy = predictionLikelihood.array().sum()/predictionCount.sum();
 
-    return {validated, fp, rejected, fn};
+    // cohen Kappa metric is invalid for multilabel data
+    // here is the krippendorff alpha metric, generalizing cohen kappa because it handle
+    // multilabel data, incomplete data (but in our case, a confusion matrix is full), and can weight each label (useless here ?)
+
+    // interpretation:
+    // 0 = model output is similar than random output
+    // 1 = model is perfect
+    // inferior to 0 = model is worse than random
+
+    // https://www.surgehq.ai/blog/inter-rater-reliability-metrics-an-introduction-to-krippendorffs-alpha
+
+    double cohenKappa = 0;
+    for(eigen_size_t i = 0; i < real.cols(); i++)
+    {
+        cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
+    }
+    cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
+
+    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(score>=threshold | label=1)
+    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(score<threshold | label=0)
+
+    return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
 }
 
 

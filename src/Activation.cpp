@@ -41,7 +41,7 @@ void omnilearn::Linear::computeGradients([[maybe_unused]] double aggr, [[maybe_u
 }
 
 
-void omnilearn::Linear::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Linear::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -122,7 +122,7 @@ void omnilearn::Sigmoid::computeGradients([[maybe_unused]] double aggr, [[maybe_
 }
 
 
-void omnilearn::Sigmoid::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Sigmoid::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -201,7 +201,7 @@ void omnilearn::Tanh::computeGradients([[maybe_unused]] double aggr, [[maybe_unu
 }
 
 
-void omnilearn::Tanh::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Tanh::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -280,7 +280,7 @@ void omnilearn::Softplus::computeGradients([[maybe_unused]] double aggr, [[maybe
 }
 
 
-void omnilearn::Softplus::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Softplus::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -361,7 +361,7 @@ void omnilearn::Relu::computeGradients([[maybe_unused]] double aggr, [[maybe_unu
 }
 
 
-void omnilearn::Relu::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Relu::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -436,12 +436,12 @@ void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Prelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Prelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     if(_counter != 0)
     {
         _coefGradient /= static_cast<double>(_counter);
-        optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+        optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
     }
 
     _coefGradient = 0;
@@ -526,7 +526,7 @@ void omnilearn::Elu::computeGradients([[maybe_unused]] double aggr, [[maybe_unus
 }
 
 
-void omnilearn::Elu::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Elu::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -609,13 +609,13 @@ void omnilearn::Pelu::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Pelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Pelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     _coefGradient /= static_cast<double>(_counter);
     _coef2Gradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-    optimizedUpdate(_coef2, _previousCoef2Grad, _previousCoef2Grad2, _optimalPreviousCoef2Grad2, _previousCoef2Update, _coef2Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
+    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_coef2, _previousCoef2Grad, _previousCoef2Grad2, _optimalPreviousCoef2Grad2, _previousCoef2Update, _coef2Gradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
 
     _coefGradient = 0;
     _coef2Gradient = 0;
@@ -761,21 +761,21 @@ void omnilearn::Srelu::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Srelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Srelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     if(_counter1 != 0)
     {
         _coef1Gradient /= static_cast<double>(_counter1);
         _hinge1Gradient /= static_cast<double>(_counter1);
-        optimizedUpdate(_coef1, _previousCoef1Grad, _previousCoef1Grad2, _optimalPreviousCoef1Grad2, _previousCoef1Update, _coef1Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-        optimizedUpdate(_hinge1, _previousHinge1Grad, _previousHinge1Grad2, _optimalPreviousHinge1Grad2, _previousHinge1Update, _hinge1Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+        optimizedUpdate(_coef1, _previousCoef1Grad, _previousCoef1Grad2, _optimalPreviousCoef1Grad2, _previousCoef1Update, _coef1Gradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+        optimizedUpdate(_hinge1, _previousHinge1Grad, _previousHinge1Grad2, _optimalPreviousHinge1Grad2, _previousHinge1Update, _hinge1Gradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
     }
     if(_counter2 != 0)
     {
         _coef2Gradient /= static_cast<double>(_counter2);
         _hinge2Gradient /= static_cast<double>(_counter2);
-        optimizedUpdate(_coef2, _previousCoef2Grad, _previousCoef2Grad2, _optimalPreviousCoef2Grad2, _previousCoef2Update, _coef2Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-        optimizedUpdate(_hinge2, _previousHinge2Grad, _previousHinge2Grad2, _optimalPreviousHinge2Grad2, _previousHinge2Update, _hinge2Gradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+        optimizedUpdate(_coef2, _previousCoef2Grad, _previousCoef2Grad2, _optimalPreviousCoef2Grad2, _previousCoef2Update, _coef2Gradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+        optimizedUpdate(_hinge2, _previousHinge2Grad, _previousHinge2Grad2, _optimalPreviousHinge2Grad2, _previousHinge2Update, _hinge2Gradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
     }
 
     _coef1Gradient = 0;
@@ -908,7 +908,7 @@ void omnilearn::Gauss::computeGradients([[maybe_unused]] double aggr, [[maybe_un
 }
 
 
-void omnilearn::Gauss::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Gauss::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -992,13 +992,13 @@ void omnilearn::Pgauss::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Pgauss::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Pgauss::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     _centerGradient /= static_cast<double>(_counter);
     _devGradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_center, _previousCenterGrad, _previousCenterGrad2, _optimalPreviousCenterGrad2, _previousCenterUpdate, _centerGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-    optimizedUpdate(_dev, _previousDevGrad, _previousDevGrad2, _optimalPreviousDevGrad2, _previousDevUpdate, _devGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
+    optimizedUpdate(_center, _previousCenterGrad, _previousCenterGrad2, _optimalPreviousCenterGrad2, _previousCenterUpdate, _centerGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_dev, _previousDevGrad, _previousDevGrad2, _optimalPreviousDevGrad2, _previousDevUpdate, _devGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
 
     _centerGradient = 0;
     _devGradient = 0;
@@ -1092,7 +1092,7 @@ void omnilearn::Sin::computeGradients([[maybe_unused]] double aggr, [[maybe_unus
 }
 
 
-void omnilearn::Sin::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Sin::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -1175,13 +1175,13 @@ void omnilearn::Psin::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Psin::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Psin::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     _pulsationGradient /= static_cast<double>(_counter);
     _phaseGradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_pulsation, _previousPulsationGrad, _previousPulsationGrad2, _optimalPreviousPulsationGrad2, _previousPulsationUpdate, _pulsationGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-    optimizedUpdate(_phase, _previousPhaseGrad, _previousPhaseGrad2, _optimalPreviousPhaseGrad2, _previousPhaseUpdate, _phaseGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_pulsation, _previousPulsationGrad, _previousPulsationGrad2, _optimalPreviousPulsationGrad2, _previousPulsationUpdate, _pulsationGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_phase, _previousPhaseGrad, _previousPhaseGrad2, _optimalPreviousPhaseGrad2, _previousPhaseUpdate, _phaseGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
 
     _pulsationGradient = 0;
     _phaseGradient = 0;
@@ -1279,7 +1279,7 @@ void omnilearn::Sinc::computeGradients([[maybe_unused]] double aggr, [[maybe_unu
 }
 
 
-void omnilearn::Sinc::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
+void omnilearn::Sinc::updateCoefs([[maybe_unused]] bool automaticLearningRate, [[maybe_unused]] bool adaptiveLearningRate, [[maybe_unused]] bool useMaxDenominator, [[maybe_unused]] double learningRate, [[maybe_unused]] double momentum, [[maybe_unused]] double previousMomentum, [[maybe_unused]] double nextMomentum, [[maybe_unused]] double cumulativeMomentum, [[maybe_unused]] double window, [[maybe_unused]] double optimizerBias, [[maybe_unused]] size_t iteration, [[maybe_unused]] double L1, [[maybe_unused]] double L2, [[maybe_unused]] double decay)
 {
     //nothing to do
 }
@@ -1362,13 +1362,13 @@ void omnilearn::Psinc::computeGradients(double aggr, double inputGrad)
 }
 
 
-void omnilearn::Psinc::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
+void omnilearn::Psinc::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
     _pulsationGradient /= static_cast<double>(_counter);
     _phaseGradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_pulsation, _previousPulsationGrad, _previousPulsationGrad2, _optimalPreviousPulsationGrad2, _previousPulsationUpdate, _pulsationGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-    optimizedUpdate(_phase, _previousPhaseGrad, _previousPhaseGrad2, _optimalPreviousPhaseGrad2, _previousPhaseUpdate, _phaseGradient, automaticLearningRate, adaptiveLearningRate, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_pulsation, _previousPulsationGrad, _previousPulsationGrad2, _optimalPreviousPulsationGrad2, _previousPulsationUpdate, _pulsationGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_phase, _previousPhaseGrad, _previousPhaseGrad2, _optimalPreviousPhaseGrad2, _previousPhaseUpdate, _phaseGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
 
     _pulsationGradient = 0;
     _phaseGradient = 0;

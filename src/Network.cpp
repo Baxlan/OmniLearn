@@ -25,6 +25,38 @@ void omnilearn::Network::addLayer(LayerParam const& param)
 void omnilearn::Network::setParam(NetworkParam const& param)
 {
   _param = param;
+
+  if(_param.optimizer == Optimizer::Default)
+  {
+    _param.adaptiveLearningRate = false;
+    _param.automaticLearningRate = false;
+    _param.useMaxDenominator = false;
+  }
+  else if(_param.optimizer == Optimizer::Nadam)
+  {
+    _param.adaptiveLearningRate = true;
+    _param.automaticLearningRate = false;
+    _param.useMaxDenominator = false;
+  }
+  else if(_param.optimizer == Optimizer::NadamX)
+  {
+    _param.adaptiveLearningRate = true;
+    _param.automaticLearningRate = false;
+    _param.useMaxDenominator = true;
+  }
+  else if(_param.optimizer == Optimizer::Adadelta)
+  {
+    _param.adaptiveLearningRate = true;
+    _param.automaticLearningRate = true;
+    _param.useMaxDenominator = false;
+  }
+  else if(_param.optimizer == Optimizer::AdadeltaX)
+  {
+    _param.adaptiveLearningRate = true;
+    _param.automaticLearningRate = true;
+    _param.useMaxDenominator = true;
+  }
+
   _param.seed = (_param.seed == 0 ? static_cast<unsigned>(std::chrono::steady_clock().now().time_since_epoch().count()) : _param.seed);
   _generator = std::mt19937(_param.seed);
   _dropoutDist = std::bernoulli_distribution(param.dropout);
@@ -61,13 +93,18 @@ void omnilearn::Network::learn()
   {
     *_io << "\nChecking parameters...\n";
     check();
+    *_io << "Seed: " << _param.seed << "\n";
     *_io << "Shuffling and splitting data...\n";
     splitData();
     *_io << "Preprocessing data...\n";
     initPreprocess();
-    *_io << "Initializing layer and neuron parameters...\n";
+    *_io << "Initializing layer and neuron parameters...\n\n";
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
+    *_io << "Total number of trainable parameters: " << getNbParameters() << "\n";
+    *_io << "Training dataset size: " << _trainInputs.rows() << "\n";
+    *_io << "Validation dataset size: " << _validationInputs.rows() << "\n";
+    *_io << "Test dataset size: " << _testInputs.rows() << "\n\n";
 
     *_io << "Inputs: " << _trainInputs.cols() << " / " << _testRawInputs.cols() << " (" <<  _testRawInputs.cols() - _trainInputs.cols() << " discarded after reduction)\n";
     *_io << "Outputs: " << _trainOutputs.cols() << " / " << _testRawOutputs.cols() << " (" <<  _testRawOutputs.cols() - _trainOutputs.cols() << " discarded after reduction)\n";
@@ -95,7 +132,7 @@ void omnilearn::Network::learn()
       computeLoss();
 
       double low = lowestLoss;
-      //if validation loss is inferior to (_param.plateau * optimal loss), save current weights
+
       if(1-(_validLosses[_epoch] / lowestLoss) > _param.improvement)
       {
         keep();
@@ -152,7 +189,7 @@ omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
 omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target, Vector input)
 {
   if(input.size() == 0)
-    input = Vector::Random(_layers[0].nbWeights());
+    input = Vector::Random(_layers[0].inputSize());
   else
     input = preprocess(input);
   target = depostprocess(target);
@@ -658,7 +695,7 @@ void omnilearn::Network::performeOneEpoch()
 
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.decay, _param.automaticLearningRate, _param.adaptiveLearningRate, _currentMomentum, _previousMomentum, mom, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
+      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.decay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.useMaxDenominator, _currentMomentum, _previousMomentum, mom, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
     }
     _previousMomentum = _currentMomentum; // because momentum is constant within an epoch, _previousMomentum was only valid at the first iteration of the epoch
   }
@@ -779,10 +816,10 @@ void omnilearn::Network::adaptLearningRate()
 {
   if(_epoch == 1)
     _currentLearningRate = _param.learningRate;
-  else
+  else if(_param.scheduleLearningRate)
   {
     size_t epochToUse = _epoch;
-    if(_param.useBatchSizeScheduler)
+    if(_param.scheduleBatchSize)
     {
       if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
         epochToUse = _epoch - _epochWhenBatchSizeReachedMax;
@@ -796,7 +833,7 @@ void omnilearn::Network::adaptLearningRate()
       _currentLearningRate = LRstep(_param.learningRate, epochToUse, _param.schedulerValue, _param.schedulerDelay);
     else if(_param.scheduler == Scheduler::Plateau)
       if(epochToUse - _optimalEpoch > _param.schedulerDelay)
-          _currentLearningRate /= _param.schedulerValue;
+        _currentLearningRate /= _param.schedulerValue;
   }
 }
 
@@ -808,7 +845,7 @@ void omnilearn::Network::adaptBatchSize()
     _currentBatchSize = _param.batchSize;
     _epochWhenBatchSizeReachedMax = 1;
   }
-  else if(_param.useBatchSizeScheduler && _currentBatchSize != static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
+  else if(_param.scheduleBatchSize && _currentBatchSize != static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
   {
     if(_param.scheduler == Scheduler::Exp)
       _currentBatchSize = static_cast<size_t>(std::round(BSexp(static_cast<double>(_param.batchSize), _epoch, _param.schedulerValue)));
@@ -858,8 +895,11 @@ void omnilearn::Network::check() const
   if(_param.automaticLearningRate && !_param.adaptiveLearningRate)
     throw Exception("Cannot use automatic learning rate without adaptive learning rate.");
 
-  if(_param.adaptiveLearningRate && _param.window < 0.9)
-    throw Exception("When using adaptive learning rate, the window parameter must be superior to 0.9 (because of Nesterov approximation).");
+  if(_param.useMaxDenominator && !_param.adaptiveLearningRate)
+    throw Exception("Cannot use the denominator correction (useMaxDenominator) without adaptive learning rate.");
+
+  if(_param.adaptiveLearningRate && _param.window < 0.9 && (_param.momentum > 0 || _param.momentumScheduler != Scheduler::None))
+    throw Exception("When using adaptive learning rate, the window parameter must be superior to 0.9 (because of Nesterov approximation) unless momentum is 0 and momentumSheduler is None.");
 
   if(_param.L1 < 0 || _param.L2 < 0 || _param.decay < 0)
     throw Exception("L1 / L2 regularization and weight decay cannot be negative.");
@@ -879,7 +919,7 @@ void omnilearn::Network::check() const
   if(_param.momentumScheduler == Scheduler::Plateau)
     throw Exception("Momentum cannot use the plateau scheduler, the next momentum needed for Nesterov wouldn't be predictible.");
 
-  if(_param.useBatchSizeScheduler && _param.scheduler == Scheduler::None)
+  if(_param.scheduleBatchSize && _param.scheduler == Scheduler::None)
     throw Exception("The batch size cannot be scheduled with the None scheduler.");
 
   if((_param.scheduler == Scheduler::Plateau || _param.scheduler == Scheduler::Step) && _param.schedulerValue < 1)
@@ -896,6 +936,19 @@ void omnilearn::Network::check() const
 
   if(_param.classificationThreshold < 0.5 || _param.classificationThreshold >= 1)
     throw Exception("The classification threshold must be in [0.5, 1[.");
+}
+
+
+size_t omnilearn::Network::getNbParameters() const
+{
+  size_t p = 0;
+
+  for(size_t i=0; i<_layers.size(); i++)
+  {
+    p += _layers[i].getNbParameters();
+  }
+
+  return p;
 }
 
 

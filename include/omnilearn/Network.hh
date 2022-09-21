@@ -23,8 +23,19 @@ enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
 enum class Scheduler {None, Exp, Step, Plateau};
 enum class SecondOrder {None, Univariate, Multivariate};
+enum class Optimizer {None, Default, Nadam, NadamX ,Adadelta, AdadeltaX};
+// All cases involve Nesterov and AdamW
+// NadamX = AMSGrad but with a corrected convergence proof
+// AdadeltaX = Adadelta but with the AMSgrad (NadamX) correction
+// (RMSprop and Adam can have increasing LR, and Adagrad can have infinitesimal LR, so none have been inplemented)
+// None: allows the user to set his own settings (3 bools)
 
+// these bools are:
 
+//                       | Default | Nadam | NadamX | Adadelta | AdadeltaX |
+// adaptiveLearningRate  |    0    |    1  |    1   |    1     |     1     |
+// automaticLearningRate |    0    |    0  |    0   |    1     |     1     |
+// useMaxDenominator     |    0    |    0  |    1   |    0     |     1     |
 
 //=============================================================================
 //=============================================================================
@@ -41,7 +52,8 @@ struct NetworkParam
     NetworkParam():
     seed(0),
     batchSize(1),
-    useBatchSizeScheduler(false),
+    scheduleLearningRate(false),
+    scheduleBatchSize(false),
     maxBatchSizeRatio(0.1),
     learningRate(0.01),
     L1(0),
@@ -61,6 +73,7 @@ struct NetworkParam
     threads(1),
     automaticLearningRate(false),
     adaptiveLearningRate(false),
+    useMaxDenominator(false),
     momentum(0),
     maxMomentum(0.9),
     momentumSchedulerDelay(1),
@@ -75,13 +88,15 @@ struct NetworkParam
     outputReductionThreshold(0.9995),
     inputWhiteningBias(1e-5),
     name("omnilearn_network"),
-    verbose(false)
+    verbose(false),
+    optimizer(Optimizer::Default)
     {
     }
 
     unsigned seed;
     size_t batchSize;
-    bool useBatchSizeScheduler; // use the same scheduler, delay and value than LR ones
+    bool scheduleLearningRate; // use the same scheduler, delay and value than BS ones
+    bool scheduleBatchSize;    // use the same scheduler, delay and value than LR ones
     double maxBatchSizeRatio;
     double learningRate;
     double L1;
@@ -101,6 +116,7 @@ struct NetworkParam
     size_t threads;
     bool automaticLearningRate;
     bool adaptiveLearningRate;
+    bool useMaxDenominator;
     double momentum; //momentum
     double maxMomentum; //asymptotic value the momentum tries to reach in case of momentum shedule
     size_t momentumSchedulerDelay;
@@ -116,6 +132,7 @@ struct NetworkParam
     double inputWhiteningBias;
     std::string name;
     bool verbose;
+    Optimizer optimizer;
 };
 
 
@@ -171,6 +188,7 @@ private:
   void adaptBatchSize();
   void adaptMomentum();
   void check() const;
+  size_t getNbParameters() const;
   void list(double lowestLoss, bool initial) const;
 
 private:
