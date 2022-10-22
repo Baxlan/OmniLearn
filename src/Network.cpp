@@ -98,10 +98,11 @@ void omnilearn::Network::learn()
     splitData();
     *_io << "Preprocessing data...\n";
     initPreprocess();
-    *_io << "Initializing layer and neuron parameters...\n\n";
+    *_io << "Initializing layer and neuron parameters...\n";
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
     *_io << "Total number of trainable parameters: " << getNbParameters() << "\n";
+    initCrossEntropyWeights();
     *_io << "Training dataset size: " << _trainInputs.rows() << "\n";
     *_io << "Validation dataset size: " << _validationInputs.rows() << "\n";
     *_io << "Test dataset size: " << _testInputs.rows() << "\n\n";
@@ -658,6 +659,36 @@ void omnilearn::Network::initPreprocess()
 }
 
 
+void omnilearn::Network::initCrossEntropyWeights()
+{
+  if(_param.weightMode == Weight::Disabled)
+  {
+  }
+  else
+  {
+    *_io << "Initializing cross entropy weights\n\n";
+    if(_param.weightMode == Weight::Enabled)
+    {
+      if(_trainOutputs.cols() != _param.weights.size())
+      {
+        throw Exception("Cross entropy weight vector must have the same size as the number of labels");
+      }
+    }
+    else if(_param.weightMode == Weight::Automatic)
+    {
+      _param.weights = Vector(_trainOutputs.cols());
+
+      for(eigen_size_t i=0; i < _trainOutputs.cols(); i++)
+      {
+        _param.weights[i] = static_cast<double>(_trainOutputs.col(i).count())/static_cast<double>(_trainOutputs.rows());
+        if(_param.loss == Loss::CrossEntropy)
+          _param.weights[i] *= static_cast<double>(_trainOutputs.cols()) / 2;
+      }
+    }
+  }
+}
+
+
 void omnilearn::Network::performeOneEpoch()
 {
   for(size_t batch = 0; batch < _nbBatch; batch++)
@@ -726,22 +757,28 @@ omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult
   else if(_param.loss == Loss::L2)
     return L2Loss(realResult, predicted, *_pool);
   else if(_param.loss == Loss::BinaryCrossEntropy)
-    return binaryCrossEntropyLoss(realResult, predicted, *_pool);
-  else //if loss == crossEntropy
-    return crossEntropyLoss(realResult, predicted, *_pool);
+    return binaryCrossEntropyLoss(realResult, predicted, _param.crossEntropyBias, *_pool);
+  else if(_param.loss == Loss::CrossEntropy)
+    return crossEntropyLoss(realResult, predicted, _param.crossEntropyBias, *_pool);
+  else
+    throw Exception("Error while computing loss matrix, the loss function look ill-defined");
 }
 
 
 omnilearn::Vector omnilearn::Network::computeGradVector(Vector const& realResult, Vector const& predicted) const
 {
+  bool useWeights = false;
+  if(_param.weightMode == Weight::Enabled || _param.weightMode == Weight::Automatic)
+    useWeights = true;
+
   if(_param.loss == Loss::L1)
     return L1Grad(realResult, predicted, *_pool);
   else if(_param.loss == Loss::L2)
     return L2Grad(realResult, predicted, *_pool);
   else if(_param.loss == Loss::BinaryCrossEntropy)
-    return binaryCrossEntropyGrad(realResult, predicted, *_pool);
+    return binaryCrossEntropyGrad(realResult, predicted, _param.crossEntropyBias, useWeights, _param.weights, *_pool);
   else //if loss == crossEntropy
-    return crossEntropyGrad(realResult, predicted, *_pool);
+    return crossEntropyGrad(realResult, predicted, useWeights, _param.weights, *_pool);
 }
 
 

@@ -65,8 +65,8 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
     }
     cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
 
-    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(score>=threshold | label=1)
-    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(score<threshold | label=0)
+    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(predicted >= threshold | real=1)
+    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(predicted <  threshold | real=0)
 
     return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
 }
@@ -128,8 +128,8 @@ std::array<double, 4> omnilearn::multipleClassificationMetrics(Matrix const& rea
     }
     cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
 
-    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(score>=threshold | label=1)
-    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(score<threshold | label=0)
+    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(predicted >= threshold | real=1)
+    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(predicted <  threshold | real=0)
 
     return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
 }

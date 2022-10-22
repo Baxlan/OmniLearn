@@ -228,6 +228,7 @@ void omnilearn::Pdistance::computeGradients(Vector const& inputs, Vector const& 
 
     for(eigen_size_t i = 0; i < inputs.size(); i++)
     {
+        // log error if diff == 0. Add an epsilon ?
         calc += std::log(diff[i]) * std::pow(diff[i], _order);
     }
 

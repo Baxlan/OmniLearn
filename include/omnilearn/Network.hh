@@ -19,10 +19,14 @@ namespace omnilearn
 {
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
+// In classification, if there are only two labels, one sigmoid output is enough (0 for one label, 1 for the other).
+// In this case, BinaryCrossEntropy must be used. Indeed, using CrossEntropy would use softmax too so the output would be 1 in all cases.
+// If there are more than 2 labels, as many output neurons are needed. In this case CrossEntropy (linear outputs) and BinaryCrossEntropy (sigmoid) are similar.
 enum class Metric {L1, L2, Accuracy};
 enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
 enum class Scheduler {None, Exp, Step, Plateau};
 enum class SecondOrder {None, Univariate, Multivariate};
+enum class Weight {Disabled, Enabled, Automatic};
 enum class Optimizer {None, Default, Nadam, NadamX ,Adadelta, AdadeltaX};
 // All cases involve Nesterov and AdamW
 // NadamX = AMSGrad but with a corrected convergence proof
@@ -83,13 +87,16 @@ struct NetworkParam
     improvement(0.01),
     preprocessInputs(),
     preprocessOutputs(),
-    optimizerBias(1e-6),
+    optimizerBias(1e-5),
     inputReductionThreshold(0.9995),
     outputReductionThreshold(0.9995),
     inputWhiteningBias(1e-5),
     name("omnilearn_network"),
     verbose(false),
-    optimizer(Optimizer::Default)
+    optimizer(Optimizer::Default),
+    crossEntropyBias(1e-3),
+    weights(),
+    weightMode(Weight::Disabled)
     {
     }
 
@@ -133,6 +140,9 @@ struct NetworkParam
     std::string name;
     bool verbose;
     Optimizer optimizer;
+    double crossEntropyBias;
+    Vector weights;
+    Weight weightMode;
 };
 
 
@@ -177,6 +187,7 @@ private:
   void splitData(); // shuffle data then split them into train/validation/test data
   void shuffleTrainData(); // shuffle train data each epoch
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
+  void initCrossEntropyWeights();
   void performeOneEpoch();
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;

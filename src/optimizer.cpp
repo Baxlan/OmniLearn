@@ -28,10 +28,12 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
     // we must use the previous update, not the current one, because we don't know the curent one yet...
     // this is an approximation where we assume that the curvature is locally smooth
     // the 1/(1-std::pow(window, iteration)) is here to unbias the second moment of updates. That haven't been found in any paper so this is an innovation here.
+    // MAYBE THIS UNBIASING SHOULD BE DIRECTLY DONE TO previousUpdate ?
 
     // then applying the exponential decay previously calculated (aka AdamX)
     learningRate /= (adaptiveLearningRate ? std::sqrt((optimalPreviousGrad2 / (1-std::pow(window, iteration))) + optimizerBias) : 1);
     // the 1/(1-std::pow(window, iteration)) factor is here to unbias optimalPreviousGrad2 at the first iterations
+    // MAYBE THIS UNBIASING SHOULD BE DIRECTLY DONE TO optimalPreviousGrad2 ? OR previousGrad2 ?
 
     double oldCoef = coefToUpdate;
     coefToUpdate += learningRate * (gradientUpdate - (decay * coefToUpdate));

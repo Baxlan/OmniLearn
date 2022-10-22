@@ -2,6 +2,8 @@
 
 #include "omnilearn/Layer.hh"
 
+
+//if the activation function is linear near 0 (like sigmoid or tanh)
 omnilearn::LayerParam omnilearn::Layer::generateLinearLayerParam()
 {
     LayerParam param = LayerParam();
@@ -13,6 +15,7 @@ omnilearn::LayerParam omnilearn::Layer::generateLinearLayerParam()
 }
 
 
+//if the activation function is linear near 0 (like sigmoid or tanh) => smaller weights than generateLinearLayerParam when there are only few inputs
 omnilearn::LayerParam omnilearn::Layer::generateLinearNormalizedLayerParam()
 {
     LayerParam param = LayerParam();
@@ -24,6 +27,7 @@ omnilearn::LayerParam omnilearn::Layer::generateLinearNormalizedLayerParam()
 }
 
 
+//if the activation function is non-linear near 0 (like relu)
 omnilearn::LayerParam omnilearn::Layer::generateNonLinearLayerParam()
 {
     LayerParam param = LayerParam();

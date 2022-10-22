@@ -4,45 +4,6 @@
 #include "omnilearn/metric.h"
 
 
-
-void boston()
-{
-    omnilearn::Data data = omnilearn::loadData("dataset/boston.csv", ',', 4);
-
-    omnilearn::NetworkParam netp;
-    netp.threads = 4;
-    netp.batchSize = 5;
-    netp.learningRate = 0.005;
-    netp.loss = omnilearn::Loss::L2;
-    netp.patience = 5;
-    netp.improvement = 0.01;
-    netp.scheduler = omnilearn::Scheduler::Plateau;
-    netp.schedulerValue = 2;
-    netp.schedulerDelay = 2;
-    netp.validationRatio = 0.15;
-    netp.testRatio = 0.15;
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
-    netp.preprocessOutputs = {omnilearn::Preprocess::Normalize};
-    netp.verbose = true;
-
-    omnilearn::Network net;
-    net.setParam(netp);
-    net.setData(data);
-
-    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.size = 32;
-
-    lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Relu;
-    net.addLayer(lay);
-
-    lay.activation = omnilearn::Activation::Linear;
-    net.addLayer(lay);
-
-    net.learn();
-}
-
-
 void vesta()
 {
     omnilearn::Data data = omnilearn::loadData("dataset/vesta.csv", ';', 4);
@@ -241,32 +202,32 @@ void cryptoBot()
     omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 3);
 
     omnilearn::NetworkParam netp;
-    netp.threads = 3;
+    netp.threads = 4;
     netp.batchSize = 1;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
     netp.patience = 10;
     netp.improvement = 0.01;
+
     netp.scheduler = omnilearn::Scheduler::Plateau;
-    netp.schedulerValue = 2;
+    netp.schedulerValue = 1.5;
     netp.schedulerDelay = 2;
+    netp.scheduleBatchSize = true;
+    netp.scheduleLearningRate = true;
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
     netp.verbose = true;
 
     netp.optimizer = omnilearn::Optimizer::NadamX;
+    netp.weightMode = omnilearn::Weight::Enabled;
+    netp.weights = (omnilearn::Vector(8) << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1).finished();
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.size = 256;
-
-    lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Softplus;
-    net.addLayer(lay);
 
     lay.size = 128;
     lay.aggregation = omnilearn::Aggregation::Dot;
@@ -286,16 +247,112 @@ void cryptoBot()
 }
 
 
+void waterQuality()
+{
+    omnilearn::Data data = omnilearn::loadData("dataset/water-quality.csv", ';', 3);
+
+    omnilearn::NetworkParam netp;
+    netp.threads = 3;
+    netp.batchSize = 1;
+    netp.learningRate = 0.001;
+    netp.loss = omnilearn::Loss::BinaryCrossEntropy;
+    netp.patience = 15;
+    netp.improvement = 0.01;
+    netp.classificationThreshold = 0.50;
+    netp.validationRatio = 0.15;
+    netp.testRatio = 0.15;
+    netp.verbose = true;
+    netp.weightMode = omnilearn::Weight::Automatic;
+
+    netp.scheduleBatchSize = true;
+    netp.scheduleLearningRate = true;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 1.5;
+    netp.schedulerDelay = 4;
+
+    netp.optimizer = omnilearn::Optimizer::NadamX;
+
+    omnilearn::Network net;
+    net.setParam(netp);
+    net.setData(data);
+
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
+    lay.size = 32;
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.size = 32;
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Sigmoid;
+    net.addLayer(lay);
+
+    net.learn();
+}
+
+
+void cube()
+{
+    omnilearn::Data data = omnilearn::loadData("dataset/cube.csv", ';', 3);
+
+    omnilearn::NetworkParam netp;
+    netp.threads = 3;
+    netp.batchSize = 0;
+    netp.learningRate = 0.01;
+    netp.loss = omnilearn::Loss::BinaryCrossEntropy;
+    netp.patience = 10;
+    netp.improvement = 0.01;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 2;
+    netp.classificationThreshold = 0.50;
+    netp.validationRatio = 0.15;
+    netp.testRatio = 0.15;
+    netp.verbose = true;
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
+    netp.weightMode = omnilearn::Weight::Automatic;
+
+    netp.optimizer = omnilearn::Optimizer::NadamX;
+
+    omnilearn::Network net;
+    net.setParam(netp);
+    net.setData(data);
+
+    omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
+    lay.size = 16;
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.size = 16;
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Softplus;
+    net.addLayer(lay);
+
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Sigmoid;
+    net.addLayer(lay);
+
+    net.learn();
+}
+
+
 int main()
 {
-    //boston();
     //mnist();
     //vesta();
-    iris();
+    //iris();
     //testLoader();
     //generate();
-
     //cryptoBot();
+    waterQuality();
+    //cube();
 
     return 0;
 }
