@@ -27,19 +27,17 @@ enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Redu
 enum class Scheduler {None, Exp, Step, Plateau};
 enum class SecondOrder {None, Univariate, Multivariate};
 enum class Weight {Disabled, Enabled, Automatic};
-enum class Optimizer {None, Default, Nadam, NadamX ,Adadelta, AdadeltaX};
+enum class Optimizer {None, Default, Nadam, AMSGrad ,Adadelta, AdadeltaGrad};
 // All cases involve Nesterov and AdamW
-// NadamX = AMSGrad but with a corrected convergence proof
-// AdadeltaX = Adadelta but with the AMSgrad (NadamX) correction
-// (RMSprop and Adam can have increasing LR, and Adagrad can have infinitesimal LR, so none have been inplemented)
+// AdadeltaGrad = Adadelta combined with AMSgrad
 // None: allows the user to set his own settings (3 bools)
 
 // these bools are:
 
-//                       | Default | Nadam | NadamX | Adadelta | AdadeltaX |
-// adaptiveLearningRate  |    0    |    1  |    1   |    1     |     1     |
-// automaticLearningRate |    0    |    0  |    0   |    1     |     1     |
-// useMaxDenominator     |    0    |    0  |    1   |    0     |     1     |
+//                       | Default | Nadam | AMSGrad | Adadelta | AdadeltaGrad |
+// adaptiveLearningRate  |    0    |    1  |    1    |    1     |      1       |
+// automaticLearningRate |    0    |    0  |    0    |    1     |      1       |
+// useMaxDenominator     |    0    |    0  |    1    |    0     |      1       |
 
 //=============================================================================
 //=============================================================================

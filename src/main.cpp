@@ -34,7 +34,7 @@ void vesta()
     netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
 
     netp.verbose = true;
-    netp.optimizer = omnilearn::Optimizer::NadamX;
+    netp.optimizer = omnilearn::Optimizer::AMSGrad;
     netp.window = 0.99;
 
     omnilearn::Network net;
@@ -62,7 +62,7 @@ void iris()
 
     omnilearn::NetworkParam netp;
     netp.threads = 3;
-    netp.batchSize = 5;
+    netp.batchSize = 1;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 10;
@@ -77,6 +77,7 @@ void iris()
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
+    netp.momentum = 0.9;
 
     netp.optimizer = omnilearn::Optimizer::Adadelta;
 
@@ -136,7 +137,7 @@ void mnist()
     netp.inputReductionThreshold = 0.99;
 
     netp.verbose = true;
-    netp.optimizer = omnilearn::Optimizer::NadamX;
+    netp.optimizer = omnilearn::Optimizer::AMSGrad;
     netp.window = 0.99;
 
 
@@ -219,7 +220,7 @@ void cryptoBot()
     netp.testRatio = 0.15;
     netp.verbose = true;
 
-    netp.optimizer = omnilearn::Optimizer::NadamX;
+    netp.optimizer = omnilearn::Optimizer::AMSGrad;
     netp.weightMode = omnilearn::Weight::Enabled;
     netp.weights = (omnilearn::Vector(8) << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1).finished();
 
@@ -270,7 +271,7 @@ void waterQuality()
     netp.schedulerValue = 1.5;
     netp.schedulerDelay = 4;
 
-    netp.optimizer = omnilearn::Optimizer::NadamX;
+    netp.optimizer = omnilearn::Optimizer::AMSGrad;
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -317,7 +318,7 @@ void cube()
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
     netp.weightMode = omnilearn::Weight::Automatic;
 
-    netp.optimizer = omnilearn::Optimizer::NadamX;
+    netp.optimizer = omnilearn::Optimizer::AMSGrad;
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -347,11 +348,11 @@ int main()
 {
     //mnist();
     //vesta();
-    //iris();
+    iris();
     //testLoader();
     //generate();
     //cryptoBot();
-    waterQuality();
+    //waterQuality();
     //cube();
 
     return 0;

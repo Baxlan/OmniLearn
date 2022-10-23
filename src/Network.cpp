@@ -38,7 +38,7 @@ void omnilearn::Network::setParam(NetworkParam const& param)
     _param.automaticLearningRate = false;
     _param.useMaxDenominator = false;
   }
-  else if(_param.optimizer == Optimizer::NadamX)
+  else if(_param.optimizer == Optimizer::AMSGrad)
   {
     _param.adaptiveLearningRate = true;
     _param.automaticLearningRate = false;
@@ -50,7 +50,7 @@ void omnilearn::Network::setParam(NetworkParam const& param)
     _param.automaticLearningRate = true;
     _param.useMaxDenominator = false;
   }
-  else if(_param.optimizer == Optimizer::AdadeltaX)
+  else if(_param.optimizer == Optimizer::AdadeltaGrad)
   {
     _param.adaptiveLearningRate = true;
     _param.automaticLearningRate = true;
