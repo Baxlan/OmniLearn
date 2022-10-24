@@ -25,6 +25,7 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
     Vector rejectionCount = Vector::Constant(real.cols(), 0);
 
     Vector falsePrediction = Vector::Constant(real.cols(), 0);
+    Vector falseRejection = Vector::Constant(real.cols(), 0);
 
     for(eigen_size_t i = 0; i < real.rows(); i++)
     {
@@ -36,6 +37,10 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
                 if(predicted(i, j) >= classValidity)
                 {
                     predictionLikelihood(j)++;
+                }
+                else
+                {
+                    falseRejection(j)++;
                 }
             }
             else
@@ -54,16 +59,37 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
     }
     double accuracy = predictionLikelihood.array().sum()/predictionCount.sum();
 
+    double cohenKappa = 0;
     // cohen Kappa metric indicate that:
     // 0 = model output is similar than random output
     // 1 = model is perfect
     // inferior to 0 = model is worse than random
-    double cohenKappa = 0;
-    for(eigen_size_t i = 0; i < real.cols(); i++)
+
+    // the next bloc is the real Cohen kappa metric, it only works for monolabel classifiaction
+    if(false)
     {
-        cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(predictionCount.array().sum(), 2);
+        for(eigen_size_t i = 0; i < real.cols(); i++)
+        {
+            cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
+        }
+        cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
     }
-    cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
+    // the next bloc a mean Cohen kappa over each label, allowing multilabel classification
+    // each label is considered binary, thus one cohen kappa is calculated for each label, then the mean is taken.
+    else
+    {
+        for(eigen_size_t i = 0; i < real.cols(); i++)
+        {
+            double po = predictionLikelihood(i)/predictionCount(i);
+
+            double pe = (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
+            pe += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
+            pe /= std::pow(real.rows(), 2);
+
+            cohenKappa += (po-pe)/(1-pe);
+        }
+        cohenKappa /= static_cast<double>(real.cols());
+    }
 
     predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(predicted >= threshold | real=1)
     rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(predicted <  threshold | real=0)

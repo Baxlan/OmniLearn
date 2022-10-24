@@ -212,17 +212,18 @@ void cryptoBot()
 
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 1.5;
-    netp.schedulerDelay = 2;
+    netp.schedulerDelay = 1;
     netp.scheduleBatchSize = true;
-    netp.scheduleLearningRate = true;
+    //netp.scheduleLearningRate = true;
+
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
     netp.verbose = true;
 
-    netp.optimizer = omnilearn::Optimizer::AMSGrad;
+    netp.optimizer = omnilearn::Optimizer::Adadelta;
     netp.weightMode = omnilearn::Weight::Enabled;
-    netp.weights = (omnilearn::Vector(8) << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1).finished();
+    netp.weights = (omnilearn::Vector(8) << 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15).finished();
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -353,8 +354,8 @@ int main()
     //testLoader();
     //generate();
     //cryptoBot();
-    //waterQuality();
-    cube();
+    waterQuality();
+    //cube();
 
     return 0;
 }
