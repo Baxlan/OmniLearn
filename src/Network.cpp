@@ -811,10 +811,8 @@ void omnilearn::Network::computeLoss()
   std::array<double, 4> testMetric;
   if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
     testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization);
-  else if(_param.loss == Loss::CrossEntropy)
-    testMetric = monoClassificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
-  else
-    testMetric = multipleClassificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
+  else if(_param.loss == Loss::CrossEntropy || _param.loss == Loss::BinaryCrossEntropy)
+    testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
 
   _trainLosses.conservativeResize(_trainLosses.size() + 1);
   _trainLosses[_trainLosses.size()-1] = trainLoss;

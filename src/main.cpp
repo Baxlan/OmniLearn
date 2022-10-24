@@ -168,7 +168,7 @@ void testLoader()
     omnilearn::Network genNet;
     genNet.load("omnilearn_network", 4);
     omnilearn::Data data = omnilearn::loadData("dataset/mnist_test.csv", ',', 4);
-    std::array<double, 4> metric = omnilearn::monoClassificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
+    std::array<double, 4> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
     std::cout << metric[0] << " " << metric[1] << " " << metric[2] << " " << metric[3] << "\n";
 }
 
@@ -302,30 +302,31 @@ void cube()
     omnilearn::Data data = omnilearn::loadData("dataset/cube.csv", ';', 3);
 
     omnilearn::NetworkParam netp;
-    netp.threads = 3;
-    netp.batchSize = 0;
-    netp.learningRate = 0.01;
+    netp.threads = 4;
+    netp.batchSize = 1;
+    netp.learningRate = 0.001;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
     netp.patience = 10;
     netp.improvement = 0.01;
+
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
     netp.schedulerDelay = 2;
+
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
     netp.verbose = true;
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
     netp.weightMode = omnilearn::Weight::Automatic;
 
-    netp.optimizer = omnilearn::Optimizer::AMSGrad;
+    netp.optimizer = omnilearn::Optimizer::Nadam;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.size = 16;
+    lay.size = 32;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Softplus;
@@ -348,12 +349,12 @@ int main()
 {
     //mnist();
     //vesta();
-    iris();
+    //iris();
     //testLoader();
     //generate();
     //cryptoBot();
     //waterQuality();
-    //cube();
+    cube();
 
     return 0;
 }

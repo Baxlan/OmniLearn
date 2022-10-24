@@ -116,8 +116,8 @@ omnilearn::Vector omnilearn::crossEntropyGrad(Vector const& real, Vector const& 
         {
             gradients(i) = real(i) - softMax(i);
             if(useWeights)
-                gradients(i) /= (std::abs(real(i)-1) <= std::numeric_limits<double>::epsilon() ? -std::log(1-weights(i))/std::log(4) : -std::log(weights(i))/std::log(4));
-                // dividing by ln(4) to get base 4 logarithm, thus if ratio (aka weight) is 50%, the weighting factor is 1 (no weighting)
+                gradients(i) /= (std::abs(real(i)-1) <= std::numeric_limits<double>::epsilon() ? -std::log(1-weights(i))/std::log(2) : -std::log(weights(i))/std::log(2));
+                // dividing by ln(2) to get base 2 logarithm, thus if ratio (aka weight) is 50%, the weighting factor is 1 (no weighting)
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
@@ -156,8 +156,8 @@ omnilearn::Vector omnilearn::binaryCrossEntropyGrad(Vector const& real, Vector c
         {
             gradients(i) = (real(i) - predicted(i)) / ((predicted(i) * (1 -  predicted(i))) + crossEntropyBias);
             if(useWeights)
-                gradients(i) /= (std::abs(real(i)-1) <= std::numeric_limits<double>::epsilon() ? -std::log(1-weights(i))/std::log(4) : -std::log(weights(i))/std::log(4));
-                // dividing by ln(4) to get base 4 logarithm, thus if ratio (aka weight) is 50%, the weighting factor is 1 (no weighting)
+                gradients(i) /= (std::abs(real(i)-1) <= std::numeric_limits<double>::epsilon() ? -std::log(1-weights(i))/std::log(2) : -std::log(weights(i))/std::log(2));
+                // dividing by ln(2) to get base 2 logarithm, thus if ratio (aka weight) is 50%, the weighting factor is 1 (no weighting)
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)

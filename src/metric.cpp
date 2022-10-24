@@ -16,8 +16,8 @@ double omnilearn::averageLoss(Matrix const& loss)
 }
 
 
-//first is "accuracy", second is "false prediction"
-std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
+//first is "accuracy", second is "mean positive likelihood", third is "mean negative likelihood", fourth is "mean cohen kappa"
+std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
 {
     Vector predictionLikelihood = Vector::Constant(real.cols(), 0); //P(score>=threshold | label=1)
     Vector rejectionLikelihood = Vector::Constant(real.cols(), 0);  //P(score<threshold | label=0)
@@ -52,7 +52,7 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
             }
         }
     }
-    double accuracy = predictionLikelihood.array().sum()/static_cast<double>(real.rows());
+    double accuracy = predictionLikelihood.array().sum()/predictionCount.sum();
 
     // cohen Kappa metric indicate that:
     // 0 = model output is similar than random output
@@ -61,7 +61,7 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
     double cohenKappa = 0;
     for(eigen_size_t i = 0; i < real.cols(); i++)
     {
-        cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
+        cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(predictionCount.array().sum(), 2);
     }
     cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
 
@@ -72,70 +72,7 @@ std::array<double, 4> omnilearn::monoClassificationMetrics(Matrix const& real, M
 }
 
 
-//first is "accuracy", second is "false prediction"
-std::array<double, 4> omnilearn::multipleClassificationMetrics(Matrix const& real, Matrix const& predicted, double classValidity)
-{
-     Vector predictionLikelihood = Vector::Constant(real.cols(), 0); //P(score>=threshold | label=1)
-    Vector rejectionLikelihood = Vector::Constant(real.cols(), 0);  //P(score<threshold | label=0)
-    Vector predictionCount = Vector::Constant(real.cols(), 0);
-    Vector rejectionCount = Vector::Constant(real.cols(), 0);
-
-    Vector falsePrediction = Vector::Constant(real.cols(), 0);
-
-    for(eigen_size_t i = 0; i < real.rows(); i++)
-    {
-        for(eigen_size_t j = 0; j < predicted.cols(); j++)
-        {
-            if(std::abs(real(i, j) - 1) <= std::numeric_limits<double>::epsilon())
-            {
-                predictionCount(j)++;
-                if(predicted(i, j) >= classValidity)
-                {
-                    predictionLikelihood(j)++;
-                }
-            }
-            else
-            {
-                rejectionCount(j)++;
-                if(predicted(i, j) >= classValidity)
-                {
-                    falsePrediction(j)++;
-                }
-                else
-                {
-                    rejectionLikelihood(j)++;
-                }
-            }
-        }
-    }
-    double accuracy = predictionLikelihood.array().sum()/predictionCount.sum();
-
-    // cohen Kappa metric is invalid for multilabel data
-    // here is the krippendorff alpha metric, generalizing cohen kappa because it handle
-    // multilabel data, incomplete data (but in our case, a confusion matrix is full), and can weight each label (useless here ?)
-
-    // interpretation:
-    // 0 = model output is similar than random output
-    // 1 = model is perfect
-    // inferior to 0 = model is worse than random
-
-    // https://www.surgehq.ai/blog/inter-rater-reliability-metrics-an-introduction-to-krippendorffs-alpha
-
-    double cohenKappa = 0;
-    for(eigen_size_t i = 0; i < real.cols(); i++)
-    {
-        cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
-    }
-    cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
-
-    predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(predicted >= threshold | real=1)
-    rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(predicted <  threshold | real=0)
-
-    return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
-}
-
-
-//first is L1 (MAE), second is L2(RMSE), with normalized outputs
+//first is L1 (MAE), second is L2(RMSE), third is "median absolute error", fourth is "mean correlation" , all with normalized outputs
 std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted, std::vector<std::pair<double, double>> const& normalization)
 {
     //"real" are already normalized
