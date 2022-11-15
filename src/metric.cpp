@@ -74,7 +74,7 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
         }
         cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
     }
-    // the next bloc a mean Cohen kappa over each label, allowing multilabel classification
+    // the next bloc calculates a mean Cohen kappa over each label, allowing multilabel classification
     // each label is considered binary, thus one cohen kappa is calculated for each label, then the mean is taken.
     else
     {

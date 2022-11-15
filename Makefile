@@ -3,7 +3,7 @@ CXX = g++
 RM = rm -rf
 
 # release line
-CXXFLAGS =  -std=c++17 -O3 -Os -s -pthread -Wall -W -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
+CXXFLAGS =  -std=c++17 -O3 -Os -s -pthread -fopenmp -Wall -W -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
 # debug line
 #CXXFLAGS = -std=c++17 -g3 -Wa,-mbig-obj -pthread -Wall -W -Wunused-macros -Wshadow -Wundef -pedantic -Wconversion -Wno-sign-conversion -Wold-style-cast -Wpointer-arith -Wcast-qual -Wcast-align -Wdouble-promotion -Woverloaded-virtual -Wswitch-default -Wunreachable-code -Wno-deprecated-declarations -I$(INCDIR)
 

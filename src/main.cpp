@@ -348,13 +348,13 @@ void cube()
 
 int main()
 {
-    //mnist();
+    mnist();
     //vesta();
     //iris();
     //testLoader();
     //generate();
     //cryptoBot();
-    waterQuality();
+    //waterQuality();
     //cube();
 
     return 0;

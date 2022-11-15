@@ -12,6 +12,7 @@ void omnilearn::Network::load(fs::path const& path, size_t threads)
 {
   _pool = std::make_unique<ThreadPool>(threads);
   _param.threads = threads;
+  Eigen::setNbThreads(static_cast<int>(threads));
   NetworkIO::load(*this, path);
 }
 
@@ -62,6 +63,7 @@ void omnilearn::Network::setParam(NetworkParam const& param)
   _dropoutDist = std::bernoulli_distribution(param.dropout);
   _dropconnectDist = std::bernoulli_distribution(param.dropconnect);
   _pool = std::make_unique<ThreadPool>(param.threads);
+  Eigen::setNbThreads(static_cast<int>(param.threads));
 }
 
 
