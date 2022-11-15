@@ -104,7 +104,10 @@ void omnilearn::Network::learn()
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
     *_io << "Total number of trainable parameters: " << getNbParameters() << "\n";
-    initCrossEntropyWeights();
+    if (_param.loss == Loss::CrossEntropy || _param.loss == Loss::BinaryCrossEntropy)
+    {
+      initCrossEntropyWeights();
+    }
     *_io << "Training dataset size: " << _trainInputs.rows() << "\n";
     *_io << "Validation dataset size: " << _validationInputs.rows() << "\n";
     *_io << "Test dataset size: " << _testInputs.rows() << "\n\n";
@@ -679,12 +682,13 @@ void omnilearn::Network::initCrossEntropyWeights()
     else if(_param.weightMode == Weight::Automatic)
     {
       _param.weights = Vector(_trainOutputs.cols());
+      double power = std::log(0.5) / std::log(1/static_cast<double>(_trainOutputs.cols()));
 
       for(eigen_size_t i=0; i < _trainOutputs.cols(); i++)
       {
         _param.weights[i] = static_cast<double>(_trainOutputs.col(i).count())/static_cast<double>(_trainOutputs.rows());
         if(_param.loss == Loss::CrossEntropy)
-          _param.weights[i] *= static_cast<double>(_trainOutputs.cols()) / 2;
+          _param.weights[i] = std::pow(_param.weights[i], power);
       }
     }
   }

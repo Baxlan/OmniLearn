@@ -80,6 +80,7 @@ void iris()
     netp.momentum = 0.9;
 
     netp.optimizer = omnilearn::Optimizer::Adadelta;
+    netp.weightMode = omnilearn::Weight::Automatic;
 
     omnilearn::Network net;
     net.setParam(netp);
