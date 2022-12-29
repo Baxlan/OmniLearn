@@ -18,9 +18,9 @@ Matrix L1Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t); // us
 Vector L1Grad(Vector const& real, Vector const& predicted, ThreadPool& t);
 Matrix L2Loss(Matrix const& real, Matrix const& predicted, ThreadPool& t); // use linear activation at the last layer
 Vector L2Grad(Vector const& real, Vector const& predicted, ThreadPool& t);
-Matrix crossEntropyLoss(Matrix const& real, Matrix const& predicted, double binaryCrossEntropyBias, ThreadPool& t); // use linear activation at the last layer
+Matrix crossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, bool useWeights, Vector weights, ThreadPool& t); // use linear activation at the last layer
 Vector crossEntropyGrad(Vector const& real, Vector const& predicted, bool useWeights, Vector weights, ThreadPool& t);
-Matrix binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, ThreadPool& t); // use sigmoid activation at last layer (all outputs must be [0, 1])
+Matrix binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, bool useWeights, Vector weights, ThreadPool& t); // use sigmoid activation at last layer (all outputs must be [0, 1])
 Vector binaryCrossEntropyGrad(Vector const& real, Vector const& predicted, double crossEntropyBias, bool useWeights, Vector weights, ThreadPool& t);
 
 

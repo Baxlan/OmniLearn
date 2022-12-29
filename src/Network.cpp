@@ -106,6 +106,7 @@ void omnilearn::Network::learn()
     *_io << "Total number of trainable parameters: " << getNbParameters() << "\n";
     if (_param.loss == Loss::CrossEntropy || _param.loss == Loss::BinaryCrossEntropy)
     {
+      *_io << "Initializing cross entropy weights\n\n";
       initCrossEntropyWeights();
     }
     *_io << "Training dataset size: " << _trainInputs.rows() << "\n";
@@ -671,7 +672,6 @@ void omnilearn::Network::initCrossEntropyWeights()
   }
   else
   {
-    *_io << "Initializing cross entropy weights\n\n";
     if(_param.weightMode == Weight::Enabled)
     {
       if(_trainOutputs.cols() != _param.weights.size())
@@ -758,14 +758,18 @@ omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
 
 omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const
 {
+  bool useWeights = false;
+  if(_param.weightMode == Weight::Enabled || _param.weightMode == Weight::Automatic)
+    useWeights = true;
+
   if(_param.loss == Loss::L1)
     return L1Loss(realResult, predicted, *_pool);
   else if(_param.loss == Loss::L2)
     return L2Loss(realResult, predicted, *_pool);
   else if(_param.loss == Loss::BinaryCrossEntropy)
-    return binaryCrossEntropyLoss(realResult, predicted, _param.crossEntropyBias, *_pool);
+    return binaryCrossEntropyLoss(realResult, predicted, _param.crossEntropyBias, useWeights, _param.weights, *_pool);
   else if(_param.loss == Loss::CrossEntropy)
-    return crossEntropyLoss(realResult, predicted, _param.crossEntropyBias, *_pool);
+    return crossEntropyLoss(realResult, predicted, _param.crossEntropyBias, useWeights, _param.weights, *_pool);
   else
     throw Exception("Error while computing loss matrix, the loss function look ill-defined");
 }

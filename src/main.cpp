@@ -201,30 +201,34 @@ void generate()
 
 void cryptoBot()
 {
-    omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 3);
+    omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 4);
 
     omnilearn::NetworkParam netp;
     netp.threads = 4;
-    netp.batchSize = 1;
+    netp.batchSize = 0;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
-    netp.patience = 10;
+    netp.patience = 20;
     netp.improvement = 0.01;
 
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 1.5;
     netp.schedulerDelay = 1;
     netp.scheduleBatchSize = true;
-    //netp.scheduleLearningRate = true;
+    netp.scheduleLearningRate = true;
 
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.15;
     netp.testRatio = 0.15;
     netp.verbose = true;
 
-    netp.optimizer = omnilearn::Optimizer::Adadelta;
-    netp.weightMode = omnilearn::Weight::Enabled;
-    netp.weights = (omnilearn::Vector(8) << 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15).finished();
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
+    netp.optimizer = omnilearn::Optimizer::Nadam;
+
+    netp.weightMode = omnilearn::Weight::Automatic;
+    //netp.weightMode = omnilearn::Weight::Enabled;
+    //netp.weights = (omnilearn::Vector(8) << 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15).finished();
+    //netp.weights = (omnilearn::Vector(1) << 0.15).finished();
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -232,16 +236,12 @@ void cryptoBot()
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
 
-    lay.size = 128;
-    lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Softplus;
-    net.addLayer(lay);
-
     lay.size = 64;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Softplus;
     net.addLayer(lay);
 
+    lay.size = 32;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Sigmoid;
     net.addLayer(lay);
@@ -349,12 +349,12 @@ void cube()
 
 int main()
 {
-    mnist();
+    //mnist();
     //vesta();
     //iris();
     //testLoader();
     //generate();
-    //cryptoBot();
+    cryptoBot();
     //waterQuality();
     //cube();
 

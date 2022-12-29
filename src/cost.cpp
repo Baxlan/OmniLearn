@@ -84,18 +84,21 @@ omnilearn::Vector omnilearn::L2Grad(Vector const& real, Vector const& predicted,
 }
 
 
-omnilearn::Matrix omnilearn::crossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, ThreadPool& t)
+omnilearn::Matrix omnilearn::crossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, bool useWeights, Vector weights, ThreadPool& t)
 {
     Matrix softMax = softmax(predicted);
     Matrix loss(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
     for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
-        tasks[i] = t.enqueue([&real, &predicted, &crossEntropyBias, &softMax, &loss, i]()->void
+        tasks[i] = t.enqueue([&real, &predicted, &useWeights, &weights, &crossEntropyBias, &softMax, &loss, i]()->void
         {
             for(eigen_size_t j = 0; j < loss.cols(); j++)
             {
                 loss(i, j) = real(i, j) * -std::log(softMax(i, j) + crossEntropyBias);
+                if(useWeights)
+                    loss(i, j) /= (std::abs(real(i, j)-1) <= std::numeric_limits<double>::epsilon() ? -std::log(1-weights(j))/std::log(2) : -std::log(weights(j))/std::log(2));
+                    // dividing by ln(2) to get base 2 logarithm, thus if ratio (aka weight) is 50%, the weighting factor is 1 (no weighting)
             }
         });
     }
@@ -126,17 +129,20 @@ omnilearn::Vector omnilearn::crossEntropyGrad(Vector const& real, Vector const& 
 }
 
 
-omnilearn::Matrix omnilearn::binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, ThreadPool& t)
+omnilearn::Matrix omnilearn::binaryCrossEntropyLoss(Matrix const& real, Matrix const& predicted, double crossEntropyBias, bool useWeights, Vector weights, ThreadPool& t)
 {
     Matrix loss(real.rows(), real.cols());
     std::vector<std::future<void>> tasks(loss.rows());
     for(eigen_size_t i = 0; i < loss.rows(); i++)
     {
-        tasks[i] = t.enqueue([&real, &predicted, &crossEntropyBias, &loss, i]()->void
+        tasks[i] = t.enqueue([&real, &predicted, &useWeights, &weights, &crossEntropyBias, &loss, i]()->void
         {
             for(eigen_size_t j = 0; j < loss.cols(); j++)
             {
                 loss(i, j) = -(real(i, j) * std::log(predicted(i, j) + crossEntropyBias) + (1 - real(i, j)) * std::log(1 - predicted(i, j) + crossEntropyBias));
+                if(useWeights)
+                    loss(i, j) /= (std::abs(real(i, j)-1) <= std::numeric_limits<double>::epsilon() ? -std::log(1-weights(j))/std::log(2) : -std::log(weights(j))/std::log(2));
+                    // dividing by ln(2) to get base 2 logarithm, thus if ratio (aka weight) is 50%, the weighting factor is 1 (no weighting)
             }
         });
     }
