@@ -252,11 +252,7 @@ omnilearn::Matrix omnilearn::Network::preprocess(Matrix inputs) const
 {
   for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
   {
-    if(_param.preprocessInputs[i] == Preprocess::Center)
-    {
-      center(inputs, _inputCenter);
-    }
-    else if(_param.preprocessInputs[i] == Preprocess::Normalize)
+    if(_param.preprocessInputs[i] == Preprocess::Normalize)
     {
       normalize(inputs, _inputNormalization);
     }
@@ -320,16 +316,6 @@ omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
         outputs.row(i) = _outputDecorrelation.first * outputs.row(i).transpose();
       }
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Center)
-    {
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < outputs.cols(); j++)
-        {
-          outputs(i,j) += _outputCenter[j];
-        }
-      }
-    }
   }
   return outputs;
 }
@@ -367,16 +353,6 @@ omnilearn::Matrix omnilearn::Network::depreprocess(Matrix inputs) const
         inputs.row(i) = _inputDecorrelation.first * inputs.row(i).transpose();
       }
     }
-    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Center)
-    {
-      for(eigen_size_t i = 0; i < inputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < inputs.cols(); j++)
-        {
-          inputs(i,j) += _inputCenter[j];
-        }
-      }
-    }
     else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Standardize)
     {
       for(eigen_size_t i = 0; i < inputs.rows(); i++)
@@ -408,11 +384,7 @@ omnilearn::Matrix omnilearn::Network::depostprocess(Matrix outputs) const
 {
   for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
-    if(_param.preprocessOutputs[i] == Preprocess::Center)
-    {
-      center(outputs, _outputCenter);
-    }
-    else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
+    if(_param.preprocessOutputs[i] == Preprocess::Normalize)
     {
       normalize(outputs, _outputNormalization);
     }
@@ -511,7 +483,6 @@ void omnilearn::Network::shuffleTrainData()
 
 void omnilearn::Network::initPreprocess()
 {
-  bool centered = false;
   bool normalized = false;
   bool standardized = false;
   bool decorrelated = false;
@@ -521,16 +492,7 @@ void omnilearn::Network::initPreprocess()
 
   for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
   {
-    if(_param.preprocessInputs[i] == Preprocess::Center)
-    {
-      if(centered == true)
-        throw Exception("Inputs are centered multiple times.");
-      _inputCenter = center(_trainInputs);
-      center(_validationInputs, _inputCenter);
-      center(_testInputs, _inputCenter);
-      centered = true;
-    }
-    else if(_param.preprocessInputs[i] == Preprocess::Normalize)
+    if(_param.preprocessInputs[i] == Preprocess::Normalize)
     {
       if(normalized == true)
         throw Exception("Inputs are normalized multiple times.");
@@ -552,8 +514,8 @@ void omnilearn::Network::initPreprocess()
     {
       if(decorrelated == true)
         throw Exception("Inputs are decorrelated multiple times.");
-      if(centered == false && standardized == false)
-        throw Exception("Inputs cannot be decorrelated before centering or standartization.");
+      if(standardized == false)
+        throw Exception("Inputs cannot be decorrelated before standartization.");
       _inputDecorrelation = decorrelate(_trainInputs);
       decorrelate(_validationInputs, _inputDecorrelation);
       decorrelate(_testInputs, _inputDecorrelation);
@@ -601,7 +563,6 @@ void omnilearn::Network::initPreprocess()
     }
   }
 
-  centered = false;
   normalized = false;
   standardized = false;
   decorrelated = false;
@@ -611,21 +572,12 @@ void omnilearn::Network::initPreprocess()
 
   for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
-    if(_param.preprocessOutputs[i] == Preprocess::Center)
-    {
-      if(centered == true)
-        throw Exception("Outputs are centered multiple times.");
-      _outputCenter = center(_trainOutputs);
-      center(_validationOutputs, _outputCenter);
-      center(_testOutputs, _outputCenter);
-      centered = true;
-    }
-    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
+    if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
     {
       if(decorrelated == true)
         throw Exception("Outputs are decorrelated multiple times.");
-      if(centered == false && standardized == false)
-        throw Exception("Outputs cannot be decorrelated before centering.");
+      if(standardized == false)
+        throw Exception("Outputs cannot be decorrelated before standardization.");
       _outputDecorrelation = decorrelate(_trainOutputs);
       decorrelate(_validationOutputs, _outputDecorrelation);
       decorrelate(_testOutputs, _outputDecorrelation);

@@ -136,12 +136,7 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
   jObj["preprocess"] = json::array();
   for(size_t i = 0; i < net._param.preprocessInputs.size(); i++)
   {
-    if(net._param.preprocessInputs[i] == Preprocess::Center)
-    {
-      jObj["preprocess"][i] = "center";
-      jObj["center"] = net._inputCenter;
-    }
-    else if(net._param.preprocessInputs[i] == Preprocess::Normalize)
+    if(net._param.preprocessInputs[i] == Preprocess::Normalize)
     {
       jObj["preprocess"][i] = "normalize";
 
@@ -203,12 +198,7 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
   jObj["preprocess"] = json::array();
   for(size_t i = 0; i < net._param.preprocessOutputs.size(); i++)
   {
-    if(net._param.preprocessOutputs[i] == Preprocess::Center)
-    {
-      jObj["preprocess"][i] = "center";
-      jObj["center"] = net._outputCenter;
-    }
-    else if(net._param.preprocessOutputs[i] == Preprocess::Normalize)
+    if(net._param.preprocessOutputs[i] == Preprocess::Normalize)
     {
       jObj["preprocess"][i] = "normalize";
 
@@ -277,12 +267,7 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
   net._param.preprocessInputs.resize(jObj.at("preprocess").size());
   for(size_t i = 0; i < jObj.at("preprocess").size(); i++)
   {
-    if(jObj.at("preprocess").at(i) == "center")
-    {
-      net._param.preprocessInputs[i] = Preprocess::Center;
-      net._inputCenter = stdToEigenVector(jObj.at("center"));
-    }
-    else if(jObj.at("preprocess").at(i) == "normalize")
+    if(jObj.at("preprocess").at(i) == "normalize")
     {
       net._param.preprocessInputs[i] = Preprocess::Normalize;
       std::vector<double> vec0 = jObj.at("normalization").at(0);
@@ -330,12 +315,7 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
   net._param.preprocessOutputs.resize(jObj.at("preprocess").size());
   for(size_t i = 0; i < jObj.at("preprocess").size(); i++)
   {
-    if(jObj.at("preprocess").at(i) == "center")
-    {
-      net._param.preprocessOutputs[i] = Preprocess::Center;
-      net._outputCenter = stdToEigenVector(jObj.at("center"));
-    }
-    else if(jObj.at("preprocess").at(i) == "normalize")
+    if(jObj.at("preprocess").at(i) == "normalize")
     {
       net._param.preprocessOutputs[i] = Preprocess::Normalize;
       std::vector<double> vec0 = jObj.at("normalization").at(0);

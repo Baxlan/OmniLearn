@@ -30,8 +30,8 @@ void vesta()
     netp.patience = 10;
     netp.improvement = 0.01;
 
-    netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
-    netp.preprocessOutputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
+    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
 
     netp.verbose = true;
     netp.optimizer = omnilearn::Optimizer::AMSGrad;
@@ -73,7 +73,7 @@ void iris()
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
@@ -133,9 +133,9 @@ void mnist()
 
     netp.classificationThreshold = 0.50;
 
-    netp.preprocessInputs = {omnilearn::Preprocess::Center, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
-    netp.inputReductionThreshold = 0.99;
+    netp.inputReductionThreshold = 0.90;
 
     netp.verbose = true;
     netp.optimizer = omnilearn::Optimizer::AMSGrad;
@@ -149,8 +149,8 @@ void mnist()
     net.setTestData(testdata);
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.maxNorm = 100;
-    lay.size = 256;
+    //lay.maxNorm = 100;
+    lay.size = 128;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Prelu;
@@ -205,27 +205,32 @@ void cryptoBot()
 
     omnilearn::NetworkParam netp;
     netp.threads = 4;
-    netp.batchSize = 0;
-    netp.learningRate = 0.01;
+    netp.batchSize = 100;
+    //netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
     netp.patience = 20;
     netp.improvement = 0.01;
 
+    //netp.momentumScheduler = omnilearn::Scheduler::Exp;
+    //netp.momentumSchedulerValue = 0.3;
+    netp.momentum = 0.9;
+
     netp.scheduler = omnilearn::Scheduler::Plateau;
-    netp.schedulerValue = 1.5;
+    netp.schedulerValue = 2;
     netp.schedulerDelay = 1;
     netp.scheduleBatchSize = true;
-    netp.scheduleLearningRate = true;
+    netp.scheduleLearningRate = false;
 
     netp.classificationThreshold = 0.50;
-    netp.validationRatio = 0.15;
-    netp.testRatio = 0.15;
+    netp.validationRatio = 0.10;
+    netp.testRatio = 0.10;
     netp.verbose = true;
 
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize};
-    netp.optimizer = omnilearn::Optimizer::Nadam;
+    //netp.inputReductionThreshold = 0.95;
+    netp.optimizer = omnilearn::Optimizer::Adadelta;
 
-    netp.weightMode = omnilearn::Weight::Automatic;
+    //netp.weightMode = omnilearn::Weight::Automatic;
     //netp.weightMode = omnilearn::Weight::Enabled;
     //netp.weights = (omnilearn::Vector(8) << 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15).finished();
     //netp.weights = (omnilearn::Vector(1) << 0.15).finished();
@@ -236,12 +241,17 @@ void cryptoBot()
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
 
-    lay.size = 64;
+    lay.size = 256;
     lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Softplus;
+    lay.activation = omnilearn::Activation::Prelu;
     net.addLayer(lay);
 
-    lay.size = 32;
+    lay.size = 64;
+    lay.aggregation = omnilearn::Aggregation::Dot;
+    lay.activation = omnilearn::Activation::Prelu;
+    net.addLayer(lay);
+
+    lay.size = 16;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Sigmoid;
     net.addLayer(lay);
@@ -349,12 +359,12 @@ void cube()
 
 int main()
 {
-    //mnist();
+    mnist();
     //vesta();
     //iris();
     //testLoader();
     //generate();
-    cryptoBot();
+    //cryptoBot();
     //waterQuality();
     //cube();
 

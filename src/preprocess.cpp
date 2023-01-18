@@ -53,7 +53,7 @@ std::vector<std::pair<double, double>> omnilearn::normalize(Matrix& data, std::v
     {
       mM[i] = {data.col(i).minCoeff(), data.col(i).maxCoeff()};
       if(std::abs(mM[i].second - mM[i].first) < std::numeric_limits<double>::epsilon())
-        throw Exception("Normalization can't be performed because some values have 0 variance. Try reduction.");
+        mM[i].second++; // so the whole column is just set to 0
     }
   }
   //normalize
@@ -80,7 +80,7 @@ std::vector<std::pair<double, double>> omnilearn::standardize(Matrix& data, std:
     {
       meanDev[i] = {data.col(i).mean(), dev(data.col(i))};
       if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
-        throw Exception("Standardization can't be performed because some inputs have 0 variance. Try reduction.");
+        meanDev[i].second++; // so the whole column is just set to 0
     }
   }
   //standardize

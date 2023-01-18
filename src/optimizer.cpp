@@ -36,8 +36,8 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
     // decay is decoupled from gradient. See AdamW optimizer
 
     // avoid coefToUpdate being 0 if it is used as denominator somewhere
-    if(avoidZero && std::abs(coefToUpdate) < 1e-4)
-        coefToUpdate = (coefToUpdate < 0 ? -1e-4: 1e-4);
+    if(avoidZero && std::abs(coefToUpdate) < 1e-6)
+        coefToUpdate = (coefToUpdate < 0 ? -1e-6: 1e-6);
 
     // now we know the current update, so we can update "previousUpdate"
     previousUpdate = (window * previousUpdate) + ((1 - window) * std::pow(oldCoef - coefToUpdate, 2) / (1-std::pow(window, iteration)));

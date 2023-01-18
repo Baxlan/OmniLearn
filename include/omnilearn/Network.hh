@@ -22,8 +22,7 @@ enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 // In classification, if there are only two labels, one sigmoid output is enough (0 for one label, 1 for the other).
 // In this case, BinaryCrossEntropy must be used. Indeed, using CrossEntropy would use softmax too so the output would be 1 in all cases.
 // If there are more than 2 labels, as many output neurons are needed. In this case CrossEntropy (linear outputs) and BinaryCrossEntropy (sigmoid) are similar.
-enum class Metric {L1, L2, Accuracy};
-enum class Preprocess {Center, Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
+enum class Preprocess {Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
 enum class Scheduler {None, Exp, Step, Plateau};
 enum class SecondOrder {None, Univariate, Multivariate};
 enum class Weight {Disabled, Enabled, Automatic};
@@ -251,13 +250,11 @@ private:
   std::vector<std::string> _outputLabels;
 
   //output preprocessing
-  Vector _outputCenter;
   std::vector<std::pair<double, double>> _outputNormalization;
   std::pair<Matrix, Vector> _outputDecorrelation;
   std::vector<std::pair<double, double>> _metricNormalization;
 
   //input preprocessing
-  Vector _inputCenter;
   std::vector<std::pair<double, double>> _inputNormalization;
   std::vector<std::pair<double, double>> _inputStandartization;
   std::pair<Matrix, Vector> _inputDecorrelation;
