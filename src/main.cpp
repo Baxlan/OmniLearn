@@ -31,7 +31,8 @@ void vesta()
     netp.improvement = 0.01;
 
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
-    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
+    //netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
+    netp.preprocessOutputs = {omnilearn::Preprocess::Normalize};
 
     netp.verbose = true;
     netp.optimizer = omnilearn::Optimizer::AMSGrad;
@@ -48,6 +49,7 @@ void vesta()
     lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
 
+    lay.size = 16;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Linear;
     net.addLayer(lay);
@@ -326,12 +328,14 @@ void cube()
     netp.schedulerDelay = 2;
 
     netp.classificationThreshold = 0.50;
-    netp.validationRatio = 0.15;
-    netp.testRatio = 0.15;
+    netp.validationRatio = 0.1;
+    netp.testRatio = 0.1;
     netp.verbose = true;
-    netp.weightMode = omnilearn::Weight::Automatic;
+    //netp.weightMode = omnilearn::Weight::Automatic;
+    netp.weightMode = omnilearn::Weight::Enabled;
+    netp.weights = (omnilearn::Vector(8) << 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33).finished();
 
-    netp.optimizer = omnilearn::Optimizer::Nadam;
+    netp.optimizer = omnilearn::Optimizer::Adadelta;
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -359,12 +363,12 @@ void cube()
 
 int main()
 {
-    mnist();
+    //mnist();
     //vesta();
     //iris();
     //testLoader();
     //generate();
-    //cryptoBot();
+    cryptoBot();
     //waterQuality();
     //cube();
 

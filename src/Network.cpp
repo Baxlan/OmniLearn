@@ -975,15 +975,24 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
 
   if(initial || _epoch % 50 == 0)
   {
-    *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |  First   |  Second  |  Third   |  Fourth  |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
-    *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |  metric  |  metric  |  metric  |  metric  |     LR     |   size    |          |   data    |   epochs  |\n";
-    *_io <<   "|           |            |            |                   |             |          |          |          |          |            |           |          |           |           |\n";
+    if(_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy)
+    {
+      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   Mean   |   Mean   |    Mean     |    Mean    |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
+      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             | P-likeli | N-likeli |  P-Cohen K  |  N-Cohen K |     LR     |   size    |          |   data    |   epochs  |\n";
+      *_io <<   "|           |            |            |                   |             |          |          |             |            |            |           |          |           |           |\n";
+    }
+    else
+    {
+      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   MAE    |   RMSE   |     Mean    |  Mean cos  |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
+      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |          | correlation | similarity |     LR     |   size    |          |   data    |   epochs  |\n";
+      *_io <<   "|           |            |            |                   |             |          |          |             |            |            |           |          |           |           |\n";
+    }
   }
   if(initial)
   {
     *_io << "| " << std::setw(9) << "0*" << " |  " << std::setw(9) << _validLosses[0] << " |  " << std::setw(9) << _trainLosses[0];
     *_io << " |     " << "   -    " << " %    |  " << std::setw(8) << std::round(100*(_validLosses[0]-_trainLosses[0])/_validLosses[0] *1e3)/1e3 << " % | ";
-    *_io << std::setw(8) << _testMetric[0] << " | " << std::setw(8) << _testSecondMetric[0] << " | " << std::setw(8) << _testThirdMetric[0] << " | " << std::setw(8) << _testFourthMetric[0] << " | ";
+    *_io << std::setw(8) << _testMetric[0] << " | " << std::setw(8) << _testSecondMetric[0] << " |  " << std::setw(8) << _testThirdMetric[0] << "   |  " << std::setw(8) << _testFourthMetric[0] << "  | ";
     *_io << std::setw(10) << "    -   " << " | " << std::setw(9) << "    -    " << " | " << std::setw(8) << "   -    " << " | " << std::setw(9) << "    -    " << " | " << std::setw(9) << _param.patience << " |\n";
   }
   else
@@ -991,7 +1000,7 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
     double gap = 100 * (1-(_validLosses[_epoch] / lowestLoss));
     *_io << "| " << std::setw(9) << std::to_string(_epoch) + (_epoch==_optimalEpoch ? "*": "") << " |  " << std::setw(9) << _validLosses[_epoch] << " |  " << std::setw(9) << _trainLosses[_epoch];
     *_io << " |     " << std::setw(8) << std::round(gap*1e3)/1e3 << " %    |  " << std::setw(8) << std::round(100*(_validLosses[_epoch]-_trainLosses[_epoch])/_validLosses[_epoch] * 1e3)/1e3 << " % | ";
-    *_io << std::setw(8) << _testMetric[_epoch] << " | " << std::setw(8) << _testSecondMetric[_epoch] << " | " << std::setw(8) << _testThirdMetric[_epoch] << " | " << std::setw(8) << _testFourthMetric[_epoch] << " | ";
+    *_io << std::setw(8) << _testMetric[_epoch] << " | " << std::setw(8) << _testSecondMetric[_epoch] << " |  " << std::setw(8) << _testThirdMetric[_epoch] << "   |  " << std::setw(8) << _testFourthMetric[_epoch] << "  | ";
     *_io << std::setw(10) << (_param.automaticLearningRate ? "    -   " : currentLearningRate);
     *_io << " | " << std::setw(9) << _currentBatchSize << " | " << std::setw(8) << _currentMomentum << " | " << std::setw(9) << _missedData << " | " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << " |\n";
   }

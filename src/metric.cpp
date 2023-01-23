@@ -59,7 +59,8 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
     }
     double accuracy = predictionLikelihood.array().sum()/predictionCount.sum();
 
-    double cohenKappa = 0;
+    double positiveCohenKappa = 0;
+    double negativeCohenKappa = 0;
     // cohen Kappa metric indicate that:
     // 0 = model output is similar than random output
     // 1 = model is perfect
@@ -70,9 +71,11 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
     {
         for(eigen_size_t i = 0; i < real.cols(); i++)
         {
-            cohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
+            positiveCohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
+            negativeCohenKappa += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i) / std::pow(real.rows(), 2);
         }
-        cohenKappa = (accuracy-cohenKappa)/(1-cohenKappa);
+        positiveCohenKappa = (accuracy-positiveCohenKappa)/(1-positiveCohenKappa);
+        negativeCohenKappa = ((1-accuracy)-negativeCohenKappa)/(1-negativeCohenKappa);
     }
     // the next bloc calculates a mean Cohen kappa over each label, allowing multilabel classification
     // each label is considered binary, thus one cohen kappa is calculated for each label, then the mean is taken.
@@ -80,21 +83,27 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
     {
         for(eigen_size_t i = 0; i < real.cols(); i++)
         {
-            double po = predictionLikelihood(i)/predictionCount(i);
+            double p_po = predictionLikelihood(i)/predictionCount(i);
+            double p_pe = (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
+            p_pe += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
+            p_pe /= std::pow(real.rows(), 2);
 
-            double pe = (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
-            pe += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
-            pe /= std::pow(real.rows(), 2);
+            double n_po = rejectionLikelihood(i)/rejectionCount(i);
+            double n_pe = (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
+            n_pe += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
+            n_pe /= std::pow(real.rows(), 2);
 
-            cohenKappa += (po-pe)/(1-pe);
+            positiveCohenKappa += (p_po-p_pe)/(1-p_pe);
+            negativeCohenKappa += (n_po-n_pe)/(1-n_pe);
         }
-        cohenKappa /= static_cast<double>(real.cols());
+        positiveCohenKappa /= static_cast<double>(real.cols());
+        negativeCohenKappa /= static_cast<double>(real.cols());
     }
 
     predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(predicted >= threshold | real=1)
     rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(predicted <  threshold | real=0)
 
-    return {100*accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
+    return {predictionLikelihood.mean(), rejectionLikelihood.mean(), positiveCohenKappa, negativeCohenKappa};
 }
 
 
@@ -110,7 +119,7 @@ std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted
 
     //COLUMN WIZE !
     Vector correlation = Vector::Constant(real.cols(), 0);
-
+    Vector cosine = Vector::Constant(real.cols(), 0);
     Vector realMeans = Vector::Constant(real.rows(), 0);
     Vector predictedMeans = Vector::Constant(real.rows(), 0);
 
@@ -130,6 +139,7 @@ std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted
 
             //COLUMN WIZE !
             correlation[j] += (predicted(i, j)-predictedMeans(j))*(real(i, j)-realMeans(j));
+            cosine[j] = real.col(j).dot(predicted.col(j)) / (real.col(j).norm() * predicted.col(j).norm());
         }
     }
 
@@ -138,7 +148,8 @@ std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted
         correlation[i] /= std::sqrt((real.col(i).array() - realMeans(i)).square().sum()) * std::sqrt((predicted.col(i).array() - predictedMeans(i)).square().sum());
     }
 
-    mae = mae.array()/real.cols();
+    mae  =  mae/real.cols();
+    rmse = rmse/real.cols();
 
-    return {mae.mean(), std::sqrt((rmse.array()/real.cols()).mean()), median(mae), correlation.array().abs().mean()};
+    return {mae.mean(), std::sqrt(rmse.mean()), correlation.array().abs().mean(), cosine.array().abs().mean()};
 }
