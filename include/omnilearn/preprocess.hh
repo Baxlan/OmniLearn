@@ -4,6 +4,7 @@
 #define OMNILEARN_PREPROCESS_H_
 
 #include "Matrix.hh"
+#include "Network.hh"
 
 
 
@@ -27,8 +28,7 @@ std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std
 //rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
 //first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<Matrix, Vector> decorrelate(Matrix& data, std::pair<Matrix, Vector> singular = {Matrix(0,0), Vector(0)});
-void whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias);
+std::pair<Matrix, Vector> whiten(Matrix& data, double bias, WhiteningType whiteningType, std::pair<Matrix, Vector> singular = {Matrix(0,0), Vector(0)});
 void reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold);
 
 

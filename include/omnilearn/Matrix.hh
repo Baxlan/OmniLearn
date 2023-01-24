@@ -24,6 +24,7 @@ namespace omnilearn
 
 
 using Matrix = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+using DiagMatrix = Eigen::DiagonalMatrix<double, Eigen::Dynamic>;
 using Vector = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 using rowVector = Eigen::Matrix<double, 1, Eigen::Dynamic>;
 

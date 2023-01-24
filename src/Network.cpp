@@ -260,24 +260,13 @@ omnilearn::Matrix omnilearn::Network::preprocessIn(Matrix inputs) const
     {
       standardize(inputs, _inputStandartization);
     }
-    else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
-    {
-      decorrelate(inputs, _inputDecorrelation);
-    }
     else if(_param.preprocessInputs[i] == Preprocess::Whiten)
     {
-      whiten(inputs, _inputDecorrelation, _param.inputWhiteningBias);
+      whiten(inputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
     }
     else if(_param.preprocessInputs[i] == Preprocess::Reduce)
     {
       reduce(inputs, _inputDecorrelation, _param.inputReductionThreshold);
-    }
-    else if(_param.preprocessInputs[i] == Preprocess::Recorrelate)
-    {
-      for(eigen_size_t j = 0; j < inputs.rows(); j++)
-      {
-        inputs.row(j) = _inputDecorrelation.first * inputs.row(j).transpose();
-      }
     }
   }
   return inputs;
@@ -296,24 +285,13 @@ omnilearn::Matrix omnilearn::Network::preprocessOut(Matrix outputs) const
     {
       normalize(outputs, _outputStandartization);
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
-    {
-      decorrelate(outputs, _outputDecorrelation);
-    }
     else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
     {
-      whiten(outputs, _outputDecorrelation, _param.outputWhiteningBias);
+      whiten(outputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
     {
       reduce(outputs, _outputDecorrelation, _param.outputReductionThreshold);
-    }
-    else if(_param.preprocessOutputs[i] == Preprocess::Recorrelate)
-    {
-      for(eigen_size_t j = 0; j < outputs.rows(); j++)
-      {
-        outputs.row(j) = _outputDecorrelation.first * outputs.row(j).transpose();
-      }
     }
   }
   return outputs;
@@ -345,12 +323,13 @@ omnilearn::Matrix omnilearn::Network::dePreprocessIn(Matrix inputs) const
       }
       inputs = newResults;
     }
-    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Decorrelate)
+    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Whiten)
     {
-      for(eigen_size_t i = 0; i < inputs.rows(); i++)
+      if(_param.inputWhiteningType == WhiteningType::ZCA)
       {
-        inputs.row(i) = _inputDecorrelation.first * inputs.row(i).transpose();
+        inputs = inputs * _inputDecorrelation.first;
       }
+      inputs = inputs * DiagMatrix((_inputDecorrelation.second.cwiseSqrt().array() + 1e-5).matrix()) * _inputDecorrelation.first.transpose();
     }
     else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Standardize)
     {
@@ -362,17 +341,6 @@ omnilearn::Matrix omnilearn::Network::dePreprocessIn(Matrix inputs) const
           inputs(i,j) += _inputStandartization[j].first;
         }
       }
-    }
-    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Whiten)
-    {
-      for(eigen_size_t i = 0; i < inputs.cols(); i++)
-      {
-        inputs.col(i) *= (std::sqrt(_inputDecorrelation.second[i])+_param.inputWhiteningBias);
-      }
-    }
-    else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Recorrelate)
-    {
-      decorrelate(inputs, _inputDecorrelation);
     }
   }
   return inputs;
@@ -404,12 +372,13 @@ omnilearn::Matrix omnilearn::Network::dePreprocessOut(Matrix outputs) const
       }
       outputs = newResults;
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Whiten)
     {
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      if(_param.outputWhiteningType == WhiteningType::ZCA)
       {
-        outputs.row(i) = _outputDecorrelation.first * outputs.row(i).transpose();
+        outputs = outputs * _outputDecorrelation.first;
       }
+      outputs = outputs * DiagMatrix((_outputDecorrelation.second.cwiseSqrt().array() + 1e-5).matrix()) * _outputDecorrelation.first.transpose();
     }
     else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Standardize)
     {
@@ -421,17 +390,6 @@ omnilearn::Matrix omnilearn::Network::dePreprocessOut(Matrix outputs) const
           outputs(i,j) += _outputStandartization[j].first;
         }
       }
-    }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Whiten)
-    {
-      for(eigen_size_t i = 0; i < outputs.cols(); i++)
-      {
-        outputs.col(i) *= (std::sqrt(_outputDecorrelation.second[i])+_param.outputWhiteningBias);
-      }
-    }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Recorrelate)
-    {
-      decorrelate(outputs, _outputDecorrelation);
     }
   }
   return outputs;
@@ -522,10 +480,8 @@ void omnilearn::Network::initPreprocess()
 {
   bool normalized = false;
   bool standardized = false;
-  bool decorrelated = false;
   bool whitened = false;
   bool reduced = false;
-  bool recorrelated = false;
 
   for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
   {
@@ -547,83 +503,54 @@ void omnilearn::Network::initPreprocess()
       standardize(_testInputs, _inputStandartization);
       standardized = true;
     }
-    else if(_param.preprocessInputs[i] == Preprocess::Decorrelate)
-    {
-      if(decorrelated == true)
-        throw Exception("Inputs are decorrelated multiple times.");
-      if(standardized == false)
-        throw Exception("Inputs cannot be decorrelated before standartization.");
-      _inputDecorrelation = decorrelate(_trainInputs);
-      decorrelate(_validationInputs, _inputDecorrelation);
-      decorrelate(_testInputs, _inputDecorrelation);
-      decorrelated = true;
-    }
     else if(_param.preprocessInputs[i] == Preprocess::Whiten)
     {
       if(whitened == true)
         throw Exception("Inputs are whitened multiple times.");
-      if(decorrelated == false)
-        throw Exception("Inputs cannot be whitened before decorrelation.");
-      if(recorrelated == true)
-        throw Exception("Inputs cannot be whitened after recorrelation.");
-      whiten(_trainInputs, _inputDecorrelation, _param.inputWhiteningBias);
-      whiten(_validationInputs, _inputDecorrelation, _param.inputWhiteningBias);
-      whiten(_testInputs, _inputDecorrelation, _param.inputWhiteningBias);
+      if(standardized == false)
+        throw Exception("Inputs cannot be whitened without being standartized.");
+      _inputDecorrelation = whiten(_trainInputs, _param.inputWhiteningBias, _param.inputWhiteningType);
+      whiten(_validationInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
+      whiten(_testInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
       whitened = true;
     }
     else if(_param.preprocessInputs[i] == Preprocess::Reduce)
     {
       if(reduced == true)
         throw Exception("Inputs are reduced multiple times.");
-      if(recorrelated == true)
-        throw Exception("Inputs cannot be reduced after recorrelation.");
+      if(_param.inputWhiteningType == WhiteningType::ZCA)
+        throw Exception("Inputs cannot be reduced after ZCA whitening. Try PCA whitening instead.");
       reduce(_trainInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduce(_validationInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduce(_testInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduced = true;
     }
-    else if(_param.preprocessInputs[i] == Preprocess::Recorrelate)
-    {
-      if(recorrelated == true)
-        throw Exception("Inputs are recorrelated multiple times.");
-      if(reduced == true)
-        throw Exception("Inputs cannot be recorrelated after reduction.");
-
-      for(eigen_size_t j = 0; j < _trainInputs.rows(); j++)
-        _trainInputs.row(j) = _inputDecorrelation.first * _trainInputs.row(j).transpose();
-      for(eigen_size_t j = 0; j < _validationInputs.rows(); j++)
-        _validationInputs.row(j) = _inputDecorrelation.first * _validationInputs.row(j).transpose();
-      for(eigen_size_t j = 0; j < _testInputs.rows(); j++)
-        _testInputs.row(j) = _inputDecorrelation.first * _testInputs.row(j).transpose();
-
-      recorrelated = true;
-    }
   }
 
   normalized = false;
   standardized = false;
-  decorrelated = false;
   whitened = false;
   reduced = false;
-  recorrelated = false;
 
   for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
-    if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
+    if(_param.preprocessOutputs[i] == Preprocess::Whiten)
     {
-      if(decorrelated == true)
-        throw Exception("Outputs are decorrelated multiple times.");
+      if(whitened == true)
+        throw Exception("Outputs are whitened multiple times.");
       if(standardized == false)
-        throw Exception("Outputs cannot be decorrelated before standardization.");
-      _outputDecorrelation = decorrelate(_trainOutputs);
-      decorrelate(_validationOutputs, _outputDecorrelation);
-      decorrelate(_testOutputs, _outputDecorrelation);
-      decorrelated = true;
+        throw Exception("Outputs cannot be whitened without being standardized.");
+      _outputDecorrelation = whiten(_trainOutputs, _param.outputWhiteningBias, _param.outputWhiteningType);
+      whiten(_validationOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
+      whiten(_testOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
+      whitened = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
     {
       if(reduced == true)
         throw Exception("Outputs are reduced multiple times.");
+      if(_param.outputWhiteningType == WhiteningType::ZCA)
+        throw Exception("Outputs cannot be reduced after ZCA whitening. Try PCA whitening instead.");
       reduce(_trainOutputs, _outputDecorrelation, _param.outputReductionThreshold);
       reduce(_validationOutputs, _outputDecorrelation, _param.outputReductionThreshold);
       reduce(_testOutputs, _outputDecorrelation, _param.outputReductionThreshold);
@@ -638,19 +565,6 @@ void omnilearn::Network::initPreprocess()
       normalize(_testOutputs, _outputNormalization);
       normalized = true;
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
-    {
-      if(whitened == true)
-        throw Exception("Outputs are whitened multiple times.");
-      if(decorrelated == false)
-        throw Exception("Outputs cannot be whitened before decorrelation.");
-      if(recorrelated == true)
-        throw Exception("Outputs cannot be whitened after recorrelation.");
-      whiten(_trainOutputs, _outputDecorrelation, _param.outputWhiteningBias);
-      whiten(_validationOutputs, _outputDecorrelation, _param.outputWhiteningBias);
-      whiten(_testOutputs, _outputDecorrelation, _param.outputWhiteningBias);
-      whitened = true;
-    }
     else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
     {
       if(standardized == true)
@@ -659,22 +573,6 @@ void omnilearn::Network::initPreprocess()
       standardize(_validationOutputs, _outputStandartization);
       standardize(_testOutputs, _outputStandartization);
       standardized = true;
-    }
-    else if(_param.preprocessOutputs[i] == Preprocess::Recorrelate)
-    {
-      if(recorrelated == true)
-        throw Exception("Outputs are recorrelated multiple times.");
-      if(reduced == true)
-        throw Exception("Outputs cannot be recorrelated after reduction.");
-
-      for(eigen_size_t j = 0; j < _trainOutputs.rows(); j++)
-        _trainOutputs.row(j) = _outputDecorrelation.first * _trainOutputs.row(j).transpose();
-      for(eigen_size_t j = 0; j < _validationOutputs.rows(); j++)
-        _validationOutputs.row(j) = _outputDecorrelation.first * _validationOutputs.row(j).transpose();
-      for(eigen_size_t j = 0; j < _testOutputs.rows(); j++)
-        _testOutputs.row(j) = _outputDecorrelation.first * _testOutputs.row(j).transpose();
-
-      recorrelated = true;
     }
   }
 }

@@ -16,7 +16,7 @@ void vesta()
     netp.batchSize = 1;
     netp.maxBatchSizeRatio = 0.1;
     netp.scheduleBatchSize = true;
-    netp.learningRate = 0.01;
+    netp.learningRate = 0.001;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
     netp.schedulerDelay = 2;
@@ -30,11 +30,13 @@ void vesta()
     netp.patience = 10;
     netp.improvement = 0.01;
 
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce, omnilearn::Preprocess::Whiten};
-    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce, omnilearn::Preprocess::Normalize};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten};
+    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Normalize};
+    netp.inputWhiteningType = omnilearn::WhiteningType::ZCA;
+    netp.outputWhiteningType = omnilearn::WhiteningType::ZCA;
 
     netp.verbose = true;
-    netp.optimizer = omnilearn::Optimizer::AMSGrad;
+    netp.optimizer = omnilearn::Optimizer::Nadam;
     netp.window = 0.99;
 
     omnilearn::Network net;
@@ -74,7 +76,7 @@ void iris()
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
@@ -134,7 +136,7 @@ void mnist()
 
     netp.classificationThreshold = 0.50;
 
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
     netp.inputReductionThreshold = 0.90;
 

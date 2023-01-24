@@ -113,6 +113,16 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
   else if(net._param.loss == Loss::L2)
     jObj["loss"] = "L2";
 
+  if(net._param.inputWhiteningType == WhiteningType::ZCA)
+    jObj["input whitening type"] = "ZCA";
+  else
+    jObj["input whitening type"] = "PCA";
+
+  if(net._param.outputWhiteningType == WhiteningType::ZCA)
+    jObj["output whitening type"] = "ZCA";
+  else
+    jObj["output whitening type"] = "PCA";
+
   jObj["input labels"] = net._inputLabels;
   jObj["output labels"] = net._outputLabels;
   jObj["train losses"] = net._trainLosses;
@@ -162,7 +172,7 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
       std::transform(net._inputStandartization.begin(), net._inputStandartization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<1>));
       jObj["standardization"][1] = vec;
     }
-    else if(net._param.preprocessInputs[i] == Preprocess::Decorrelate)
+    else if(net._param.preprocessInputs[i] == Preprocess::Whiten)
     {
       jObj["preprocess"][i] = "decorrelate";
       jObj["eigenvalues"] = net._inputDecorrelation.second;
@@ -182,10 +192,6 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
     {
       jObj["preprocess"][i] = "reduce";
       jObj["reduction threshold"] = net._param.inputReductionThreshold;
-    }
-    else if(net._param.preprocessInputs[i] == Preprocess::Recorrelate)
-    {
-      jObj["preprocess"][i] = "recorrelate";
     }
   }
 }
@@ -210,7 +216,7 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
       std::transform(net._outputNormalization.begin(), net._outputNormalization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<1>));
       jObj["normalization"][1] = vec;
     }
-    else if(net._param.preprocessOutputs[i] == Preprocess::Decorrelate)
+    else if(net._param.preprocessOutputs[i] == Preprocess::Whiten)
     {
       jObj["preprocess"][i] = "decorrelate";
       jObj["eigenvalues"] = net._outputDecorrelation.second;
@@ -245,10 +251,6 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
       jObj["preprocess"][i] = "whiten";
       jObj["whitening bias"] = net._param.outputWhiteningBias;
     }
-    else if(net._param.preprocessOutputs[i] == Preprocess::Recorrelate)
-    {
-      jObj["preprocess"][i] = "recorrelate";
-    }
   }
 }
 
@@ -272,6 +274,16 @@ void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
     net._param.loss = Loss::L1;
   else if(jObj.at("loss") == "L2")
     net._param.loss = Loss::L2;
+
+  if(jObj.at("input whitening type") == "ZCA")
+    net._param.inputWhiteningType = WhiteningType::ZCA;
+  else
+    net._param.inputWhiteningType = WhiteningType::PCA;
+
+  if(jObj.at("output whitening type") == "ZCA")
+    net._param.outputWhiteningType = WhiteningType::ZCA;
+  else
+    net._param.outputWhiteningType = WhiteningType::PCA;
 
   jObj.at("input labels").get_to(net._inputLabels);
   jObj.at("output labels").get_to(net._outputLabels);
@@ -304,7 +316,7 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
     }
     else if(jObj.at("preprocess").at(i) == "decorrelate")
     {
-      net._param.preprocessInputs[i] = Preprocess::Decorrelate;
+      net._param.preprocessInputs[i] = Preprocess::Whiten;
       net._inputDecorrelation.second = stdToEigenVector(jObj.at("eigenvalues"));
       net._inputDecorrelation.first = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
       for(eigen_size_t j = 0; j < net._inputDecorrelation.first.rows(); j++)
@@ -322,10 +334,6 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
     {
       net._param.preprocessInputs[i] = Preprocess::Reduce;
       net._param.inputReductionThreshold = jObj.at("reduction threshold");
-    }
-    else if(jObj.at("preprocess").at(i) == "recorrelate")
-    {
-      net._param.preprocessInputs[i] = Preprocess::Recorrelate;
     }
   }
 }
@@ -345,7 +353,7 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
     }
     else if(jObj.at("preprocess").at(i) == "decorrelate")
     {
-      net._param.preprocessOutputs[i] = Preprocess::Decorrelate;
+      net._param.preprocessOutputs[i] = Preprocess::Whiten;
       net._outputDecorrelation.second = stdToEigenVector(jObj.at("eigenvalues"));
       net._outputDecorrelation.first = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
       for(eigen_size_t j = 0; j < net._outputDecorrelation.first.rows(); j++)
@@ -370,10 +378,6 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
     {
       net._param.preprocessOutputs[i] = Preprocess::Whiten;
       net._param.outputWhiteningBias = jObj.at("whitening bias");
-    }
-    else if(jObj.at("preprocess").at(i) == "recorrelate")
-    {
-      net._param.preprocessOutputs[i] = Preprocess::Recorrelate;
     }
   }
 }

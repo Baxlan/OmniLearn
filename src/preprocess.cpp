@@ -99,11 +99,11 @@ std::vector<std::pair<double, double>> omnilearn::standardize(Matrix& data, std:
 //rotate data in the input space to decorrelate them (and set their variance to 1).
 //USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
 //first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::decorrelate(Matrix& data, std::pair<Matrix, Vector> singular)
+std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::whiten(Matrix& data, double bias, WhiteningType whiteningType, std::pair<Matrix, Vector> singular)
 {
   if(singular.second.size() == 0)
   {
-    Matrix cov = (data.transpose() * data) / static_cast<double>(data.rows() - 1);
+    Matrix cov = (data.transpose() * data) / static_cast<double>(data.rows());
 
     //in U, eigen vectors are columns
     Eigen::BDCSVD<Matrix> svd(cov, Eigen::ComputeFullU);
@@ -111,23 +111,14 @@ std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::decorrelate(Matrix& d
     singular.second = svd.singularValues();
   }
 
-  //apply rotation
-  for(eigen_size_t i = 0; i < data.rows(); i++)
+  data = data * singular.first * DiagMatrix((singular.second.cwiseSqrt().array() + bias).matrix().cwiseInverse());
+
+  if(whiteningType == WhiteningType::ZCA)
   {
-    data.row(i) = singular.first.transpose() * data.row(i).transpose();
+    data = data * singular.first.transpose();
   }
+
   return singular;
-}
-
-
-void omnilearn::whiten(Matrix& data, std::pair<Matrix, Vector> const& singular, double bias)
-{
-  if(singular.second.size() == 0)
-    throw Exception("Decorrelation must be performed before whitening");
-  for(eigen_size_t i = 0; i < data.cols(); i++)
-  {
-    data.col(i) /= (std::sqrt(singular.second[i])+bias);
-  }
 }
 
 

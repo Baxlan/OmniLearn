@@ -22,7 +22,8 @@ enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 // In classification, if there are only two labels, one sigmoid output is enough (0 for one label, 1 for the other).
 // In this case, BinaryCrossEntropy must be used. Indeed, using CrossEntropy would use softmax too so the output would be 1 in all cases.
 // If there are more than 2 labels, as many output neurons are needed. In this case CrossEntropy (linear outputs) and BinaryCrossEntropy (sigmoid) are similar.
-enum class Preprocess {Normalize, Standardize, Decorrelate, Whiten, Reduce, Recorrelate};
+enum class Preprocess {Normalize, Standardize, Whiten, Reduce};
+enum class WhiteningType {PCA, ZCA};
 enum class Scheduler {None, Exp, Step, Plateau};
 enum class SecondOrder {None, Univariate, Multivariate};
 enum class Weight {Disabled, Enabled, Automatic};
@@ -84,6 +85,8 @@ struct NetworkParam
     improvement(0.01),
     preprocessInputs(),
     preprocessOutputs(),
+    inputWhiteningType(WhiteningType::ZCA),
+    outputWhiteningType(WhiteningType::ZCA),
     optimizerBias(1e-5),
     inputReductionThreshold(0.99),
     outputReductionThreshold(0.99),
@@ -131,6 +134,8 @@ struct NetworkParam
     double improvement; // minimum validation loss improvement nedeed to become the new optimal
     std::vector<Preprocess> preprocessInputs;
     std::vector<Preprocess> preprocessOutputs;
+    WhiteningType inputWhiteningType;
+    WhiteningType outputWhiteningType;
     double optimizerBias;
     double inputReductionThreshold;
     double outputReductionThreshold;
