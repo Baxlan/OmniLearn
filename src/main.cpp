@@ -30,9 +30,8 @@ void vesta()
     netp.patience = 10;
     netp.improvement = 0.01;
 
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Whiten};
-    //netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Normalize};
-    netp.preprocessOutputs = {omnilearn::Preprocess::Normalize};
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce, omnilearn::Preprocess::Whiten};
+    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Decorrelate, omnilearn::Preprocess::Reduce, omnilearn::Preprocess::Normalize};
 
     netp.verbose = true;
     netp.optimizer = omnilearn::Optimizer::AMSGrad;
@@ -364,11 +363,11 @@ void cube()
 int main()
 {
     //mnist();
-    //vesta();
+    vesta();
     //iris();
     //testLoader();
     //generate();
-    cryptoBot();
+    //cryptoBot();
     //waterQuality();
     //cube();
 

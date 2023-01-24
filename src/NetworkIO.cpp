@@ -62,8 +62,6 @@ _verbose(verbose)
 }
 
 
-
-// jObj[i] : each i is a save of the NN if the NN have been trained multiple time (transfert learning)
 void omnilearn::NetworkIO::save(Network const& net) const
 {
   json jObj = {};
@@ -111,9 +109,9 @@ void omnilearn::NetworkIO::saveParameters(Network const& net, json& jObj) const
   else if(net._param.loss == Loss::CrossEntropy)
     jObj["loss"] = "cross entropy";
   else if(net._param.loss == Loss::L1)
-    jObj["loss"] = "mae";
+    jObj["loss"] = "L1";
   else if(net._param.loss == Loss::L2)
-    jObj["loss"] = "mse";
+    jObj["loss"] = "L2";
 
   jObj["input labels"] = net._inputLabels;
   jObj["output labels"] = net._outputLabels;
@@ -147,7 +145,7 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
 
       vec = std::vector<double>(0);
       // transform vector of pairs into vector of second element of each pair
-      std::transform(net._inputNormalization.begin(), net._inputNormalization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<0>));
+      std::transform(net._inputNormalization.begin(), net._inputNormalization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<1>));
       jObj["normalization"][1] = vec;
     }
     else if(net._param.preprocessInputs[i] == Preprocess::Standardize)
@@ -161,7 +159,7 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
 
       vec = std::vector<double>(0);
       // transform vector of pairs into vector of second element of each pair
-      std::transform(net._inputStandartization.begin(), net._inputStandartization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<0>));
+      std::transform(net._inputStandartization.begin(), net._inputStandartization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<1>));
       jObj["standardization"][1] = vec;
     }
     else if(net._param.preprocessInputs[i] == Preprocess::Decorrelate)
@@ -209,7 +207,7 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
 
       vec = std::vector<double>(0);
       // transform vector of pairs into vector of second element of each pair
-      std::transform(net._outputNormalization.begin(), net._outputNormalization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<0>));
+      std::transform(net._outputNormalization.begin(), net._outputNormalization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<1>));
       jObj["normalization"][1] = vec;
     }
     else if(net._param.preprocessOutputs[i] == Preprocess::Decorrelate)
@@ -227,6 +225,29 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
     {
       jObj["preprocess"][i] = "reduce";
       jObj["reduction threshold"] = net._param.outputReductionThreshold;
+    }
+    else if(net._param.preprocessOutputs[i] == Preprocess::Standardize)
+    {
+      jObj["preprocess"][i] = "standardize";
+
+      std::vector<double> vec(0);
+      // transform vector of pairs into vector of first element of each pair
+      std::transform(net._outputStandartization.begin(), net._outputStandartization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<0>));
+      jObj["standardization"][0] = vec;
+
+      vec = std::vector<double>(0);
+      // transform vector of pairs into vector of second element of each pair
+      std::transform(net._outputStandartization.begin(), net._outputStandartization.end(), std::back_inserter(vec), static_cast<const double& (*)(const std::pair<double, double>&)>(std::get<1>));
+      jObj["standardization"][1] = vec;
+    }
+    else if(net._param.preprocessOutputs[i] == Preprocess::Whiten)
+    {
+      jObj["preprocess"][i] = "whiten";
+      jObj["whitening bias"] = net._param.outputWhiteningBias;
+    }
+    else if(net._param.preprocessOutputs[i] == Preprocess::Recorrelate)
+    {
+      jObj["preprocess"][i] = "recorrelate";
     }
   }
 }
@@ -247,9 +268,9 @@ void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
     net._param.loss = Loss::BinaryCrossEntropy;
   else if(jObj.at("loss") == "cross entropy")
     net._param.loss = Loss::CrossEntropy;
-  else if(jObj.at("loss") == "mae")
+  else if(jObj.at("loss") == "L1")
     net._param.loss = Loss::L1;
-  else if(jObj.at("loss") == "mse")
+  else if(jObj.at("loss") == "L2")
     net._param.loss = Loss::L2;
 
   jObj.at("input labels").get_to(net._inputLabels);
@@ -337,6 +358,22 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
     {
       net._param.preprocessOutputs[i] = Preprocess::Reduce;
       net._param.outputReductionThreshold = jObj.at("reduction threshold");
+    }
+    else if(jObj.at("preprocess").at(i) == "standardize")
+    {
+      net._param.preprocessOutputs[i] = Preprocess::Normalize;
+      std::vector<double> vec0 = jObj.at("standardize").at(0);
+      std::vector<double> vec1 = jObj.at("standardize").at(1);
+      std::transform(vec0.begin(), vec0.end(), vec1.begin(), std::back_inserter(net._outputStandartization), [](double a, double b)->std::pair<double, double>{return std::make_pair(a, b);});
+    }
+    else if(jObj.at("preprocess").at(i) == "whiten")
+    {
+      net._param.preprocessOutputs[i] = Preprocess::Whiten;
+      net._param.outputWhiteningBias = jObj.at("whitening bias");
+    }
+    else if(jObj.at("preprocess").at(i) == "recorrelate")
+    {
+      net._param.preprocessOutputs[i] = Preprocess::Recorrelate;
     }
   }
 }

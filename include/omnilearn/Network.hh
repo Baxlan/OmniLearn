@@ -85,9 +85,10 @@ struct NetworkParam
     preprocessInputs(),
     preprocessOutputs(),
     optimizerBias(1e-5),
-    inputReductionThreshold(0.9995),
-    outputReductionThreshold(0.9995),
+    inputReductionThreshold(0.99),
+    outputReductionThreshold(0.99),
     inputWhiteningBias(1e-5),
+    outputWhiteningBias(1e-5),
     name("omnilearn_network"),
     verbose(false),
     optimizer(Optimizer::Default),
@@ -134,6 +135,7 @@ struct NetworkParam
     double inputReductionThreshold;
     double outputReductionThreshold;
     double inputWhiteningBias;
+    double outputWhiteningBias;
     std::string name;
     bool verbose;
     Optimizer optimizer;
@@ -170,14 +172,14 @@ public:
   Matrix process(Matrix inputs) const;
   Vector generate(NetworkParam param, Vector target, Vector input = Vector(0));
 
-  Vector preprocess(Vector inputs) const; //transforms real inputs to processed inputs
-  Vector postprocess(Vector inputs) const; //transforms produced outputs to real outputs
-  Vector depreprocess(Vector inputs) const; //transforms processed inputs to real inputs
-  Vector depostprocess(Vector inputs) const; //transforms real outputs to produced outputs
-  Matrix preprocess(Matrix inputs) const;
-  Matrix postprocess(Matrix inputs) const;
-  Matrix depreprocess(Matrix inputs) const;
-  Matrix depostprocess(Matrix inputs) const;
+  Vector preprocessIn(Vector inputs) const;
+  Vector preprocessOut(Vector inputs) const;
+  Vector dePreprocessIn(Vector inputs) const;
+  Vector dePreprocessOut(Vector inputs) const;
+  Matrix preprocessIn(Matrix inputs) const;
+  Matrix preprocessOut(Matrix inputs) const;
+  Matrix dePreprocessIn(Matrix inputs) const;
+  Matrix dePreprocessOut(Matrix inputs) const;
 
 private:
   void initLayers();
@@ -251,6 +253,7 @@ private:
 
   //output preprocessing
   std::vector<std::pair<double, double>> _outputNormalization;
+  std::vector<std::pair<double, double>> _outputStandartization;
   std::pair<Matrix, Vector> _outputDecorrelation;
   std::vector<std::pair<double, double>> _metricNormalization;
 

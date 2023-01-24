@@ -178,7 +178,7 @@ omnilearn::Vector omnilearn::Network::process(Vector inputs) const
 
 omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
 {
-  inputs = preprocess(inputs);
+  inputs = preprocessIn(inputs);
   for(size_t i = 0; i < _layers.size(); i++)
   {
     inputs = _layers[i].process(inputs, *_pool);
@@ -188,7 +188,7 @@ omnilearn::Matrix omnilearn::Network::process(Matrix inputs) const
   {
     inputs = softmax(inputs);
   }
-  inputs = postprocess(inputs);
+  inputs = dePreprocessOut(inputs);
   return inputs;
 }
 
@@ -198,8 +198,8 @@ omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target
   if(input.size() == 0)
     input = Vector::Random(_layers[0].inputSize());
   else
-    input = preprocess(input);
-  target = depostprocess(target);
+    input = preprocessIn(input);
+  target = preprocessOut(target);
   for(size_t iteration = 0; iteration < param.epoch; iteration++)
   {
     Vector res = input;
@@ -219,36 +219,36 @@ omnilearn::Vector omnilearn::Network::generate(NetworkParam param, Vector target
     for(size_t i = 0; i < _layers.size(); i++)
       _layers[i].resetGradientsForGeneration(*_pool);
   }
-  input = depreprocess(input);
+  input = dePreprocessIn(input);
   return input;
 }
 
 
-omnilearn::Vector omnilearn::Network::preprocess(Vector inputs) const
+omnilearn::Vector omnilearn::Network::preprocessIn(Vector inputs) const
 {
-  return preprocess(Matrix(inputs.transpose())).row(0);
+  return preprocessIn(Matrix(inputs.transpose())).row(0);
 }
 
 
-omnilearn::Vector omnilearn::Network::postprocess(Vector outputs) const
+omnilearn::Vector omnilearn::Network::preprocessOut(Vector outputs) const
 {
-  return postprocess(Matrix(outputs.transpose())).row(0);
+  return preprocessOut(Matrix(outputs.transpose())).row(0);
 }
 
 
-omnilearn::Vector omnilearn::Network::depreprocess(Vector inputs) const
+omnilearn::Vector omnilearn::Network::dePreprocessIn(Vector inputs) const
 {
-  return depreprocess(Matrix(inputs.transpose())).row(0);
+  return dePreprocessIn(Matrix(inputs.transpose())).row(0);
 }
 
 
-omnilearn::Vector omnilearn::Network::depostprocess(Vector outputs) const
+omnilearn::Vector omnilearn::Network::dePreprocessOut(Vector outputs) const
 {
-  return depostprocess(Matrix(outputs.transpose())).row(0);
+  return dePreprocessOut(Matrix(outputs.transpose())).row(0);
 }
 
 
-omnilearn::Matrix omnilearn::Network::preprocess(Matrix inputs) const
+omnilearn::Matrix omnilearn::Network::preprocessIn(Matrix inputs) const
 {
   for(size_t i = 0; i < _param.preprocessInputs.size(); i++)
   {
@@ -284,36 +284,35 @@ omnilearn::Matrix omnilearn::Network::preprocess(Matrix inputs) const
 }
 
 
-omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
+omnilearn::Matrix omnilearn::Network::preprocessOut(Matrix outputs) const
 {
-  for(size_t pre = 0; pre < _param.preprocessOutputs.size(); pre++)
+  for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
   {
-    if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
+    if(_param.preprocessOutputs[i] == Preprocess::Normalize)
     {
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < outputs.cols(); j++)
-        {
-          outputs(i,j) *= (_outputNormalization[j].second - _outputNormalization[j].first);
-          outputs(i,j) += _outputNormalization[j].first;
-        }
-      }
+      normalize(outputs, _outputNormalization);
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
+    if(_param.preprocessOutputs[i] == Preprocess::Standardize)
     {
-      Matrix newResults(outputs.rows(), _outputDecorrelation.second.size());
-      rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - outputs.cols(), 0);
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
-      {
-        newResults.row(i) = (rowVector(_outputDecorrelation.second.size()) << outputs.row(i), zero).finished();
-      }
-      outputs = newResults;
+      normalize(outputs, _outputStandartization);
     }
-    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
     {
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      decorrelate(outputs, _outputDecorrelation);
+    }
+    else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
+    {
+      whiten(outputs, _outputDecorrelation, _param.outputWhiteningBias);
+    }
+    else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
+    {
+      reduce(outputs, _outputDecorrelation, _param.outputReductionThreshold);
+    }
+    else if(_param.preprocessOutputs[i] == Preprocess::Recorrelate)
+    {
+      for(eigen_size_t j = 0; j < outputs.rows(); j++)
       {
-        outputs.row(i) = _outputDecorrelation.first * outputs.row(i).transpose();
+        outputs.row(j) = _outputDecorrelation.first * outputs.row(j).transpose();
       }
     }
   }
@@ -321,7 +320,7 @@ omnilearn::Matrix omnilearn::Network::postprocess(Matrix outputs) const
 }
 
 
-omnilearn::Matrix omnilearn::Network::depreprocess(Matrix inputs) const
+omnilearn::Matrix omnilearn::Network::dePreprocessIn(Matrix inputs) const
 {
   for(size_t pre = 0; pre < _param.preprocessInputs.size(); pre++)
   {
@@ -380,21 +379,59 @@ omnilearn::Matrix omnilearn::Network::depreprocess(Matrix inputs) const
 }
 
 
-omnilearn::Matrix omnilearn::Network::depostprocess(Matrix outputs) const
+omnilearn::Matrix omnilearn::Network::dePreprocessOut(Matrix outputs) const
 {
-  for(size_t i = 0; i < _param.preprocessOutputs.size(); i++)
+  for(size_t pre = 0; pre < _param.preprocessOutputs.size(); pre++)
   {
-    if(_param.preprocessOutputs[i] == Preprocess::Normalize)
+    if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
     {
-      normalize(outputs, _outputNormalization);
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < outputs.cols(); j++)
+        {
+          outputs(i,j) *= (_outputNormalization[j].second - _outputNormalization[j].first);
+          outputs(i,j) += _outputNormalization[j].first;
+        }
+      }
     }
-    else if(_param.preprocessOutputs[i] == Preprocess::Decorrelate)
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
+    {
+      Matrix newResults(outputs.rows(), _outputDecorrelation.second.size());
+      rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - outputs.cols(), 0);
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        newResults.row(i) = (rowVector(_outputDecorrelation.second.size()) << outputs.row(i), zero).finished();
+      }
+      outputs = newResults;
+    }
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Decorrelate)
+    {
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        outputs.row(i) = _outputDecorrelation.first * outputs.row(i).transpose();
+      }
+    }
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Standardize)
+    {
+      for(eigen_size_t i = 0; i < outputs.rows(); i++)
+      {
+        for(eigen_size_t j = 0; j < outputs.cols(); j++)
+        {
+          outputs(i,j) *= _outputStandartization[j].second;
+          outputs(i,j) += _outputStandartization[j].first;
+        }
+      }
+    }
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Whiten)
+    {
+      for(eigen_size_t i = 0; i < outputs.cols(); i++)
+      {
+        outputs.col(i) *= (std::sqrt(_outputDecorrelation.second[i])+_param.outputWhiteningBias);
+      }
+    }
+    else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Recorrelate)
     {
       decorrelate(outputs, _outputDecorrelation);
-    }
-    else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
-    {
-      reduce(outputs, _outputDecorrelation, _param.outputReductionThreshold);
     }
   }
   return outputs;
@@ -603,15 +640,41 @@ void omnilearn::Network::initPreprocess()
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
     {
-      throw Exception("Outputs can't be whitened.");
+      if(whitened == true)
+        throw Exception("Outputs are whitened multiple times.");
+      if(decorrelated == false)
+        throw Exception("Outputs cannot be whitened before decorrelation.");
+      if(recorrelated == true)
+        throw Exception("Outputs cannot be whitened after recorrelation.");
+      whiten(_trainOutputs, _outputDecorrelation, _param.outputWhiteningBias);
+      whiten(_validationOutputs, _outputDecorrelation, _param.outputWhiteningBias);
+      whiten(_testOutputs, _outputDecorrelation, _param.outputWhiteningBias);
+      whitened = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
     {
-      throw Exception("Outputs can't be standardized.");
+      if(standardized == true)
+        throw Exception("Outputs are standardized multiple times.");
+      _outputStandartization = standardize(_trainOutputs);
+      standardize(_validationOutputs, _outputStandartization);
+      standardize(_testOutputs, _outputStandartization);
+      standardized = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Recorrelate)
     {
-      throw Exception("Outputs can't be recorrelated.");
+      if(recorrelated == true)
+        throw Exception("Outputs are recorrelated multiple times.");
+      if(reduced == true)
+        throw Exception("Outputs cannot be recorrelated after reduction.");
+
+      for(eigen_size_t j = 0; j < _trainOutputs.rows(); j++)
+        _trainOutputs.row(j) = _outputDecorrelation.first * _trainOutputs.row(j).transpose();
+      for(eigen_size_t j = 0; j < _validationOutputs.rows(); j++)
+        _validationOutputs.row(j) = _outputDecorrelation.first * _validationOutputs.row(j).transpose();
+      for(eigen_size_t j = 0; j < _testOutputs.rows(); j++)
+        _testOutputs.row(j) = _outputDecorrelation.first * _testOutputs.row(j).transpose();
+
+      recorrelated = true;
     }
   }
 }
