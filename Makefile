@@ -32,7 +32,8 @@ $(SRCDIR)/NetworkIO.cpp \
 $(SRCDIR)/Neuron.cpp \
 $(SRCDIR)/optimizer.cpp \
 $(SRCDIR)/preprocess.cpp \
-$(SRCDIR)/main.cpp \
+$(SRCDIR)/fileString.cpp \
+$(SRCDIR)/main.cpp
 
 
 OBJS = $(SRCS:.cpp=.o)

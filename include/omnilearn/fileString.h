@@ -6,7 +6,11 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <filesystem>
 
+
+
+namespace fs = std::filesystem;
 
 
 namespace omnilearn
@@ -16,9 +20,9 @@ namespace omnilearn
 
 std::string strip(std::string str, char c);
 std::vector<std::string> split(std::string str, char c);
-std::string removeRepetition(std::string const& str, char c);
-std::vector<std::string> readLines(std::string path);
-std::vector<std::string> readCleanLines(std::string path);
+std::string removeDoubles(std::string const& str, char c);
+std::string removeOccurences(std::string str, char c);
+std::vector<std::string> readLines(fs::path path);
 void writeLines(std::vector<std::string> const& text, std::ostream& stream);
 
 

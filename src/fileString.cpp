@@ -1,6 +1,7 @@
 // fileString.cpp
 
-#include "omnilearn/fileString.hh"
+#include "omnilearn/fileString.h"
+#include "omnilearn/Exception.hh"
 
 #include <algorithm>
 
@@ -8,20 +9,10 @@
 
 std::string omnilearn::strip(std::string str, char c)
 {
-  while(true)
-  {
-    if(str[0]==c)
+  while(str[0]==c)
       str.erase(0, 1);
-    else
-      break;
-  }
-  while(true)
-  {
-    if(str[str.size()-1]==c)
-      str.erase(str.size()-1, 1);
-    else
-      break;
-  }
+  while(str[str.size()-1]==c)
+    str.erase(str.size()-1, 1);
   return str;
 }
 
@@ -39,7 +30,7 @@ std::vector<std::string> omnilearn::split(std::string str, char c)
 }
 
 
-std::string omnilearn::removeRepetition(std::string const& str, char c)
+std::string omnilearn::removeDoubles(std::string const& str, char c)
 {
   std::string output;
   size_t pos = 0;
@@ -57,31 +48,23 @@ std::string omnilearn::removeRepetition(std::string const& str, char c)
 }
 
 
-std::vector<std::string> omnilearn::readLines(std::string path)
+std::string omnilearn::removeOccurences(std::string str, char c)
+{
+  str.erase(std::remove(str.begin(), str.end(), c), str.end());
+  return str;
+}
+
+
+std::vector<std::string> omnilearn::readLines(fs::path path)
 {
   std::ifstream file(path);
   if(!file)
-    throw std::runtime_error("Cannot open " + path);
+    throw Exception("Cannot open " + path.string());
   std::vector<std::string> content;
   while(file.good())
   {
     content.push_back("");
     std::getline(file, content[content.size() - 1]);
-  }
-  return content;
-}
-
-
-std::vector<std::string> omnilearn::readCleanLines(std::string path)
-{
-  std::vector<std::string> content(readLines(path));
-  for(size_t i = 0; i < content.size(); i++)
-  {
-    content[i] = strip(content[i], ' ');
-    content[i] = strip(content[i], '\t');
-    content[i] = strip(content[i], ' ');
-    content[i] = removeRepetition(content[i], ' ');
-    content[i] = removeRepetition(content[i], '\t');
   }
   return content;
 }

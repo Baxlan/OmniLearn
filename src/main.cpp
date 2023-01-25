@@ -64,7 +64,7 @@ void iris()
     omnilearn::Data data = omnilearn::loadData("dataset/iris.csv", ',', 4);
 
     omnilearn::NetworkParam netp;
-    netp.threads = 3;
+    netp.threads = 4;
     netp.batchSize = 1;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
@@ -78,6 +78,7 @@ void iris()
     netp.testRatio = 0.20;
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
+    netp.inputWhiteningType = omnilearn::WhiteningType::PCA;
     netp.inputReductionThreshold = 0.99;
     netp.verbose = true;
     netp.momentum = 0.9;
@@ -365,8 +366,8 @@ void cube()
 int main()
 {
     //mnist();
-    vesta();
-    //iris();
+    //vesta();
+    iris();
     //testLoader();
     //generate();
     //cryptoBot();

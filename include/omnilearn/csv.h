@@ -4,9 +4,11 @@
 #define OMNILEARN_CSV_H_
 
 #include <fstream>
+#include <filesystem>
 
 #include "Matrix.hh"
 
+namespace fs = std::filesystem;
 
 
 
@@ -28,12 +30,12 @@ struct Data
   Matrix outputs;
   std::vector<std::string> inputLabels;
   std::vector<std::string> outputLabels;
+  std::vector<std::string> inputInfos;
+  std::vector<std::string> outputInfos;
 };
 
 
-
-Data loadData(std::string const& path, char separator, size_t threads = 1);
-
+Data loadData(fs::path const& path, char separator, size_t threads = 1);
 
 
 } // namespace omnilearn
