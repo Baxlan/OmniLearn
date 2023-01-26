@@ -14,7 +14,7 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
   std::vector<std::string> content = readLines(path);
 
   if (content[0].find(separator) == std::string::npos)
-    throw Exception("Wrong separator specified to read " + path.string());
+    throw Exception("The specified separator have not been found in line 1 of " + path.string());
 
   ThreadPool t(threads);
   std::vector<std::future<void>> tasks(content.size()-1);
@@ -32,21 +32,44 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
   for(size_t  i = 0; i < tasks.size(); i++)
     tasks[i].get();
 
-
-
   content[0] = strip(content[0], separator);
+
+
+
+  // get the amount of pending lines
+  size_t pending = 0;
+  for(; true; pending++)
+  {
+    if(content[content.size()-1 - pending] != "")
+      break;
+  }
+
+
+
+  size_t place = content[0].find(std::string(1,separator)+separator);
+  if(place == std::string::npos)
+    throw Exception("The label line doesn't have the input/output separator (which should be a double separator)");
+
+  size_t countBefore = std::count(content[0].begin(), content[0].begin()+place, separator);
+  size_t countAfter = std::count(content[0].begin()+place, content[0].end(), separator);
   size_t elements = static_cast<size_t>(std::count(content[0].begin(), content[0].end(), separator));
   std::exception_ptr ep = nullptr;
+  tasks.resize(content.size()-1-pending);
 
-  // test if all lines have the same amount of separators
-  for(size_t i = 1; i < content.size(); i++)
+  // test if all lines have the same amount of separators and if the double ocurrence appears at the same place
+  for(size_t i = 1; i < content.size()-pending; i++)
   {
-    tasks[i-1] = t.enqueue([i, &content, separator, path, &ep, elements]()->void
+    tasks[i-1] = t.enqueue([i, &content, separator, path, &ep, elements, &place, countBefore, countAfter]()->void
     {
       try
       {
         if(static_cast<size_t>(std::count(content[i].begin(), content[i].end(), separator)) != elements)
-          throw Exception("Line " + std::to_string(i+1) + " of file " + path.string() + "has not the same amount of elements as the label line");
+          throw Exception("Line " + std::to_string(i+1) + " of file " + path.string() + " has not the same amount of elements as the label line");
+
+        place = content[i].find(std::string(1,separator)+separator);
+        if(static_cast<size_t>(std::count(content[i].begin(), content[i].begin()+place, separator)) != countBefore ||
+           static_cast<size_t>(std::count(content[i].begin()+place, content[i].end(), separator)) != countAfter)
+          throw Exception("At line " + std::to_string(i+1) + " in " + path.string() + ", the input/output separator is not at the same place as the label line's one");
       }
       catch(...)
       {
@@ -106,11 +129,11 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
 
 
 
-  data.inputs  = Matrix(content.size()-2, data.inputLabels.size());
-  data.outputs = Matrix(content.size()-2, data.outputLabels.size());
-  tasks.resize(content.size()-2);
+  data.inputs  = Matrix(content.size()-2-pending, data.inputLabels.size());
+  data.outputs = Matrix(content.size()-2-pending, data.outputLabels.size());
+  tasks.resize(content.size()-2-pending);
 
-  for(i = 0; i < content.size()-2; i++)
+  for(i = 0; i < content.size()-2-pending; i++)
   {
     tasks[i] = t.enqueue([i, &content, &data, separator]()->void
     {
@@ -134,6 +157,28 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
   }
   for(i = 0; i < tasks.size(); i++)
     tasks[i].get();
+
+
+
+  // test if all outputs have the same info
+  val = data.outputInfos[0];
+  for(i = 1; i < data.outputInfos.size(); i++)
+  {
+    if(val != data.outputInfos[i])
+      throw Exception("Either the info line is missing, or dummy and continuous outputs are mixed");
+  }
+
+
+
+  // test if convolutional inputs are adjacents
+  for(i = 1; i < data.inputInfos.size(); i++)
+  {
+    if(data.inputInfos[i].find("conv") == std::string::npos)
+    {
+      if(data.inputInfos[i-1].find("conv") != std::string::npos)
+        throw Exception("Either all convolutional inputs are not adjacents, or they are not the last inputs");
+    }
+  }
 
   return data;
 }

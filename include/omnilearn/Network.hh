@@ -260,12 +260,14 @@ private:
   std::vector<std::pair<double, double>> _outputNormalization;
   std::vector<std::pair<double, double>> _outputStandartization;
   std::pair<Matrix, Vector> _outputDecorrelation;
+  std::vector<std::pair<double, double>> _outputFAMD;
   std::vector<std::pair<double, double>> _metricNormalization;
 
   //input preprocessing
   std::vector<std::pair<double, double>> _inputNormalization;
   std::vector<std::pair<double, double>> _inputStandartization;
   std::pair<Matrix, Vector> _inputDecorrelation;
+  std::vector<std::pair<double, double>> _inputFAMD;
 
   //IO
   std::unique_ptr<NetworkIO> _io; // is a pointer because we only need IO during training
