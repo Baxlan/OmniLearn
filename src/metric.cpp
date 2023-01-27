@@ -2,7 +2,7 @@
 
 #include "omnilearn/metric.h"
 
-#include <iostream>
+
 
 // the inputs are loss, the output is average loss
 double omnilearn::averageLoss(Matrix const& loss)

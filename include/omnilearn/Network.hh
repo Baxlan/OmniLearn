@@ -20,7 +20,7 @@ namespace omnilearn
 
 enum class Loss {L1, L2, CrossEntropy, BinaryCrossEntropy};
 // In classification, if there are only two labels, one sigmoid output is enough (0 for one label, 1 for the other).
-// In this case, BinaryCrossEntropy must be used. Indeed, using CrossEntropy would use softmax too so the output would be 1 in all cases.
+// In this case, BinaryCrossEntropy must be used. Indeed, using CrossEntropy would use softmax so the output would be 1 in all cases.
 // If there are more than 2 labels, as many output neurons are needed. In this case CrossEntropy (linear outputs) and BinaryCrossEntropy (sigmoid) are similar.
 enum class Preprocess {Normalize, Standardize, Whiten, Reduce};
 enum class WhiteningType {PCA, ZCA};
@@ -38,6 +38,8 @@ enum class Optimizer {None, Default, Nadam, AMSGrad ,Adadelta, AdadeltaGrad};
 // adaptiveLearningRate  |    0    |    1  |    1    |    1     |      1       |
 // automaticLearningRate |    0    |    0  |    0    |    1     |      1       |
 // useMaxDenominator     |    0    |    0  |    1    |    0     |      1       |
+
+
 
 //=============================================================================
 //=============================================================================
@@ -154,6 +156,33 @@ struct NetworkParam
 //=============================================================================
 //=============================================================================
 //=============================================================================
+//=== DECORRELATION DATA ======================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+struct DecorrelationData
+{
+    DecorrelationData():
+    eigenVectors(0, 0),
+    eigenValues(0),
+    dummyScales(0),
+    dummyMeans(0)
+    {}
+
+    Matrix eigenVectors;
+    Vector eigenValues;
+    Vector dummyScales;
+    Vector dummyMeans;
+};
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
 //=== NETWORK =================================================================
 //=============================================================================
 //=============================================================================
@@ -256,18 +285,20 @@ private:
   std::vector<std::string> _inputLabels;
   std::vector<std::string> _outputLabels;
 
+  //infos
+  std::vector<std::string> _inputInfos;
+  std::vector<std::string> _outputInfos;
+
   //output preprocessing
   std::vector<std::pair<double, double>> _outputNormalization;
   std::vector<std::pair<double, double>> _outputStandartization;
-  std::pair<Matrix, Vector> _outputDecorrelation;
-  std::vector<std::pair<double, double>> _outputFAMD;
+  DecorrelationData _outputDecorrelation;
   std::vector<std::pair<double, double>> _metricNormalization;
 
   //input preprocessing
   std::vector<std::pair<double, double>> _inputNormalization;
   std::vector<std::pair<double, double>> _inputStandartization;
-  std::pair<Matrix, Vector> _inputDecorrelation;
-  std::vector<std::pair<double, double>> _inputFAMD;
+  DecorrelationData _inputDecorrelation;
 
   //IO
   std::unique_ptr<NetworkIO> _io; // is a pointer because we only need IO during training

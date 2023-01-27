@@ -15,33 +15,16 @@ DISABLE_WARNING_POP
 
 
 
-//subtract the mean of each comumn to each elements of these columns
-//returns the mean of each column
-omnilearn::Vector omnilearn::center(Matrix& data, Vector mean)
-{
-  if(mean.size() == 0)
-  {
-    mean = Vector(data.cols());
-    //calculate mean
-    for(eigen_size_t i = 0; i < data.cols(); i++)
-    {
-      mean[i] = data.col(i).mean();
-    }
-  }
-
-  //center
-  for(eigen_size_t i = 0; i < data.rows(); i++)
-  {
-    for(eigen_size_t j = 0; j < data.cols(); j++)
-    {
-      data(i, j) -= mean[j];
-    }
-  }
-  return mean;
-}
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//======== PREPROCESSING ======================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
 
 
-//set the elements of each columns between a range [0, 1]
+
 //returns vector of min and max respectively
 std::vector<std::pair<double, double>> omnilearn::normalize(Matrix& data, std::vector<std::pair<double, double>> mM)
 {
@@ -68,7 +51,6 @@ std::vector<std::pair<double, double>> omnilearn::normalize(Matrix& data, std::v
 }
 
 
-//set the mean and the std deviation of each column to 0 and 1
 //returns vector of mean and deviation respectively
 std::vector<std::pair<double, double>> omnilearn::standardize(Matrix& data, std::vector<std::pair<double, double>> meanDev)
 {
@@ -96,47 +78,128 @@ std::vector<std::pair<double, double>> omnilearn::standardize(Matrix& data, std:
 }
 
 
-//rotate data in the input space to decorrelate them (and set their variance to 1).
-//USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
-//first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<omnilearn::Matrix, omnilearn::Vector> omnilearn::whiten(Matrix& data, double bias, WhiteningType whiteningType, std::pair<Matrix, Vector> singular)
+omnilearn::DecorrelationData omnilearn::whiten(Matrix& data, double bias, WhiteningType whiteningType, std::vector<std::string> const& infos, DecorrelationData decorrelationData)
 {
-  if(singular.second.size() == 0)
+  if(decorrelationData.eigenValues.size() == 0)
   {
+    decorrelationData.dummyScales = Vector::Constant(data.cols(), 0);
+    decorrelationData.dummyMeans = Vector::Constant(data.cols(), 0);
+
+    // prepare for FAMD
+    for(size_t i = 0; i < infos.size(); i++)
+    {
+      if(infos[i].find("dummy") != std::string::npos)
+      {
+          decorrelationData.dummyMeans[i] = data.col(i).mean();
+
+          if(decorrelationData.dummyMeans[i] < std::numeric_limits<double>::epsilon())
+            decorrelationData.dummyScales[i] = 1; // avoid dividing by 0
+          else
+            decorrelationData.dummyScales[i] = 1 / std::sqrt(decorrelationData.dummyMeans[i]);
+
+          data.col(i) = (data.col(i).array() * decorrelationData.dummyScales[i]) - decorrelationData.dummyMeans[i];
+      }
+    }
+
     Matrix cov = (data.transpose() * data) / static_cast<double>(data.rows());
 
     //in U, eigen vectors are columns
     Eigen::BDCSVD<Matrix> svd(cov, Eigen::ComputeFullU);
-    singular.first = svd.matrixU();
-    singular.second = svd.singularValues();
+    decorrelationData.eigenVectors = svd.matrixU();
+    decorrelationData.eigenValues = svd.singularValues();
   }
 
-  data = data * singular.first * DiagMatrix((singular.second.cwiseSqrt().array() + bias).matrix().cwiseInverse());
+  data = data * decorrelationData.eigenVectors * DiagMatrix((decorrelationData.eigenValues.cwiseSqrt().array() + bias).matrix().cwiseInverse());
 
   if(whiteningType == WhiteningType::ZCA)
   {
-    data = data * singular.first.transpose();
+    data = data * decorrelationData.eigenVectors.transpose();
   }
 
-  return singular;
+  return decorrelationData;
 }
 
 
-void omnilearn::reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold)
+void omnilearn::reduce(Matrix& data, DecorrelationData const& decorrelationData, double threshold)
 {
-  if(singular.second.size() == 0)
+  if(decorrelationData.eigenValues.size() == 0)
     throw Exception("Decorrelation must be performed before reduction");
 
-  double eigenTot = singular.second.sum();
+  double eigenTot = decorrelationData.eigenValues.sum();
   double eigenSum = 0;
 
-  for(eigen_size_t i = 0; i < singular.second.size(); i++)
+  for(eigen_size_t i = 0; i < decorrelationData.eigenValues.size(); i++)
   {
-    eigenSum += singular.second[i];
+    eigenSum += decorrelationData.eigenValues[i];
     if(eigenSum/eigenTot >= threshold)
     {
       data = Matrix(data.leftCols(i+1));
       break;
     }
   }
+}
+
+
+
+//=============================================================================
+//=============================================================================
+//=============================================================================
+//======== PREPROCESSING ======================================================
+//=============================================================================
+//=============================================================================
+//=============================================================================
+
+
+
+void omnilearn::deNormalize(Matrix& data, std::vector<std::pair<double, double>> const& mM)
+{
+  for(eigen_size_t i = 0; i < data.rows(); i++)
+  {
+    for(eigen_size_t j = 0; j < data.cols(); j++)
+    {
+      data(i,j) *= (mM[j].second - mM[j].first);
+      data(i,j) += mM[j].first;
+    }
+  }
+}
+
+
+void omnilearn::deStandardize(Matrix& data, std::vector<std::pair<double, double>> const& meanDev)
+{
+  for(eigen_size_t i = 0; i < data.rows(); i++)
+  {
+    for(eigen_size_t j = 0; j < data.cols(); j++)
+    {
+      data(i,j) *= meanDev[j].second;
+      data(i,j) += meanDev[j].first;
+    }
+  }
+}
+
+
+void omnilearn::deWhiten(Matrix& data, double bias, WhiteningType whiteningType, DecorrelationData const& decorrelationData)
+{
+  if(whiteningType == WhiteningType::ZCA)
+  {
+    data = data * decorrelationData.eigenVectors;
+  }
+  data = data * DiagMatrix((decorrelationData.eigenValues.cwiseSqrt().array() + bias).matrix()) * decorrelationData.eigenVectors.transpose();
+
+  // reverse FAMD
+  for(eigen_size_t i = 0; i < decorrelationData.dummyMeans.size(); i++)
+  {
+    data.col(i) = (data.col(i).array() + decorrelationData.dummyMeans[i]) / decorrelationData.dummyScales[i];
+  }
+}
+
+
+void omnilearn::deReduce(Matrix& data, DecorrelationData const& decorrelationData)
+{
+  Matrix newResults(data.rows(), decorrelationData.eigenValues.size());
+  rowVector zero = rowVector::Constant(decorrelationData.eigenValues.size() - data.cols(), 0);
+  for(eigen_size_t i = 0; i < data.rows(); i++)
+  {
+    newResults.row(i) = (rowVector(decorrelationData.eigenValues.size()) << data.row(i), zero).finished();
+  }
+  data = newResults;
 }

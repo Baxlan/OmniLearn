@@ -73,6 +73,8 @@ void omnilearn::Network::setData(Data const& data)
   _trainOutputs = data.outputs;
   _inputLabels = data.inputLabels;
   _outputLabels = data.outputLabels;
+  _inputInfos = data.inputInfos;
+  _outputInfos = data.outputInfos;
 }
 
 
@@ -262,7 +264,7 @@ omnilearn::Matrix omnilearn::Network::preprocessIn(Matrix inputs) const
     }
     else if(_param.preprocessInputs[i] == Preprocess::Whiten)
     {
-      whiten(inputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
+      whiten(inputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos, _inputDecorrelation);
     }
     else if(_param.preprocessInputs[i] == Preprocess::Reduce)
     {
@@ -287,7 +289,7 @@ omnilearn::Matrix omnilearn::Network::preprocessOut(Matrix outputs) const
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Whiten)
     {
-      whiten(outputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
+      whiten(outputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos, _outputDecorrelation);
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
     {
@@ -304,43 +306,19 @@ omnilearn::Matrix omnilearn::Network::dePreprocessIn(Matrix inputs) const
   {
     if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Normalize)
     {
-      for(eigen_size_t i = 0; i < inputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < inputs.cols(); j++)
-        {
-          inputs(i,j) *= (_inputNormalization[j].second - _inputNormalization[j].first);
-          inputs(i,j) += _inputNormalization[j].first;
-        }
-      }
+      deNormalize(inputs, _inputNormalization);
     }
     else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Reduce)
     {
-      Matrix newResults(inputs.rows(), _inputDecorrelation.second.size());
-      rowVector zero = rowVector::Constant(_inputDecorrelation.second.size() - inputs.cols(), 0);
-      for(eigen_size_t i = 0; i < inputs.rows(); i++)
-      {
-        newResults.row(i) = (rowVector(_inputDecorrelation.second.size()) << inputs.row(i), zero).finished();
-      }
-      inputs = newResults;
+      deReduce(inputs, _inputDecorrelation);
     }
     else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Whiten)
     {
-      if(_param.inputWhiteningType == WhiteningType::ZCA)
-      {
-        inputs = inputs * _inputDecorrelation.first;
-      }
-      inputs = inputs * DiagMatrix((_inputDecorrelation.second.cwiseSqrt().array() + 1e-5).matrix()) * _inputDecorrelation.first.transpose();
+      deWhiten(inputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
     }
     else if(_param.preprocessInputs[_param.preprocessInputs.size() - pre - 1] == Preprocess::Standardize)
     {
-      for(eigen_size_t i = 0; i < inputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < inputs.cols(); j++)
-        {
-          inputs(i,j) *= _inputStandartization[j].second;
-          inputs(i,j) += _inputStandartization[j].first;
-        }
-      }
+      deStandardize(inputs, _inputStandartization);
     }
   }
   return inputs;
@@ -353,43 +331,19 @@ omnilearn::Matrix omnilearn::Network::dePreprocessOut(Matrix outputs) const
   {
     if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Normalize)
     {
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < outputs.cols(); j++)
-        {
-          outputs(i,j) *= (_outputNormalization[j].second - _outputNormalization[j].first);
-          outputs(i,j) += _outputNormalization[j].first;
-        }
-      }
+      deNormalize(outputs, _outputNormalization);
     }
     else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Reduce)
     {
-      Matrix newResults(outputs.rows(), _outputDecorrelation.second.size());
-      rowVector zero = rowVector::Constant(_outputDecorrelation.second.size() - outputs.cols(), 0);
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
-      {
-        newResults.row(i) = (rowVector(_outputDecorrelation.second.size()) << outputs.row(i), zero).finished();
-      }
-      outputs = newResults;
+      deReduce(outputs, _outputDecorrelation);
     }
     else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Whiten)
     {
-      if(_param.outputWhiteningType == WhiteningType::ZCA)
-      {
-        outputs = outputs * _outputDecorrelation.first;
-      }
-      outputs = outputs * DiagMatrix((_outputDecorrelation.second.cwiseSqrt().array() + 1e-5).matrix()) * _outputDecorrelation.first.transpose();
+      deWhiten(outputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
     }
     else if(_param.preprocessOutputs[_param.preprocessOutputs.size() - pre - 1] == Preprocess::Standardize)
     {
-      for(eigen_size_t i = 0; i < outputs.rows(); i++)
-      {
-        for(eigen_size_t j = 0; j < outputs.cols(); j++)
-        {
-          outputs(i,j) *= _outputStandartization[j].second;
-          outputs(i,j) += _outputStandartization[j].first;
-        }
-      }
+      deStandardize(outputs, _outputStandartization);
     }
   }
   return outputs;
@@ -509,9 +463,9 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Inputs are whitened multiple times.");
       if(standardized == false)
         throw Exception("Inputs cannot be whitened without being standartized.");
-      _inputDecorrelation = whiten(_trainInputs, _param.inputWhiteningBias, _param.inputWhiteningType);
-      whiten(_validationInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
-      whiten(_testInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputDecorrelation);
+      _inputDecorrelation = whiten(_trainInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos);
+      whiten(_validationInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos, _inputDecorrelation);
+      whiten(_testInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos, _inputDecorrelation);
       whitened = true;
     }
     else if(_param.preprocessInputs[i] == Preprocess::Reduce)
@@ -540,9 +494,9 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Outputs are whitened multiple times.");
       if(standardized == false)
         throw Exception("Outputs cannot be whitened without being standardized.");
-      _outputDecorrelation = whiten(_trainOutputs, _param.outputWhiteningBias, _param.outputWhiteningType);
-      whiten(_validationOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
-      whiten(_testOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputDecorrelation);
+      _outputDecorrelation = whiten(_trainOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos);
+      whiten(_validationOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos, _outputDecorrelation);
+      whiten(_testOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos, _outputDecorrelation);
       whitened = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Reduce)

@@ -13,23 +13,15 @@ namespace omnilearn
 
 
 
-//subtract the mean of each comumn to each elements of these columns
-//returns the mean of each column
-Vector center(Matrix& data, Vector mean = Vector(0));
+std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::pair<double, double>> mM = {}); //returns vector of min and max respectively
+std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std::pair<double, double>> meanDev = {}); //returns vector of mean and deviation respectively
+DecorrelationData whiten(Matrix& data, double bias, WhiteningType whiteningType, std::vector<std::string> const& infos, DecorrelationData decorrelationData = DecorrelationData());
+void reduce(Matrix& data, DecorrelationData const& decorrelationData, double threshold);
 
-//set the elements of each columns between a range [0, 1]
-//returns vector of min and max respectively
-std::vector<std::pair<double, double>> normalize(Matrix& data, std::vector<std::pair<double, double>> mM = {});
-
-//set the mean and the std deviation of each column to 0 and 1
-//returns vector of mean and deviation respectively
-std::vector<std::pair<double, double>> standardize(Matrix& data, std::vector<std::pair<double, double>> meanDev = {});
-
-//rotate data in the input space to decorrelate them (and set their variance to 1).
-//USE THIS FUNCTION ONLY IF DATA ARE MEAN CENTERED
-//first is rotation matrix (eigenvectors of the cov matrix of the data), second is eigenvalues
-std::pair<Matrix, Vector> whiten(Matrix& data, double bias, WhiteningType whiteningType, std::pair<Matrix, Vector> singular = {Matrix(0,0), Vector(0)});
-void reduce(Matrix& data, std::pair<Matrix, Vector> const& singular, double threshold);
+void deNormalize(Matrix& data, std::vector<std::pair<double, double>> const& mM);
+void deStandardize(Matrix& data, std::vector<std::pair<double, double>> const& meanDev);
+void deWhiten(Matrix& data, double bias, WhiteningType whiteningType, DecorrelationData const& decorrelationData);
+void deReduce(Matrix& data, DecorrelationData const& decorrelationData);
 
 
 

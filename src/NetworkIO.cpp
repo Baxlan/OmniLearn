@@ -175,9 +175,11 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
     else if(net._param.preprocessInputs[i] == Preprocess::Whiten)
     {
       jObj["preprocess"][i] = "decorrelate";
-      jObj["eigenvalues"] = net._inputDecorrelation.second;
+      jObj["eigenvalues"] = net._inputDecorrelation.eigenValues;
+      jObj["dummyMeans"] = net._inputDecorrelation.dummyMeans;
+      jObj["dummyScales"] = net._inputDecorrelation.dummyScales;
 
-      Matrix vectors = net._inputDecorrelation.first.transpose();
+      Matrix vectors = net._inputDecorrelation.eigenVectors.transpose();
       for(eigen_size_t j = 0; j < vectors.rows(); j++)
       {
         jObj["eigenvectors"][j] = Vector(vectors.row(j));
@@ -219,9 +221,12 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
     else if(net._param.preprocessOutputs[i] == Preprocess::Whiten)
     {
       jObj["preprocess"][i] = "decorrelate";
-      jObj["eigenvalues"] = net._outputDecorrelation.second;
+      jObj["preprocess"][i] = "decorrelate";
+      jObj["eigenvalues"] = net._outputDecorrelation.eigenValues;
+      jObj["dummyMeans"] = net._outputDecorrelation.dummyMeans;
+      jObj["dummyScales"] = net._outputDecorrelation.dummyScales;
 
-      Matrix vectors = net._outputDecorrelation.first.transpose();
+      Matrix vectors = net._outputDecorrelation.eigenVectors.transpose();
       for(eigen_size_t j = 0; j < vectors.rows(); j++)
       {
         jObj["eigenvectors"][j] = Vector(vectors.row(j));
@@ -317,13 +322,15 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
     else if(jObj.at("preprocess").at(i) == "decorrelate")
     {
       net._param.preprocessInputs[i] = Preprocess::Whiten;
-      net._inputDecorrelation.second = stdToEigenVector(jObj.at("eigenvalues"));
-      net._inputDecorrelation.first = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
-      for(eigen_size_t j = 0; j < net._inputDecorrelation.first.rows(); j++)
+      net._inputDecorrelation.eigenVectors = stdToEigenVector(jObj.at("eigenvalues"));
+      net._inputDecorrelation.dummyMeans = stdToEigenVector(jObj.at("dummyMeans"));
+      net._inputDecorrelation.dummyScales = stdToEigenVector(jObj.at("dummyScales"));
+      net._inputDecorrelation.eigenValues = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
+      for(eigen_size_t j = 0; j < net._inputDecorrelation.eigenVectors.rows(); j++)
       {
-        net._inputDecorrelation.first.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
+        net._inputDecorrelation.eigenVectors.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
       }
-      net._inputDecorrelation.first.transposeInPlace();
+      net._inputDecorrelation.eigenVectors.transposeInPlace();
     }
     else if(jObj.at("preprocess").at(i) == "whiten")
     {
@@ -354,13 +361,15 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
     else if(jObj.at("preprocess").at(i) == "decorrelate")
     {
       net._param.preprocessOutputs[i] = Preprocess::Whiten;
-      net._outputDecorrelation.second = stdToEigenVector(jObj.at("eigenvalues"));
-      net._outputDecorrelation.first = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
-      for(eigen_size_t j = 0; j < net._outputDecorrelation.first.rows(); j++)
+      net._outputDecorrelation.eigenValues= stdToEigenVector(jObj.at("eigenvalues"));
+      net._outputDecorrelation.dummyMeans= stdToEigenVector(jObj.at("dummyMeans"));
+      net._outputDecorrelation.dummyScales= stdToEigenVector(jObj.at("dummyScales"));
+      net._outputDecorrelation.eigenVectors = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
+      for(eigen_size_t j = 0; j < net._outputDecorrelation.eigenVectors.rows(); j++)
       {
-        net._outputDecorrelation.first.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
+        net._outputDecorrelation.eigenVectors.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
       }
-      net._outputDecorrelation.first.transposeInPlace();
+      net._outputDecorrelation.eigenVectors.transposeInPlace();
     }
     else if(jObj.at("preprocess").at(i) == "reduce")
     {
