@@ -64,15 +64,14 @@ void iris()
     omnilearn::Data data = omnilearn::loadData("dataset/iris.csv", ',', 4);
 
     omnilearn::NetworkParam netp;
-    netp.threads = 4;
+    netp.threads = 1;
     netp.batchSize = 1;
     netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::CrossEntropy;
-    netp.patience = 10;
+    netp.patience = 15;
     netp.improvement = 0.01;
-    netp.scheduler = omnilearn::Scheduler::Plateau;
-    netp.schedulerValue = 2;
-    netp.schedulerDelay = 2;
+    netp.momentum = 0.9;
+
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
@@ -80,25 +79,25 @@ void iris()
     netp.preprocessOutputs = {};
     netp.inputWhiteningType = omnilearn::WhiteningType::PCA;
     netp.inputReductionThreshold = 0.99;
-    netp.verbose = true;
-    netp.momentum = 0.9;
 
+    netp.verbose = true;
     netp.optimizer = omnilearn::Optimizer::Adadelta;
-    netp.weightMode = omnilearn::Weight::Automatic;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.size = 32;
+    //lay.size = 32;
     //lay.lockBias = true;
     //lay.lockWeights = true;
+    //lay.lockParametric = true;
 
-    lay.aggregation = omnilearn::Aggregation::Dot;
-    lay.activation = omnilearn::Activation::Relu;
+    lay.aggregation = omnilearn::Aggregation::Pdistance;
+    lay.activation = omnilearn::Activation::Pelu;
     net.addLayer(lay);
 
+    lay.size = 8;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Linear;
     net.addLayer(lay);

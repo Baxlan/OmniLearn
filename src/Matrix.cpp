@@ -14,6 +14,9 @@ double omnilearn::dev(Vector const& vec)
 
 double omnilearn::norm(Vector const& vec, double order)
 {
+  if(std::abs(order) < std::numeric_limits<double>::epsilon())
+    return 1; // norm is 1 if order is 0
+
   double norm = 0;
   for(eigen_size_t i = 0; i < vec.size(); i++)
     norm += std::pow(vec[i], order);

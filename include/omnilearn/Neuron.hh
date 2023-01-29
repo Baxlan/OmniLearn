@@ -65,7 +65,7 @@ private:
     Matrix _gradients; //sum (over features of the batch) of partial gradient of aggregation according to each weight
     Vector _biasGradients;
     Vector _featureGradient; // store gradients for the current feature (for the previous layer's neurons)
-    std::vector<size_t> _weightsetCount; //counts the number of features passed in each weight set
+    size_t _count; //counts the number of features passed in each weight set
     Matrix _previousWeightGradient; // used for optimizers (momentum effect)
     Vector _previousBiasGradient; // used for optimizers (momentum effect)
     Matrix _previousWeightGradient2; // used for optimizers (window effect)
