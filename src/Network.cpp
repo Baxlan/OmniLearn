@@ -19,6 +19,9 @@ void omnilearn::Network::load(fs::path const& path, size_t threads)
 
 void omnilearn::Network::addLayer(LayerParam const& param)
 {
+  if((param.aggregation == Aggregation::Distance || param.aggregation == Aggregation::Pdistance) &&
+  (_param.dropconnect > std::numeric_limits<double>::epsilon() || _param.dropout > std::numeric_limits<double>::epsilon()))
+    throw Exception("Dropout / dropconnect can't be used with layers having Distance / Pdistance aggregation function");
   _layers.push_back(Layer(param));
 }
 
@@ -564,6 +567,8 @@ void omnilearn::Network::initCrossEntropyWeights()
 
 void omnilearn::Network::performeOneEpoch()
 {
+  std::bernoulli_distribution nullDist(0); // used to prevent the output neurons to get droppedOut
+
   for(size_t batch = 0; batch < _nbBatch; batch++)
   {
     _iteration += 1;
@@ -574,7 +579,7 @@ void omnilearn::Network::performeOneEpoch()
 
       for(size_t i = 0; i < _layers.size(); i++)
       {
-        featureInput = _layers[i].processToLearn(featureInput, _param.dropout, _param.dropconnect, _dropoutDist, _dropconnectDist, _generator, *_pool);
+        featureInput = _layers[i].processToLearn(featureInput, (i == _layers.size()-1 ? nullDist : _dropoutDist), _dropconnectDist, _generator, *_pool);
       }
 
       Vector gradients(computeGradVector(featureOutput, featureInput));
@@ -607,7 +612,7 @@ void omnilearn::Network::performeOneEpoch()
 
 
 // process taking already processed inputs and giving processed outputs
-// this allow to calculate loss and metrics without performing all the preprocessing
+// this allow to calculate loss without performing all the preprocessing
 omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
 {
   for(size_t i = 0; i < _layers.size(); i++)
@@ -818,6 +823,9 @@ void omnilearn::Network::check() const
 
   if(_param.dropconnect < 0 || _param.dropconnect >= 1 || _param.dropout < 0 || _param.dropout >= 1)
     throw Exception("Dropout and dropconnect must be in [0, 1[.");
+
+  if(_param.dropconnect > std::numeric_limits<double>::epsilon() && _param.dropout > std::numeric_limits<double>::epsilon())
+    throw Exception("Dropout and dropconnect can't be used simultaneously.");
 
   if(_param.window < 0 || _param.window >= 1)
     throw Exception("Window must be in [0, 1[.");

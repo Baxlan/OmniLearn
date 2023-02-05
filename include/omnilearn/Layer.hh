@@ -75,7 +75,7 @@ public:
     void init(size_t nbInputs, std::mt19937& generator);
     void init(size_t nbInputs);
     Matrix process(Matrix const& inputs, ThreadPool& t) const;
-    Vector processToLearn(Vector const& input, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t);
+    Vector processToLearn(Vector const& input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t);
     Vector processToGenerate(Vector const& input, ThreadPool& t);
     void computeGradients(Vector const& inputGradient, ThreadPool& t);
     void computeGradientsAccordingToInputs(Vector const& inputGradient, ThreadPool& t);

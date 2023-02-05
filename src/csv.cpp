@@ -59,16 +59,16 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
   // test if all lines have the same amount of separators and if the double ocurrence appears at the same place
   for(size_t i = 1; i < content.size()-pending; i++)
   {
-    tasks[i-1] = t.enqueue([i, &content, separator, path, &ep, elements, &place, countBefore, countAfter]()->void
+    tasks[i-1] = t.enqueue([i, &content, separator, path, &ep, elements, countBefore, countAfter]()->void
     {
       try
       {
         if(static_cast<size_t>(std::count(content[i].begin(), content[i].end(), separator)) != elements)
           throw Exception("Line " + std::to_string(i+1) + " of file " + path.string() + " has not the same amount of elements as the label line");
 
-        place = content[i].find(std::string(1,separator)+separator);
-        if(static_cast<size_t>(std::count(content[i].begin(), content[i].begin()+place, separator)) != countBefore ||
-           static_cast<size_t>(std::count(content[i].begin()+place, content[i].end(), separator)) != countAfter)
+        size_t place2 = content[i].find(std::string(1,separator)+separator);
+        if(static_cast<size_t>(std::count(content[i].begin(), content[i].begin()+place2, separator)) != countBefore ||
+           static_cast<size_t>(std::count(content[i].begin()+place2, content[i].end(), separator)) != countAfter)
           throw Exception("At line " + std::to_string(i+1) + " in " + path.string() + ", the input/output separator is not at the same place as the label line's one");
       }
       catch(...)

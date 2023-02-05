@@ -99,7 +99,7 @@ omnilearn::Matrix omnilearn::Layer::process(Matrix const& inputs, ThreadPool& t)
 }
 
 
-omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, double dropout, double dropconnect, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
+omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
 {
     //each element is associated to a neuron
     Vector output(_neurons.size());
@@ -107,17 +107,9 @@ omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, double d
 
     for(size_t i = 0; i < _neurons.size(); i++)
     {
-        tasks[i] = t.enqueue([this, &input, &output, i, dropout, dropconnect, &dropoutDist, &dropconnectDist, &dropGen]()->void
+        tasks[i] = t.enqueue([this, &input, &output, i, &dropoutDist, &dropconnectDist, &dropGen]()->void
         {
-            output(i) = _neurons[i].processToLearn(input, dropconnect, dropconnectDist, dropGen);
-            //dropOut
-            if(dropout > std::numeric_limits<double>::epsilon())
-            {
-                if(dropoutDist(dropGen))
-                    output[i] = 0;
-                else
-                    output[i] /= (1-dropout);
-            }
+            output(i) = _neurons[i].processToLearn(input, dropoutDist, dropconnectDist, dropGen);
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
@@ -314,7 +306,7 @@ std::pair<double, double> omnilearn::Layer::L1L2(ThreadPool& t) const
 
 size_t omnilearn::Layer::getNbParameters() const
 {
-    return _neurons[0].getNbParameters() * size();
+    return _neurons[0].getNbParameters(_param.lockWeights, _param.lockBias, _param.lockParametric) * size();
 }
 
 

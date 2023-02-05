@@ -34,7 +34,7 @@ public:
     void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t k, std::mt19937& generator, bool useOutput);
     //each line of the input matrix is a feature. Returns one result per feature.
     Vector process(Matrix const& inputs) const;
-    double processToLearn(Vector const& input, double dropconnect, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen);
+    double processToLearn(Vector const& input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen);
     double processToGenerate(Vector const& input);
     //compute gradients for one feature, finally summed for the whole batch
     void computeGradients(double inputGradient);
@@ -48,7 +48,7 @@ public:
     void resetGradientsForGeneration();
     size_t inputSize() const;
     std::pair<double, double> L1L2() const;
-    size_t getNbParameters() const;
+    size_t getNbParameters(bool lockWeights, bool lockBias, bool lockParameters) const;
 
 private:
     std::unique_ptr<IAggregation> _aggregation;
@@ -60,12 +60,17 @@ private:
     Vector _input;
     std::pair<double, size_t> _aggregResult;
     double _actResult;
+    bool _dropped;
+    BoolVector _connectDropped;
+    bool _biasDropped;
 
     double _actGradient; //gradient of activation according to aggregation result
     Matrix _gradients; //sum (over features of the batch) of partial gradient of aggregation according to each weight
     Vector _biasGradients;
     Vector _featureGradient; // store gradients for the current feature (for the previous layer's neurons)
-    size_t _count; //counts the number of features passed in each weight set
+    size_t _count;
+    Size_tVector _counts; // one count per weight, useful in case of dropconnect
+    size_t _biasCount;
     Matrix _previousWeightGradient; // used for optimizers (momentum effect)
     Vector _previousBiasGradient; // used for optimizers (momentum effect)
     Matrix _previousWeightGradient2; // used for optimizers (window effect)

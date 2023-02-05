@@ -27,6 +27,8 @@ using Matrix = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowM
 using DiagMatrix = Eigen::DiagonalMatrix<double, Eigen::Dynamic>;
 using Vector = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 using rowVector = Eigen::Matrix<double, 1, Eigen::Dynamic>;
+using Size_tVector = Eigen::Matrix<size_t, 1, Eigen::Dynamic>;
+using BoolVector = Eigen::Matrix<bool, 1, Eigen::Dynamic>;
 
 
 double dev(Vector const& vec);

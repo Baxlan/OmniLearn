@@ -151,7 +151,7 @@ protected:
     double _previousCoefGrad2;
     double _optimalPreviousCoefGrad2;
     double _previousCoefUpdate;
-    double _counter;
+    size_t _counter;
 };
 
 
@@ -203,7 +203,7 @@ protected:
     double _previousCoef2Grad2;
     double _optimalPreviousCoef2Grad2;
     double _previousCoef2Update;
-    double _counter;
+    size_t _counter;
 };
 class Gauss : public IActivation
 {
@@ -254,7 +254,7 @@ protected:
     double _optimalPreviousDevGrad2;
     double _previousDevUpdate;
 
-    double _counter;
+    size_t _counter;
 };
 
 
@@ -283,7 +283,7 @@ protected:
     double _previousCoefGrad2;
     double _optimalPreviousCoefGrad2;
     double _previousCoefUpdate;
-    double _counter;
+    size_t _counter;
 };
 
 
