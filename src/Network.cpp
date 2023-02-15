@@ -85,10 +85,6 @@ void omnilearn::Network::setTestData(Data const& data)
 {
   _testInputs = data.inputs;
   _testOutputs = data.outputs;
-
-  //_testRawInputs = data.inputs;
-  //_testRawOutputs = data.outputs;
-  //not needed because they are set in the shuffle function
 }
 
 
@@ -118,12 +114,12 @@ void omnilearn::Network::learn()
     *_io << "Validation dataset size: " << _validationInputs.rows() << "\n";
     *_io << "Test dataset size: " << _testInputs.rows() << "\n\n";
 
-    *_io << "Inputs: " << _trainInputs.cols() << " / " << _testRawInputs.cols() << " (" <<  _testRawInputs.cols() - _trainInputs.cols() << " discarded after reduction)\n";
-    *_io << "Outputs: " << _trainOutputs.cols() << " / " << _testRawOutputs.cols() << " (" <<  _testRawOutputs.cols() - _trainOutputs.cols() << " discarded after reduction)\n";
+    *_io << "Inputs: " << _trainInputs.cols() << " / " << _testInputs.cols() << " (" <<  _testInputs.cols() - _trainInputs.cols() << " discarded after reduction)\n";
+    *_io << "Outputs: " << _trainOutputs.cols() << " / " << _testOutputs.cols() << " (" <<  _testOutputs.cols() - _trainOutputs.cols() << " discarded after reduction)\n";
 
     if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
     {
-      _testNormalizedOutputsForMetric = _testRawOutputs;
+      _testNormalizedOutputsForMetric = _testOutputs;
       _metricNormalization = normalize(_testNormalizedOutputsForMetric);
     }
 
@@ -406,8 +402,6 @@ void omnilearn::Network::splitData()
       _testOutputs.row(i) = _trainOutputs.row(_trainOutputs.rows()-1-i-static_cast<eigen_size_t>(validation));
     }
   }
-  _testRawInputs = _testInputs; // testInputs will be preprocessed later
-  _testRawOutputs = _testOutputs; // idem
   _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
 }
@@ -448,7 +442,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Inputs are normalized multiple times.");
       _inputNormalization = normalize(_trainInputs);
       normalize(_validationInputs, _inputNormalization);
-      normalize(_testInputs, _inputNormalization);
       normalized = true;
     }
     else if(_param.preprocessInputs[i] == Preprocess::Standardize)
@@ -457,7 +450,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Inputs are standardized multiple times.");
       _inputStandartization = standardize(_trainInputs);
       standardize(_validationInputs, _inputStandartization);
-      standardize(_testInputs, _inputStandartization);
       standardized = true;
     }
     else if(_param.preprocessInputs[i] == Preprocess::Whiten)
@@ -468,7 +460,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Inputs cannot be whitened without being standartized.");
       _inputDecorrelation = whiten(_trainInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos);
       whiten(_validationInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos, _inputDecorrelation);
-      whiten(_testInputs, _param.inputWhiteningBias, _param.inputWhiteningType, _inputInfos, _inputDecorrelation);
       whitened = true;
     }
     else if(_param.preprocessInputs[i] == Preprocess::Reduce)
@@ -479,7 +470,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Inputs cannot be reduced after ZCA whitening. Try PCA whitening instead.");
       reduce(_trainInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduce(_validationInputs, _inputDecorrelation, _param.inputReductionThreshold);
-      reduce(_testInputs, _inputDecorrelation, _param.inputReductionThreshold);
       reduced = true;
     }
   }
@@ -497,9 +487,10 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Outputs are whitened multiple times.");
       if(standardized == false)
         throw Exception("Outputs cannot be whitened without being standardized.");
+      if(_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy)
+        throw Exception("Outputs cannot be whitened when using the cross-entropy or the binary cross-entropy loss function.");
       _outputDecorrelation = whiten(_trainOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos);
       whiten(_validationOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos, _outputDecorrelation);
-      whiten(_testOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos, _outputDecorrelation);
       whitened = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Reduce)
@@ -510,7 +501,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Outputs cannot be reduced after ZCA whitening. Try PCA whitening instead.");
       reduce(_trainOutputs, _outputDecorrelation, _param.outputReductionThreshold);
       reduce(_validationOutputs, _outputDecorrelation, _param.outputReductionThreshold);
-      reduce(_testOutputs, _outputDecorrelation, _param.outputReductionThreshold);
       reduced = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Normalize)
@@ -519,7 +509,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Outputs are normalized multiple times.");
       _outputNormalization = normalize(_trainOutputs);
       normalize(_validationOutputs, _outputNormalization);
-      normalize(_testOutputs, _outputNormalization);
       normalized = true;
     }
     else if(_param.preprocessOutputs[i] == Preprocess::Standardize)
@@ -528,7 +517,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Outputs are standardized multiple times.");
       _outputStandartization = standardize(_trainOutputs);
       standardize(_validationOutputs, _outputStandartization);
-      standardize(_testOutputs, _outputStandartization);
       standardized = true;
     }
   }
@@ -692,9 +680,9 @@ void omnilearn::Network::computeLoss()
   //test metric
   std::array<double, 4> testMetric;
   if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
-    testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testRawInputs), _metricNormalization);
+    testMetric = regressionMetrics(_testNormalizedOutputsForMetric, process(_testInputs), _metricNormalization);
   else if(_param.loss == Loss::CrossEntropy || _param.loss == Loss::BinaryCrossEntropy)
-    testMetric = classificationMetrics(_testRawOutputs, process(_testRawInputs), _param.classificationThreshold);
+    testMetric = classificationMetrics(_testOutputs, process(_testInputs), _param.classificationThreshold);
 
   _trainLosses.conservativeResize(_trainLosses.size() + 1);
   _trainLosses[_trainLosses.size()-1] = trainLoss;

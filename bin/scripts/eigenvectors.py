@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import sys
+import json
 
 
 if len(sys.argv) < 2:
@@ -9,8 +10,7 @@ if len(sys.argv) < 2:
   sys.exit()
 
 
-content = open(sys.argv[1]).readlines()
-content = [content[i][:-1] for i in range(len(content))]
+content = json.load(open(sys.argv[1], "r"))
 
 
 
@@ -22,7 +22,7 @@ content = [content[i][:-1] for i in range(len(content))]
 
 
 # get loss type
-loss_t = content[content.index("loss:")+1]
+loss_t = content["parameters"]["loss"]
 
 # get metric type
 metric_t = "regression"
@@ -42,56 +42,77 @@ if loss_t in ["cross entropy", "binary cross entropy"]:
 
 
 
-outLabels = content[content.index("output labels:")+1][:-1].split(",")
+outLabels = content["parameters"]["output labels"]
 
 # get test outputs
-predicted = ""
-expected = ""
+predicted = []
+expected = []
 for lab in outLabels:
-  expected = expected + content[content.index("label: " + lab)+1][:-1] + ";"
-  predicted = predicted + content[content.index("label: " + lab)+2][:-1] + ";"
-expected = np.matrix(expected[:-1])
-predicted = np.matrix(predicted[:-1])
+  expected.append(content["test data"][lab]["expected"])
+  predicted.append(content["test data"][lab]["predicted"])
+expected = np.matrix(expected)
+predicted = np.matrix(predicted)
 
 # turn real data into processed ones
-process = content[content.index("output preprocess:")+1][:-1].split(",")
+process = content["preprocess"]["output"]["preprocess"]
 
 for proc in process:
-  if proc == "center":
-    center = [float(val) for val in content[content.index("output center:")+1][:-1].split(",")]
-    for i in range(len(outLabels)):
-      expected[i] = expected[i] - center[i]
-      predicted[i] = predicted[i] - center[i]
 
-  if proc == "decorrelate":
-    vectors = ""
+  if proc == "standardize":
+    mean = content["preprocess"]["output"]["standardization"][0]
+    dev = content["preprocess"]["output"]["standardization"][1]
     for i in range(len(outLabels)):
-      vectors = vectors + content[content.index("output eigenvectors:")+1+i][:-1] + ";"
-    Ut = np.matrix(vectors[:-1])
-    for i in range(np.size(expected, 1)):
-      expected[:,i] = Ut * expected[:,i]
-      predicted[:,i] = Ut * predicted[:,i]
+      expected[i] = (expected[i] - mean[i]) / dev[i]
+      predicted[i] = (predicted[i] - mean[i]) / dev[i]
+
+  if proc == "whiten":
+    val = content["preprocess"]["output"]["eigenvalues"]
+    vec = []
+    FAMDmean = content["preprocess"]["output"]["dummyMeans"]
+    FAMDscale = content["preprocess"]["output"]["dummyScales"]
+    bias = content["preprocess"]["output"]["whitening bias"]
+    ZCA = content["parameters"]["output whitening type"] == "ZCA"
+
+    for i in range(len(val)):
+      vec.append(content["preprocess"]["output"]["eigenvectors"][i])
+
+    vec = np.matrix(vec)
+
+    for i in range(len(FAMDmean)):
+      if(FAMDscale[i] != 0):
+        expected[i] = (expected[i] * FAMDscale[i]) - FAMDmean[i]
+        predicted[i] = (predicted[i] * FAMDscale[i]) - FAMDmean[i]
+
+    expected = expected.transpose() * vec * np.reciprocal((np.sqrt(np.diag(val)) + bias))
+    predicted = predicted.transpose() * vec * np.reciprocal((np.sqrt(np.diag(val)) + bias))
+
+    if ZCA:
+      expected = (expected * vec.transpose()).transpose()
+      predicted = (predicted * vec.transpose()).transpose()
+    else:
+      expected = expected.transpose()
+      predicted = predicted.transpose()
+
     for i in range(len(outLabels)):
       outLabels[i] = "eigenvector " + str(i+1)
 
   if proc == "reduce":
-    eigen = [float(val) for val in content[content.index("output eigenvalues:")+1][:-1].split(",")]
-    threshold = float(content[content.index("output eigenvalues:")+2])
-    tot = np.sum(eigen)
-    rates = [np.sum(eigen[0:i])/tot for i in range(len(eigen))]
+    val = content["preprocess"]["output"]["eigenvalues"]
+    threshold = content["preprocess"]["output"]["reduction threshold"]
+    tot = np.sum(val)
+    rates = [np.sum(val[0:i])/tot for i in range(len(val))]
     optimal = 0
-    for i in range(len(eigen)):
-      optimal += eigen[i]/tot
+    for i in range(len(val)):
+      optimal += val[i]/tot
       if optimal >= threshold:
-        optimal = i
+        expexted = expected[:i+1]
+        predicted = predicted[:i+1]
+        outLabels = outLabels[:i+1]
         break
-    for i in range(len(outLabels)):
-      if(i > optimal):
-        outLabels[i] = outLabels[i] + " (not learned)"
 
   if proc == "normalize":
-    min = [float(val) for val in content[content.index("output normalization:")+1][:-1].split(",")]
-    max = [float(val) for val in content[content.index("output normalization:")+2][:-1].split(",")]
+    min = content["preprocess"]["output"]["normalization"][0]
+    max = content["preprocess"]["output"]["normalization"][1]
     for i in range(len(outLabels)):
       expected[i] = (expected[i] - min[i]) / (max[i] - min[i])
       predicted[i] = (predicted[i] - min[i]) / (max[i] - min[i])
@@ -111,9 +132,9 @@ if metric_t == "regression":
   for i in range(len(predicted)):
     if sys.argv[2] == "mae":
       metric.append(np.mean(np.abs(error[i])))
-      dev.append(np.std(error[i]))
+      dev.append(np.std(np.abs(error[i])))
     elif sys.argv[2] == "rmse":
-      metric.append(sqrt(np.mean(np.square(error[i]))))
+      metric.append(np.sqrt(np.mean(np.square(error[i]))))
       dev.append(np.std(np.square(error[i])))
     err.append(dev[i]/math.sqrt(len(np.asarray(predicted)[i])))
 
@@ -168,9 +189,9 @@ if metric_t == "regression":
   for i in range(len(predicted)):
     if sys.argv[2] == "mae":
       metric.append(np.mean(np.abs(error[i])))
-      dev.append(np.std(error[i]))
+      dev.append(np.std(np.abs(error[i])))
     elif sys.argv[2] == "rmse":
-      metric.append(sqrt(np.mean(np.square(error[i]))))
+      metric.append(np.sqrt(np.mean(np.square(error[i]))))
       dev.append(np.std(np.square(error[i])))
     err.append(dev[i]/math.sqrt(len(np.asarray(predicted)[i])))
 

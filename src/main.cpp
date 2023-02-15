@@ -13,10 +13,10 @@ void vesta()
 
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
-    netp.batchSize = 1;
+    netp.batchSize = 100;
     netp.maxBatchSizeRatio = 0.1;
     netp.scheduleBatchSize = true;
-    netp.learningRate = 0.001;
+    netp.learningRate = 0.01;
     netp.scheduler = omnilearn::Scheduler::Plateau;
     netp.schedulerValue = 2;
     netp.schedulerDelay = 2;
@@ -30,10 +30,10 @@ void vesta()
     netp.patience = 10;
     netp.improvement = 0.01;
 
-    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten};
-    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Normalize};
-    netp.inputWhiteningType = omnilearn::WhiteningType::ZCA;
-    netp.outputWhiteningType = omnilearn::WhiteningType::ZCA;
+    netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce};
+    netp.preprocessOutputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce, omnilearn::Preprocess::Normalize};
+    netp.inputWhiteningType = omnilearn::WhiteningType::PCA;
+    netp.outputWhiteningType = omnilearn::WhiteningType::PCA;
 
     netp.verbose = true;
     netp.optimizer = omnilearn::Optimizer::Nadam;
@@ -44,13 +44,13 @@ void vesta()
     net.setData(data);
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
-    lay.size = 32;
+    lay.size = 24;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
 
-    lay.size = 16;
+    // output layer
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Linear;
     net.addLayer(lay);
@@ -73,7 +73,7 @@ void iris()
     netp.momentum = 0.9;
 
     netp.classificationThreshold = 0.50;
-    netp.validationRatio = 0.20;
+    netp.validationRatio = 0.15;
     netp.testRatio = 0.20;
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce};
     netp.preprocessOutputs = {};
@@ -209,22 +209,20 @@ void cryptoBot()
 
     omnilearn::NetworkParam netp;
     netp.threads = 4;
-    netp.batchSize = 50;
-    netp.learningRate = 0.005;
+    netp.batchSize = 100;
+    netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
-    netp.patience = 10;
+    netp.patience = 15;
     netp.improvement = 0.01;
 
-    //netp.momentumScheduler = omnilearn::Scheduler::Exp;
-    //netp.momentumSchedulerValue = 0.3;
     netp.momentum = 0.;
     netp.momentumScheduler = omnilearn::Scheduler::Exp;
     netp.momentumSchedulerDelay = 1;
-    netp.momentumSchedulerValue = 0.5;
+    netp.momentumSchedulerValue = 0.15;
     netp.maxMomentum = 0.9;
 
     netp.scheduler = omnilearn::Scheduler::Plateau;
-    netp.schedulerValue = 1;
+    netp.schedulerValue = 1.5;
     netp.schedulerDelay = 1;
     netp.scheduleBatchSize = true;
     netp.scheduleLearningRate = true;
@@ -246,7 +244,7 @@ void cryptoBot()
 
     //netp.L2 = 0.01;
 
-    netp.dropconnect = 0.5;
+    netp.dropout = 0.5;
 
     omnilearn::Network net;
     net.setParam(netp);
@@ -327,11 +325,11 @@ void cube()
 int main()
 {
     //mnist();
-    //vesta();
+    vesta();
     //iris();
     //testLoader();
     //generate();
-    cryptoBot();
+    //cryptoBot();
     //cube();
 
     return 0;

@@ -4,72 +4,93 @@ import math
 import scipy.stats
 from decimal import Decimal
 import sys
+import json
 
 
 wantedLabels = ""
 if(len(sys.argv) > 2):
   wantedLabels = sys.argv[2]
 
-content = open(sys.argv[1]).readlines()
-content = [content[i][:-1] for i in range(len(content))]
+content = json.load(open(sys.argv[1], "r"))
 
-outLabels = content[content.index("output labels:")+1][:-1].split(",")
+outLabels = content["parameters"]["output labels"]
 
 # get test outputs
-predicted = ""
-expected = ""
+predicted = []
+expected = []
 for lab in outLabels:
-  expected = expected + content[content.index("label: " + lab)+1][:-1] + ";"
-  predicted = predicted + content[content.index("label: " + lab)+2][:-1] + ";"
-expected = np.matrix(expected[:-1])
-predicted = np.matrix(predicted[:-1])
+  expected.append(content["test data"][lab]["expected"])
+  predicted.append(content["test data"][lab]["predicted"])
+expected = np.matrix(expected)
+predicted = np.matrix(predicted)
 
 # get metric type
-metric_t = content[content.index("loss:")+1]
-if metric_t in ["rmse", "mae"]:
+metric_t = content["parameters"]["loss"]
+if metric_t in ["L1", "L2"]:
   metric_t = "regression"
 else:
   metric_t = "classification"
 
 # turn real data into processed ones
-process = content[content.index("output preprocess:")+1][:-1].split(",")
+process = content["preprocess"]["output"]["preprocess"]
 
 for proc in process:
-  if proc == "center":
-    center = [float(val) for val in content[content.index("output center:")+1][:-1].split(",")]
-    for i in range(len(outLabels)):
-      expected[i] = expected[i] - center[i]
-      predicted[i] = predicted[i] - center[i]
 
-  if proc == "decorrelate":
-    vectors = ""
+  if proc == "standardize":
+    mean = content["preprocess"]["output"]["standardization"][0]
+    dev = content["preprocess"]["output"]["standardization"][1]
     for i in range(len(outLabels)):
-      vectors = vectors + content[content.index("output eigenvectors:")+1+i][:-1] + ";"
-    Ut = np.matrix(vectors[:-1])
-    for i in range(np.size(expected, 1)):
-      expected[:,i] = Ut * expected[:,i]
-      predicted[:,i] = Ut * predicted[:,i]
+      expected[i] = (expected[i] - mean[i]) / dev[i]
+      predicted[i] = (predicted[i] - mean[i]) / dev[i]
+
+  if proc == "whiten":
+    val = content["preprocess"]["output"]["eigenvalues"]
+    vec = []
+    FAMDmean = content["preprocess"]["output"]["dummyMeans"]
+    FAMDscale = content["preprocess"]["output"]["dummyScales"]
+    bias = content["preprocess"]["output"]["whitening bias"]
+    ZCA = content["parameters"]["output whitening type"] == "ZCA"
+
+    for i in range(len(val)):
+      vec.append(content["preprocess"]["output"]["eigenvectors"][i])
+
+    vec = np.matrix(vec)
+
+    for i in range(len(FAMDmean)):
+      if(FAMDscale[i] != 0):
+        expected[i] = (expected[i] * FAMDscale[i]) - FAMDmean[i]
+        predicted[i] = (predicted[i] * FAMDscale[i]) - FAMDmean[i]
+
+    expected = expected.transpose() * vec * np.reciprocal((np.sqrt(np.diag(val)) + bias))
+    predicted = predicted.transpose() * vec * np.reciprocal((np.sqrt(np.diag(val)) + bias))
+
+    if ZCA:
+      expected = (expected * vec.transpose()).transpose()
+      predicted = (predicted * vec.transpose()).transpose()
+    else:
+      expected = expected.transpose()
+      predicted = predicted.transpose()
+
     for i in range(len(outLabels)):
       outLabels[i] = "eigenvector " + str(i+1)
 
   if proc == "reduce":
-    eigen = [float(val) for val in content[content.index("output eigenvalues:")+1][:-1].split(",")]
-    threshold = float(content[content.index("output eigenvalues:")+2])
-    tot = np.sum(eigen)
-    rates = [np.sum(eigen[0:i])/tot for i in range(len(eigen))]
+    val = content["preprocess"]["output"]["eigenvalues"]
+    threshold = content["preprocess"]["output"]["reduction threshold"]
+    tot = np.sum(val)
+    rates = [np.sum(val[0:i])/tot for i in range(len(val))]
     optimal = 0
-    for i in range(len(eigen)):
-      optimal += eigen[i]/tot
+    for i in range(len(val)):
+      optimal += val[i]/tot
       if optimal >= threshold:
-        optimal = i
+        expexted = expected[:i]
+        predicted = predicted[:i]
+        outLabels = outLabels[:i]
         break
-    for i in range(len(outLabels)):
-      if(i > optimal):
-        outLabels[i] = outLabels[i] + " (not learned)"
 
   if proc == "normalize":
-    min = [float(val) for val in content[content.index("output normalization:")+1][:-1].split(",")]
-    max = [float(val) for val in content[content.index("output normalization:")+2][:-1].split(",")]
+    min = content["preprocess"]["output"]["normalization"][0]
+    max = content["preprocess"]["output"]["normalization"][1]
     for i in range(len(outLabels)):
       expected[i] = (expected[i] - min[i]) / (max[i] - min[i])
       predicted[i] = (predicted[i] - min[i]) / (max[i] - min[i])

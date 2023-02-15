@@ -112,7 +112,7 @@ double omnilearn::Neuron::processToLearn(Vector const& input, std::bernoulli_dis
                 }
                 else
                 {
-                    //_input[i] /= (1-dropconnectDist.p());
+                    _input[i] /= (1-dropconnectDist.p());
                 }
             }
         }

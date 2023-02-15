@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import sys
+import json
 
 
 if len(sys.argv) < 2:
@@ -9,8 +10,7 @@ if len(sys.argv) < 2:
   sys.exit()
 
 
-content = open(sys.argv[1]).readlines()
-content = [content[i][:-1] for i in range(len(content))]
+content = json.load(open(sys.argv[1], "r"))
 
 
 
@@ -26,16 +26,16 @@ fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
 
 # get loss type
-loss_t = content[content.index("loss:")+1]
+loss_t = content["parameters"]["loss"]
 
 # get train loss
-trainLoss = content[content.index("loss:")+2][:-1].split(',')
+trainLoss = content["parameters"]["train losses"]
 for i in range(0, len(trainLoss)):
     trainLoss[i] = float(trainLoss[i])
 lns1 = ax1.plot(range(0, len(trainLoss)), trainLoss, label = "training loss", color="blue")
 
 # get validation loss
-validLoss = content[content.index("loss:")+3][:-1].split(',')
+validLoss = content["parameters"]["validation losses"]
 for i in range(0, len(validLoss)):
     validLoss[i] = float(validLoss[i])
 lns2 = ax1.plot(range(0, len(validLoss)), validLoss, label = "validation loss", color="orange")
@@ -50,19 +50,19 @@ if loss_t in ["cross entropy", "binary cross entropy"]:
   metricLabel2 = "false prediction rate"
 
 # get metric mae (or accuracy)
-mae_acc = content[content.index("metric:")+1][:-1].split(',')
+mae_acc = content["parameters"]["test first metrics"]
 for i in range(0, len(mae_acc)):
     mae_acc[i] = float(mae_acc[i])
 lns3 = ax2.plot(range(0, len(mae_acc)), mae_acc, label = metricLabel1, color = "green")
 
 # get metric mse (or false prediction rate)
-mse_fp = content[content.index("metric:")+2][:-1].split(',')
+mse_fp = content["parameters"]["test second metrics"]
 for i in range(0, len(mse_fp)):
     mse_fp[i] = float(mse_fp[i])
 lns4 = ax2.plot(range(0, len(mse_fp)), mse_fp, label = metricLabel2, color = "red")
 
 # get optimal epoch
-optimal = int(content[content.index("optimal epoch:")+1])
+optimal = int(content["parameters"]["optimal epoch"])
 plt.axvline(optimal, color = "black")
 
 plt.title("Learning process overview", fontsize=18)

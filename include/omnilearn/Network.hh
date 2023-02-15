@@ -257,8 +257,6 @@ private:
   Matrix _validationOutputs;
   Matrix _testInputs;
   Matrix _testOutputs;
-  Matrix _testRawInputs;
-  Matrix _testRawOutputs;
   Matrix _testNormalizedOutputsForMetric;
 
   //learning infos

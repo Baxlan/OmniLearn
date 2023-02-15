@@ -62,7 +62,7 @@ std::vector<std::pair<double, double>> omnilearn::standardize(Matrix& data, std:
     {
       meanDev[i] = {data.col(i).mean(), dev(data.col(i))};
       if(std::abs(meanDev[i].second) < std::numeric_limits<double>::epsilon())
-        meanDev[i].second++; // so the whole column is just set to 0
+        meanDev[i].second = 1; // so the whole column is just set to 0
     }
   }
   //standardize
@@ -188,7 +188,10 @@ void omnilearn::deWhiten(Matrix& data, double bias, WhiteningType whiteningType,
   // reverse FAMD
   for(eigen_size_t i = 0; i < decorrelationData.dummyMeans.size(); i++)
   {
-    data.col(i) = (data.col(i).array() + decorrelationData.dummyMeans[i]) / decorrelationData.dummyScales[i];
+    if(decorrelationData.dummyScales[i] != 0)
+    {
+      data.col(i) = (data.col(i).array() + decorrelationData.dummyMeans[i]) / decorrelationData.dummyScales[i];
+    }
   }
 }
 

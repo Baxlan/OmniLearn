@@ -70,7 +70,7 @@ void omnilearn::NetworkIO::save(Network const& net) const
   saveInputPreprocess(net, jObj["preprocess"]["input"]);
   saveOutputPreprocess(net, jObj["preprocess"]["output"]);
   saveCoefs(net, jObj["coefs"]);
-  saveTest(net, jObj["test"]);
+  saveTest(net, jObj["test data"]);
 
   std::ofstream save(_path.string() + ".save");
   if(!save)
@@ -174,21 +174,17 @@ void omnilearn::NetworkIO::saveInputPreprocess(Network const& net, json& jObj) c
     }
     else if(net._param.preprocessInputs[i] == Preprocess::Whiten)
     {
-      jObj["preprocess"][i] = "decorrelate";
+      jObj["preprocess"][i] = "whiten";
       jObj["eigenvalues"] = net._inputDecorrelation.eigenValues;
       jObj["dummyMeans"] = net._inputDecorrelation.dummyMeans;
       jObj["dummyScales"] = net._inputDecorrelation.dummyScales;
+      jObj["whitening bias"] = net._param.inputWhiteningBias;
 
       Matrix vectors = net._inputDecorrelation.eigenVectors.transpose();
       for(eigen_size_t j = 0; j < vectors.rows(); j++)
       {
         jObj["eigenvectors"][j] = Vector(vectors.row(j));
       }
-    }
-    else if(net._param.preprocessInputs[i] == Preprocess::Whiten)
-    {
-      jObj["preprocess"][i] = "whiten";
-      jObj["whitening bias"] = net._param.inputWhiteningBias;
     }
     else if(net._param.preprocessInputs[i] == Preprocess::Reduce)
     {
@@ -220,11 +216,11 @@ void omnilearn::NetworkIO::saveOutputPreprocess(Network const& net, json& jObj) 
     }
     else if(net._param.preprocessOutputs[i] == Preprocess::Whiten)
     {
-      jObj["preprocess"][i] = "decorrelate";
-      jObj["preprocess"][i] = "decorrelate";
+      jObj["preprocess"][i] = "whiten";
       jObj["eigenvalues"] = net._outputDecorrelation.eigenValues;
       jObj["dummyMeans"] = net._outputDecorrelation.dummyMeans;
       jObj["dummyScales"] = net._outputDecorrelation.dummyScales;
+      jObj["whitening bias"] = net._param.outputWhiteningBias;
 
       Matrix vectors = net._outputDecorrelation.eigenVectors.transpose();
       for(eigen_size_t j = 0; j < vectors.rows(); j++)
@@ -314,28 +310,25 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
     }
     else if(jObj.at("preprocess").at(i) == "standardize")
     {
-      net._param.preprocessInputs[i] = Preprocess::Normalize;
+      net._param.preprocessInputs[i] = Preprocess::Standardize;
       std::vector<double> vec0 = jObj.at("standardize").at(0);
       std::vector<double> vec1 = jObj.at("standardize").at(1);
       std::transform(vec0.begin(), vec0.end(), vec1.begin(), std::back_inserter(net._inputStandartization), [](double a, double b)->std::pair<double, double>{return std::make_pair(a, b);});
     }
-    else if(jObj.at("preprocess").at(i) == "decorrelate")
+    else if(jObj.at("preprocess").at(i) == "whiten")
     {
       net._param.preprocessInputs[i] = Preprocess::Whiten;
       net._inputDecorrelation.eigenVectors = stdToEigenVector(jObj.at("eigenvalues"));
       net._inputDecorrelation.dummyMeans = stdToEigenVector(jObj.at("dummyMeans"));
       net._inputDecorrelation.dummyScales = stdToEigenVector(jObj.at("dummyScales"));
       net._inputDecorrelation.eigenValues = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
+      net._param.inputWhiteningBias = jObj.at("whitening bias");
+
       for(eigen_size_t j = 0; j < net._inputDecorrelation.eigenVectors.rows(); j++)
       {
         net._inputDecorrelation.eigenVectors.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
       }
       net._inputDecorrelation.eigenVectors.transposeInPlace();
-    }
-    else if(jObj.at("preprocess").at(i) == "whiten")
-    {
-      net._param.preprocessInputs[i] = Preprocess::Whiten;
-      net._param.inputWhiteningBias = jObj.at("whitening bias");
     }
     else if(jObj.at("preprocess").at(i) == "reduce")
     {
@@ -358,13 +351,15 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
       std::vector<double> vec1 = jObj.at("normalization").at(1);
       std::transform(vec0.begin(), vec0.end(), vec1.begin(), std::back_inserter(net._outputNormalization), [](double a, double b)->std::pair<double, double>{return std::make_pair(a, b);});
     }
-    else if(jObj.at("preprocess").at(i) == "decorrelate")
+    else if(jObj.at("preprocess").at(i) == "whiten")
     {
       net._param.preprocessOutputs[i] = Preprocess::Whiten;
       net._outputDecorrelation.eigenValues= stdToEigenVector(jObj.at("eigenvalues"));
       net._outputDecorrelation.dummyMeans= stdToEigenVector(jObj.at("dummyMeans"));
       net._outputDecorrelation.dummyScales= stdToEigenVector(jObj.at("dummyScales"));
       net._outputDecorrelation.eigenVectors = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
+      net._param.outputWhiteningBias = jObj.at("whitening bias");
+
       for(eigen_size_t j = 0; j < net._outputDecorrelation.eigenVectors.rows(); j++)
       {
         net._outputDecorrelation.eigenVectors.row(j) = stdToEigenVector(jObj.at("eigenvectors").at(j));
@@ -378,15 +373,10 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
     }
     else if(jObj.at("preprocess").at(i) == "standardize")
     {
-      net._param.preprocessOutputs[i] = Preprocess::Normalize;
+      net._param.preprocessOutputs[i] = Preprocess::Standardize;
       std::vector<double> vec0 = jObj.at("standardize").at(0);
       std::vector<double> vec1 = jObj.at("standardize").at(1);
       std::transform(vec0.begin(), vec0.end(), vec1.begin(), std::back_inserter(net._outputStandartization), [](double a, double b)->std::pair<double, double>{return std::make_pair(a, b);});
-    }
-    else if(jObj.at("preprocess").at(i) == "whiten")
-    {
-      net._param.preprocessOutputs[i] = Preprocess::Whiten;
-      net._param.outputWhiteningBias = jObj.at("whitening bias");
     }
   }
 }
@@ -404,11 +394,10 @@ void omnilearn::NetworkIO::loadCoefs(Network& net, json const& jObj)
 
 void omnilearn::NetworkIO::saveTest(Network const& net, json& jObj) const
 {
-  Matrix testRes(net.process(net._testRawInputs));
+  Matrix testRes(net.process(net._testInputs));
   for(size_t i = 0; i < net._outputLabels.size(); i++)
   {
-    jObj[i]["label"] = net._outputLabels[i];
-    jObj[i]["expected"] = net._testRawOutputs.col(i);
-    jObj[i]["predicted"] = testRes.col(i);
+    jObj[net._outputLabels[i]]["expected"] = net._testOutputs.col(i);
+    jObj[net._outputLabels[i]]["predicted"] = testRes.col(i);
   }
 }
