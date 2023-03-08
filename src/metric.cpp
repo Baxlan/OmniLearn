@@ -57,53 +57,31 @@ std::array<double, 4> omnilearn::classificationMetrics(Matrix const& real, Matri
             }
         }
     }
-    double accuracy = predictionLikelihood.array().sum()/predictionCount.sum();
 
-    double positiveCohenKappa = 0;
-    double negativeCohenKappa = 0;
-    // cohen Kappa metric indicate that:
-    // 0 = model output is similar than random output
-    // 1 = model is perfect
-    // inferior to 0 = model is worse than random
+    double accuracy = 100*predictionLikelihood.array().sum()/predictionCount.sum();
+    double cohenKappa = 0;
+    // cohen Kappa metric indicates that:
+    // 1 => model is perfect
+    // 0 => model output is equivalent to random output
+    // negative => model is worse than random
 
-    // the next bloc is the real Cohen kappa metric, it only works for monolabel classifiaction
-    if(false)
-    {
-        for(eigen_size_t i = 0; i < real.cols(); i++)
-        {
-            positiveCohenKappa += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i) / std::pow(real.rows(), 2);
-            negativeCohenKappa += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i) / std::pow(real.rows(), 2);
-        }
-        positiveCohenKappa = (accuracy-positiveCohenKappa)/(1-positiveCohenKappa);
-        negativeCohenKappa = ((1-accuracy)-negativeCohenKappa)/(1-negativeCohenKappa);
-    }
-    // the next bloc calculates a mean Cohen kappa over each label, allowing multilabel classification
+    // next loop calculates a mean Cohen kappa over each label, allowing multilabel classification
     // each label is considered binary, thus one cohen kappa is calculated for each label, then the mean is taken.
-    else
+    for(eigen_size_t i = 0; i < real.cols(); i++)
     {
-        for(eigen_size_t i = 0; i < real.cols(); i++)
-        {
-            double p_po = predictionLikelihood(i)/predictionCount(i);
-            double p_pe = (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
-            p_pe += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
-            p_pe /= std::pow(real.rows(), 2);
+        double po = (predictionLikelihood(i)+rejectionLikelihood(i))/static_cast<double>(real.rows());
+        double pe = (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
+        pe += (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
+        pe /= std::pow(real.rows(), 2);
 
-            double n_po = rejectionLikelihood(i)/rejectionCount(i);
-            double n_pe = (rejectionLikelihood(i)+falseRejection(i)) * rejectionCount(i);
-            n_pe += (predictionLikelihood(i)+falsePrediction(i)) * predictionCount(i);
-            n_pe /= std::pow(real.rows(), 2);
-
-            positiveCohenKappa += (p_po-p_pe)/(1-p_pe);
-            negativeCohenKappa += (n_po-n_pe)/(1-n_pe);
-        }
-        positiveCohenKappa /= static_cast<double>(real.cols());
-        negativeCohenKappa /= static_cast<double>(real.cols());
+        cohenKappa += (po-pe)/(1-pe);
     }
+    cohenKappa /= static_cast<double>(real.cols());
 
     predictionLikelihood = 100*predictionLikelihood.array()/predictionCount.array(); //P(predicted >= threshold | real=1)
     rejectionLikelihood = 100*rejectionLikelihood.array()/rejectionCount.array();    //P(predicted <  threshold | real=0)
 
-    return {predictionLikelihood.mean(), rejectionLikelihood.mean(), positiveCohenKappa, negativeCohenKappa};
+    return {accuracy, predictionLikelihood.mean(), rejectionLikelihood.mean(), cohenKappa};
 }
 
 
@@ -151,5 +129,5 @@ std::array<double, 4> omnilearn::regressionMetrics(Matrix real, Matrix predicted
     mae  =  mae/real.cols();
     rmse = rmse/real.cols();
 
-    return {mae.mean(), std::sqrt(rmse.mean()), correlation.array().abs().mean(), cosine.array().abs().mean()};
+    return {mae.mean(), std::sqrt(rmse.mean()), correlation.mean(), cosine.mean()};
 }

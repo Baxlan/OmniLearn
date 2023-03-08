@@ -56,10 +56,13 @@ struct NetworkParam
     NetworkParam():
     seed(0),
     batchSize(1),
+    batchSizePercent(false),
     scheduleLearningRate(false),
     scheduleBatchSize(false),
-    maxBatchSizeRatio(0.1),
+    maxBatchSize(0.1),
+    maxBatchSizePercent(false),
     learningRate(0.01),
+    minLearningRate(0),
     L1(0),
     L2(0),
     decay(0), // weight decay
@@ -104,11 +107,14 @@ struct NetworkParam
     }
 
     unsigned seed;
-    size_t batchSize;
+    double batchSize;
+    bool batchSizePercent;
     bool scheduleLearningRate; // use the same scheduler, delay and value than BS ones
     bool scheduleBatchSize;    // use the same scheduler, delay and value than LR ones
-    double maxBatchSizeRatio;
+    double maxBatchSize;
+    bool maxBatchSizePercent;
     double learningRate;
+    double minLearningRate;
     double L1;
     double L2;
     double decay;

@@ -40,9 +40,6 @@ if metric_t == "regression":
     if wantedLabels != "" and outLabels[lab] != wantedLabels:
       continue
 
-    print(np.where(expected[lab]==9))
-    print(expected[lab, 9956])
-
     slope, origin, corr, p, err = scipy.stats.linregress(expected[lab], predicted[lab])
 
     # x=y line

@@ -114,6 +114,8 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
     val = content[1].substr(0, content[1].find(separator));
     if(val == "")
       break;
+    if(val.find("dummy") == std::string::npos && val.find("cont") == std::string::npos && val.find("conv") == std::string::npos)
+      throw Exception("The info line is missing");
     data.inputInfos.push_back(val);
     content[1].erase(0, content[1].find(separator) + 1);
   }
@@ -123,6 +125,8 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
   for(; i < elements; i++)
   {
     val = content[1].substr(0, content[1].find(separator));
+    if(val.find("dummy") == std::string::npos && val.find("cont") == std::string::npos && val.find("conv") == std::string::npos)
+      throw Exception("The info line is missing");
     data.outputInfos.push_back(val);
     content[1].erase(0, content[1].find(separator) + 1);
   }
@@ -165,7 +169,7 @@ omnilearn::Data omnilearn::loadData(fs::path const& path, char separator, size_t
   for(i = 1; i < data.outputInfos.size(); i++)
   {
     if(val != data.outputInfos[i])
-      throw Exception("Either the info line is missing, or dummy and continuous outputs are mixed");
+      throw Exception("Dummy and continuous outputs are mixed");
   }
 
 

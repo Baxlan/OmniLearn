@@ -371,17 +371,16 @@ void omnilearn::Network::initLayers()
 
 void omnilearn::Network::splitData()
 {
+  size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.size())/100 : _param.batchSize);
+
   if(_testInputs.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
     throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
   size_t validation = static_cast<size_t>(std::round(_param.validationRatio * static_cast<double>(_trainInputs.rows())));
   size_t test = static_cast<size_t>(std::round(_param.testRatio * static_cast<double>(_trainInputs.rows())));
 
-  if(_param.batchSize > static_cast<size_t>(_trainInputs.rows()) - validation - test)
+  if(batchSize > static_cast<size_t>(_trainInputs.rows()) - validation - test)
     throw Exception("The batch size is greater than the number of training data. Decrease the batch size, the validation ratio or the test ratio.");
-
-  if(_param.batchSize == 0)
-    _param.batchSize = static_cast<size_t>(_trainInputs.rows()) - validation - test; // if batch size == 0, then it is batch gradient descend
 
   shuffleTrainData();
 
@@ -487,8 +486,6 @@ void omnilearn::Network::initPreprocess()
         throw Exception("Outputs are whitened multiple times.");
       if(standardized == false)
         throw Exception("Outputs cannot be whitened without being standardized.");
-      if(_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy)
-        throw Exception("Outputs cannot be whitened when using the cross-entropy or the binary cross-entropy loss function.");
       _outputDecorrelation = whiten(_trainOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos);
       whiten(_validationOutputs, _param.outputWhiteningBias, _param.outputWhiteningType, _outputInfos, _outputDecorrelation);
       whitened = true;
@@ -530,11 +527,15 @@ void omnilearn::Network::initCrossEntropyWeights()
   }
   else
   {
+    if(_param.loss == Loss::L1 || _param.loss == Loss::L2)
+    {
+      throw Exception("Gradient weighting can only be used with (binary) cross entropy loss.");
+    }
     if(_param.weightMode == Weight::Enabled)
     {
       if(_trainOutputs.cols() != _param.weights.size())
       {
-        throw Exception("Cross entropy weight vector must have the same size as the number of labels");
+        throw Exception("Weight vector must have the same size as the number of labels.");
       }
     }
     else if(_param.weightMode == Weight::Automatic)
@@ -631,7 +632,7 @@ omnilearn::Matrix omnilearn::Network::computeLossMatrix(Matrix const& realResult
   else if(_param.loss == Loss::CrossEntropy)
     return crossEntropyLoss(realResult, predicted, _param.crossEntropyBias, useWeights, _param.weights, *_pool);
   else
-    throw Exception("Error while computing loss matrix, the loss function look ill-defined");
+    throw Exception("Error while computing loss matrix, the loss function look ill-defined.");
 }
 
 
@@ -726,7 +727,7 @@ void omnilearn::Network::adaptLearningRate()
     size_t epochToUse = _epoch;
     if(_param.scheduleBatchSize)
     {
-      if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
+      if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize)))
         epochToUse = _epoch - _epochWhenBatchSizeReachedMax;
       else
         return;
@@ -739,34 +740,37 @@ void omnilearn::Network::adaptLearningRate()
     else if(_param.scheduler == Scheduler::Plateau)
       if(epochToUse - _optimalEpoch > _param.schedulerDelay)
         _currentLearningRate /= _param.schedulerValue;
+
+    if(_currentLearningRate < _param.minLearningRate)
+      _currentLearningRate = _param.minLearningRate;
   }
 }
 
 
 void omnilearn::Network::adaptBatchSize()
 {
+  size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.size())/100 : _param.batchSize);
+
   if(_epoch == 1)
   {
-    _currentBatchSize = _param.batchSize;
+    _currentBatchSize = batchSize;
     _epochWhenBatchSizeReachedMax = 1;
   }
-  else if(_param.scheduleBatchSize && _currentBatchSize != static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
+  else if(_param.scheduleBatchSize && _currentBatchSize != static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize)))
   {
     if(_param.scheduler == Scheduler::Exp)
-      _currentBatchSize = static_cast<size_t>(std::round(BSexp(static_cast<double>(_param.batchSize), _epoch, _param.schedulerValue)));
+      _currentBatchSize = static_cast<size_t>(std::round(BSexp(static_cast<double>(batchSize), _epoch, _param.schedulerValue)));
     else if(_param.scheduler == Scheduler::Step)
-      _currentBatchSize = static_cast<size_t>(std::round(BSstep(static_cast<double>(_param.batchSize), _epoch, _param.schedulerValue, _param.schedulerDelay)));
+      _currentBatchSize = static_cast<size_t>(std::round(BSstep(static_cast<double>(batchSize), _epoch, _param.schedulerValue, _param.schedulerDelay)));
     else if(_param.scheduler == Scheduler::Plateau)
       if(_epoch - _optimalEpoch > _param.schedulerDelay)
           _currentBatchSize = static_cast<size_t>(std::round(static_cast<double>(_currentBatchSize) * _param.schedulerValue));
 
-    size_t before = _currentBatchSize;
-    if(_currentBatchSize > static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows()))))
-      _currentBatchSize = static_cast<size_t>(std::round(_param.maxBatchSizeRatio * static_cast<double>(_trainInputs.rows())));
-
-    _param.learningRate = static_cast<double>(_currentBatchSize)/static_cast<double>(before);
-    _currentLearningRate /= _param.learningRate;
-    _epochWhenBatchSizeReachedMax = _epoch;
+    if(_currentBatchSize > static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize)))
+    {
+      _currentBatchSize = static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize));
+      _epochWhenBatchSizeReachedMax = _epoch;
+    }
   }
   _nbBatch = static_cast<size_t>(std::floor(_trainInputs.rows() / _currentBatchSize));
   _missedData = _trainInputs.rows() % _currentBatchSize;
@@ -797,6 +801,18 @@ void omnilearn::Network::adaptMomentum()
 
 void omnilearn::Network::check() const
 {
+  if(_param.learningRate < _param.minLearningRate)
+    throw Exception("Learning rate cannot be inferior to minimum learning rate.");
+
+  if(_param.batchSizePercent && (_param.batchSize <= 0 || _param.batchSize > 100))
+    throw Exception("When batch size is expressed as percentage, it must be in ]0, 100].");
+
+  if(!_param.batchSizePercent && (_param.batchSize <= 0 || static_cast<eigen_size_t>(_param.batchSize) > _trainInputs.size()))
+    throw Exception("Batch size cannot be 0, nor negative, nor greater than the training size.");
+
+  if(_param.learningRate < _param.minLearningRate)
+    throw Exception("Learning rate cannot be inferior to minimum learning rate.");
+
   if(_param.automaticLearningRate && !_param.adaptiveLearningRate)
     throw Exception("Cannot use automatic learning rate without adaptive learning rate.");
 
@@ -842,8 +858,11 @@ void omnilearn::Network::check() const
   if(_param.schedulerValue <= 0 || _param.momentumSchedulerValue <= 0)
     throw Exception("The different scheduler values must be strictly positive.");
 
-  if(_param.classificationThreshold < 0.5 || _param.classificationThreshold >= 1)
-    throw Exception("The classification threshold must be in [0.5, 1[.");
+  if(_param.classificationThreshold < 0 || _param.classificationThreshold >= 1)
+    throw Exception("The classification threshold must be in [0, 1[.");
+
+  if((_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy) && _param.preprocessOutputs.size() != 0)
+    throw Exception("Outputs cannot be preprocessed when using (binary) cross-entropy loss.");
 }
 
 
@@ -888,22 +907,22 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
   {
     if(_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy)
     {
-      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   Mean   |   Mean   |    Mean     |    Mean    |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
-      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             | P-likeli | N-likeli |  P-Cohen K  |  N-Cohen K |     LR     |   size    |          |   data    |   epochs  |\n";
-      *_io <<   "|           |            |            |                   |             |          |          |             |            |            |           |          |           |           |\n";
+      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting | Accuracy |    Mean    |    Mean    |   Mean     |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
+      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |  positive  |  negative  |   Cohen    |     LR     |   size    |          |   data    |   epochs  |\n";
+      *_io <<   "|           |            |            |                   |             |          | likelihood | likelihood |   kappa    |            |           |          |           |           |\n";
     }
     else
     {
-      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   MAE    |   RMSE   |     Mean    |  Mean cos  |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
-      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |          | correlation | similarity |     LR     |   size    |          |   data    |   epochs  |\n";
-      *_io <<   "|           |            |            |                   |             |          |          |             |            |            |           |          |           |           |\n";
+      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   MAE    |   RMSE    |     Mean    |  Mean cos  |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
+      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |           | correlation | similarity |     LR     |   size    |          |   data    |   epochs  |\n";
+      *_io <<   "|           |            |            |                   |             |          |           |             |            |            |           |          |           |           |\n";
     }
   }
   if(initial)
   {
     *_io << "| " << std::setw(9) << "0*" << " |  " << std::setw(9) << _validLosses[0] << " |  " << std::setw(9) << _trainLosses[0];
     *_io << " |     " << "   -    " << " %    |  " << std::setw(8) << std::round(100*(_validLosses[0]-_trainLosses[0])/_validLosses[0] *1e3)/1e3 << " % | ";
-    *_io << std::setw(8) << _testMetric[0] << " | " << std::setw(8) << _testSecondMetric[0] << " |  " << std::setw(8) << _testThirdMetric[0] << "   |  " << std::setw(8) << _testFourthMetric[0] << "  | ";
+    *_io << std::setw(8) << _testMetric[0] << " |  " << std::setw(9) << _testSecondMetric[0] << " | " << std::setw(8) << _testThirdMetric[0] << "   |  " << std::setw(8) << _testFourthMetric[0] << "  | ";
     *_io << std::setw(10) << "    -   " << " | " << std::setw(9) << "    -    " << " | " << std::setw(8) << "   -    " << " | " << std::setw(9) << "    -    " << " | " << std::setw(9) << _param.patience << " |\n";
   }
   else
@@ -911,7 +930,7 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
     double gap = 100 * (1-(_validLosses[_epoch] / lowestLoss));
     *_io << "| " << std::setw(9) << std::to_string(_epoch) + (_epoch==_optimalEpoch ? "*": "") << " |  " << std::setw(9) << _validLosses[_epoch] << " |  " << std::setw(9) << _trainLosses[_epoch];
     *_io << " |     " << std::setw(8) << std::round(gap*1e3)/1e3 << " %    |  " << std::setw(8) << std::round(100*(_validLosses[_epoch]-_trainLosses[_epoch])/_validLosses[_epoch] * 1e3)/1e3 << " % | ";
-    *_io << std::setw(8) << _testMetric[_epoch] << " | " << std::setw(8) << _testSecondMetric[_epoch] << " |  " << std::setw(8) << _testThirdMetric[_epoch] << "   |  " << std::setw(8) << _testFourthMetric[_epoch] << "  | ";
+    *_io << std::setw(8) << _testMetric[_epoch] << " |  " << std::setw(9) << _testSecondMetric[_epoch] << " |  " << std::setw(8) << _testThirdMetric[_epoch] << "  |  " << std::setw(8) << _testFourthMetric[_epoch] << "  | ";
     *_io << std::setw(10) << (_param.automaticLearningRate ? "    -   " : currentLearningRate);
     *_io << " | " << std::setw(9) << _currentBatchSize << " | " << std::setw(8) << _currentMomentum << " | " << std::setw(9) << _missedData << " | " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << " |\n";
   }
