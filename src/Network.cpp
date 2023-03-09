@@ -371,16 +371,11 @@ void omnilearn::Network::initLayers()
 
 void omnilearn::Network::splitData()
 {
-  size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.size())/100 : _param.batchSize);
-
   if(_testInputs.rows() != 0 && std::abs(_param.testRatio) > std::numeric_limits<double>::epsilon())
     throw Exception("TestRatio must be set to 0 because you already set a test dataset.");
 
   size_t validation = static_cast<size_t>(std::round(_param.validationRatio * static_cast<double>(_trainInputs.rows())));
   size_t test = static_cast<size_t>(std::round(_param.testRatio * static_cast<double>(_trainInputs.rows())));
-
-  if(batchSize > static_cast<size_t>(_trainInputs.rows()) - validation - test)
-    throw Exception("The batch size is greater than the number of training data. Decrease the batch size, the validation ratio or the test ratio.");
 
   shuffleTrainData();
 
@@ -403,6 +398,23 @@ void omnilearn::Network::splitData()
   }
   _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
+
+  if(!_param.batchSizePercent && (_param.batchSize < 1 || static_cast<eigen_size_t>(_param.batchSize) > _trainInputs.rows()))
+    throw Exception("Batch size cannot be inferior to 1 nor greater than the training size.");
+
+  if(_param.maxBatchSizePercent == _param.batchSizePercent)
+  {
+    if(_param.batchSize > _param.maxBatchSize)
+      throw Exception("BatchBize cannot be greater than maxBatchSize.");
+  }
+  else if(_param.maxBatchSizePercent && static_cast<eigen_size_t>(_param.batchSize) > static_cast<eigen_size_t>(_param.maxBatchSize*static_cast<double>(_trainInputs.rows())/100))
+  {
+    throw Exception("BatchBize cannot be greater than maxBatchSize.");
+  }
+  else if(_param.batchSizePercent && static_cast<eigen_size_t>(_param.maxBatchSize) < static_cast<eigen_size_t>(_param.batchSize*static_cast<double>(_trainInputs.rows())/100))
+  {
+    throw Exception("BatchBize cannot be greater than maxBatchSize.");
+  }
 }
 
 
@@ -749,7 +761,7 @@ void omnilearn::Network::adaptLearningRate()
 
 void omnilearn::Network::adaptBatchSize()
 {
-  size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.size())/100 : _param.batchSize);
+  size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.rows())/100 : _param.batchSize);
 
   if(_epoch == 1)
   {
@@ -802,13 +814,10 @@ void omnilearn::Network::adaptMomentum()
 void omnilearn::Network::check() const
 {
   if(_param.learningRate < _param.minLearningRate)
-    throw Exception("Learning rate cannot be inferior to minimum learning rate.");
+    throw Exception("Learning rate cannot be inferior to minLearningRate.");
 
   if(_param.batchSizePercent && (_param.batchSize <= 0 || _param.batchSize > 100))
     throw Exception("When batch size is expressed as percentage, it must be in ]0, 100].");
-
-  if(!_param.batchSizePercent && (_param.batchSize <= 0 || static_cast<eigen_size_t>(_param.batchSize) > _trainInputs.size()))
-    throw Exception("Batch size cannot be 0, nor negative, nor greater than the training size.");
 
   if(_param.learningRate < _param.minLearningRate)
     throw Exception("Learning rate cannot be inferior to minimum learning rate.");

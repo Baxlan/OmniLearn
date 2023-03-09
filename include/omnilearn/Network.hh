@@ -60,7 +60,7 @@ struct NetworkParam
     scheduleLearningRate(false),
     scheduleBatchSize(false),
     maxBatchSize(0.1),
-    maxBatchSizePercent(false),
+    maxBatchSizePercent(true),
     learningRate(0.01),
     minLearningRate(0),
     L1(0),

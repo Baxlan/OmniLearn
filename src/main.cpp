@@ -329,10 +329,10 @@ int main()
 {
     //mnist();
     //vesta();
-    //iris();
+    iris();
     //testLoader();
     //generate();
-    cryptoBot();
+    //cryptoBot();
     //cube();
 
     return 0;
