@@ -80,7 +80,7 @@ void omnilearn::NetworkIO::save(Network const& net) const
 }
 
 
-void omnilearn::NetworkIO::load(Network& net, fs::path const& path)
+void omnilearn::NetworkIO::load(Network& net, fs::path const& path, bool loadTestData)
 {
   json jObj = json::parse(std::ifstream(path.string() + ".save"));
 
@@ -88,6 +88,8 @@ void omnilearn::NetworkIO::load(Network& net, fs::path const& path)
   loadInputPreprocess(net, jObj.at("preprocess").at("input"));
   loadOutputPreprocess(net, jObj.at("preprocess").at("output"));
   loadCoefs(net, jObj.at("coefs"));
+  if(loadTestData)
+    loadTest(net, jObj["test data"]);
 }
 
 
@@ -265,6 +267,22 @@ void omnilearn::NetworkIO::saveCoefs(Network const& net, json& jObj) const
 }
 
 
+void omnilearn::NetworkIO::saveTest(Network const& net, json& jObj) const
+{
+  for(size_t i = 0; i < net._inputLabels.size(); i++)
+  {
+    jObj["inputs"][net._inputLabels[i]] = net._testInputs.col(i);
+  }
+
+  Matrix testRes(net.process(net._testInputs));
+  for(size_t i = 0; i < net._outputLabels.size(); i++)
+  {
+    jObj["outputs"][net._outputLabels[i]]["expected"] = net._testOutputs.col(i);
+    jObj["outputs"][net._outputLabels[i]]["predicted"] = testRes.col(i);
+  }
+}
+
+
 void omnilearn::NetworkIO::loadParameters(Network& net, json const& jObj)
 {
   if(jObj.at("loss") == "binary cross entropy")
@@ -311,17 +329,17 @@ void omnilearn::NetworkIO::loadInputPreprocess(Network& net, json const& jObj)
     else if(jObj.at("preprocess").at(i) == "standardize")
     {
       net._param.preprocessInputs[i] = Preprocess::Standardize;
-      std::vector<double> vec0 = jObj.at("standardize").at(0);
-      std::vector<double> vec1 = jObj.at("standardize").at(1);
+      std::vector<double> vec0 = jObj.at("standardization").at(0);
+      std::vector<double> vec1 = jObj.at("standardization").at(1);
       std::transform(vec0.begin(), vec0.end(), vec1.begin(), std::back_inserter(net._inputStandartization), [](double a, double b)->std::pair<double, double>{return std::make_pair(a, b);});
     }
     else if(jObj.at("preprocess").at(i) == "whiten")
     {
       net._param.preprocessInputs[i] = Preprocess::Whiten;
-      net._inputDecorrelation.eigenVectors = stdToEigenVector(jObj.at("eigenvalues"));
+      net._inputDecorrelation.eigenValues = stdToEigenVector(jObj.at("eigenvalues"));
       net._inputDecorrelation.dummyMeans = stdToEigenVector(jObj.at("dummyMeans"));
       net._inputDecorrelation.dummyScales = stdToEigenVector(jObj.at("dummyScales"));
-      net._inputDecorrelation.eigenValues = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
+      net._inputDecorrelation.eigenVectors = Matrix(jObj.at("eigenvectors").size(), jObj.at("eigenvectors").at(0).size());
       net._param.inputWhiteningBias = jObj.at("whitening bias");
 
       for(eigen_size_t j = 0; j < net._inputDecorrelation.eigenVectors.rows(); j++)
@@ -374,8 +392,8 @@ void omnilearn::NetworkIO::loadOutputPreprocess(Network& net, json const& jObj)
     else if(jObj.at("preprocess").at(i) == "standardize")
     {
       net._param.preprocessOutputs[i] = Preprocess::Standardize;
-      std::vector<double> vec0 = jObj.at("standardize").at(0);
-      std::vector<double> vec1 = jObj.at("standardize").at(1);
+      std::vector<double> vec0 = jObj.at("standardization").at(0);
+      std::vector<double> vec1 = jObj.at("standardization").at(1);
       std::transform(vec0.begin(), vec0.end(), vec1.begin(), std::back_inserter(net._outputStandartization), [](double a, double b)->std::pair<double, double>{return std::make_pair(a, b);});
     }
   }
@@ -392,12 +410,17 @@ void omnilearn::NetworkIO::loadCoefs(Network& net, json const& jObj)
 }
 
 
-void omnilearn::NetworkIO::saveTest(Network const& net, json& jObj) const
+void omnilearn::NetworkIO::loadTest(Network& net, json const& jObj)
 {
-  Matrix testRes(net.process(net._testInputs));
+  net._testInputs = Matrix(jObj.at("inputs").at(net._inputLabels[0]).size(), net._inputLabels.size());
+  for(size_t i = 0; i < net._inputLabels.size(); i++)
+  {
+    net._testInputs.col(i) = stdToEigenVector(jObj.at("inputs").at(net._inputLabels[i]));
+  }
+
+  net._testOutputs = Matrix(jObj.at("outputs").at(net._outputLabels[0]).at("expected").size(), net._outputLabels.size());
   for(size_t i = 0; i < net._outputLabels.size(); i++)
   {
-    jObj[net._outputLabels[i]]["expected"] = net._testOutputs.col(i);
-    jObj[net._outputLabels[i]]["predicted"] = testRes.col(i);
+    net._testOutputs.col(i) = stdToEigenVector(jObj.at("outputs").at(net._outputLabels[i]).at("expected"));
   }
 }

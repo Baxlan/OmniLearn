@@ -59,7 +59,7 @@ struct NetworkParam
     batchSizePercent(false),
     scheduleLearningRate(false),
     scheduleBatchSize(false),
-    maxBatchSize(0.1),
+    maxBatchSize(100),
     maxBatchSizePercent(true),
     learningRate(0.01),
     minLearningRate(0),
@@ -202,7 +202,7 @@ class Network
 
 public:
   Network() = default;
-  void load(fs::path const& path, size_t threads);
+  void load(fs::path const& path, bool loadTestData, size_t threads);
   void addLayer(LayerParam const& param);
   void setParam(NetworkParam const& param);
   void setData(Data const& data);
@@ -220,6 +220,8 @@ public:
   Matrix preprocessOut(Matrix inputs) const;
   Matrix dePreprocessIn(Matrix inputs) const;
   Matrix dePreprocessOut(Matrix inputs) const;
+
+  Data getTestData() const;
 
 private:
   void initLayers();

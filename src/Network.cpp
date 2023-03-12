@@ -8,12 +8,12 @@
 
 
 
-void omnilearn::Network::load(fs::path const& path, size_t threads)
+void omnilearn::Network::load(fs::path const& path, bool loadTestData, size_t threads)
 {
   _pool = std::make_unique<ThreadPool>(threads);
   _param.threads = threads;
   Eigen::setNbThreads(static_cast<int>(threads));
-  NetworkIO::load(*this, path);
+  NetworkIO::load(*this, path, loadTestData);
 }
 
 
@@ -348,6 +348,20 @@ omnilearn::Matrix omnilearn::Network::dePreprocessOut(Matrix outputs) const
   return outputs;
 }
 
+
+omnilearn::Data omnilearn::Network::getTestData() const
+{
+  Data data;
+
+  data.inputLabels = _inputLabels;
+  data.outputLabels = _outputLabels;
+  data.inputs = _testInputs;
+  data.outputs = _testOutputs;
+  data.inputInfos = _inputInfos;
+  data.outputInfos = _outputInfos;
+
+  return data;
+}
 
 
 //=============================================================================

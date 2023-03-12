@@ -45,7 +45,7 @@ class NetworkIO
 public:
   NetworkIO(fs::path const& path, bool verbose);
   void save(Network const& net) const;   // write the state of the network when it learned
-  static void load(Network& net, fs::path const& path);
+  static void load(Network& net, fs::path const& path, bool loadTestData);
 
 private:
   void saveParameters(Network const& net, json& jObj) const;
@@ -57,6 +57,7 @@ private:
   static void loadInputPreprocess(Network& net, json const& jObj);
   static void loadOutputPreprocess(Network& net, json const& jObj);
   static void loadCoefs(Network& net, json const& jObj);
+  static void loadTest(Network& net, json const& jObj);
 
 private:
   fs::path _path;

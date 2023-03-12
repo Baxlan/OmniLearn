@@ -23,7 +23,9 @@ struct Data
   inputs(),
   outputs(),
   inputLabels(0),
-  outputLabels(0)
+  outputLabels(0),
+  inputInfos(0),
+  outputInfos(0)
   {}
 
   Matrix inputs;

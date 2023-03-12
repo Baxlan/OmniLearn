@@ -19,8 +19,8 @@ outLabels = content["parameters"]["output labels"]
 predicted = []
 expected = []
 for lab in outLabels:
-  expected.append(content["test data"][lab]["expected"])
-  predicted.append(content["test data"][lab]["predicted"])
+  expected.append(content["test data"]["outputs"][lab]["expected"])
+  predicted.append(content["test data"]["outputs"][lab]["predicted"])
 expected = np.matrix(expected)
 predicted = np.matrix(predicted)
 

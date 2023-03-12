@@ -173,8 +173,9 @@ void mnist()
 void testLoader()
 {
     omnilearn::Network genNet;
-    genNet.load("omnilearn_network", 4);
-    omnilearn::Data data = omnilearn::loadData("dataset/mnist_test.csv", ',', 4);
+    genNet.load("omnilearn_network2", true, 4);
+    //omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 4);
+    omnilearn::Data data = genNet.getTestData();
     std::array<double, 4> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
     std::cout << metric[0] << " " << metric[1] << " " << metric[2] << " " << metric[3] << "\n";
 }
@@ -184,7 +185,7 @@ void generate()
 {
     std::srand(static_cast<unsigned>(time(0)));
     omnilearn::Network genNet;
-    genNet.load("omnilearn_network", 4);
+    genNet.load("omnilearn_network", false, 4);
     omnilearn::NetworkParam param;
     param.epoch = 200;
     param.learningRate = 0.1;
@@ -210,10 +211,10 @@ void cryptoBot()
     omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 4);
 
     omnilearn::NetworkParam netp;
-    netp.seed = 1982752692;
+    //netp.seed = 1982752692;
     netp.threads = 4;
-    netp.batchSize = 100;
-    netp.learningRate = 0.005;
+    netp.batchSize = 50;
+    netp.learningRate = 0.01;
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
     netp.patience = 5 ;
     netp.improvement = 0.01;
@@ -224,11 +225,12 @@ void cryptoBot()
     //netp.momentumSchedulerValue = 0.15;
     //netp.maxMomentum = 0.9;
 
-    //netp.scheduler = omnilearn::Scheduler::Plateau;
-    //netp.schedulerValue = 1.5;
-    //netp.schedulerDelay = 1;
-    //netp.scheduleBatchSize = true;
-    //netp.scheduleLearningRate = true;
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 1.5;
+    netp.schedulerDelay = 1;
+    netp.scheduleBatchSize = true;
+    netp.scheduleLearningRate = true;
+    netp.maxBatchSize = 10;
 
     netp.classificationThreshold = 0.50;
     netp.validationRatio = 0.05;
@@ -329,8 +331,8 @@ int main()
 {
     //mnist();
     //vesta();
-    iris();
-    //testLoader();
+    //iris();
+    testLoader();
     //generate();
     //cryptoBot();
     //cube();

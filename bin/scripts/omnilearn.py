@@ -34,14 +34,14 @@ class Classifier:
                 positive = 0
                 negative = 0
 
-                for i in range(len(self.content["test data"][label]["expected"])):
-                    if self.content["test data"][label]["expected"][i] == 1:
+                for i in range(len(self.content["test data"]["outputs"][label]["expected"])):
+                    if self.content["test data"]["outputs"][label]["expected"][i] == 1:
                         P_count += 1
-                        if self.content["test data"][label]["predicted"][i] >= t:
+                        if self.content["test data"]["outputs"][label]["predicted"][i] >= t:
                             positive += 1
                     else:
                         N_count += 1
-                        if self.content["test data"][label]["predicted"][i] < t:
+                        if self.content["test data"]["outputs"][label]["predicted"][i] < t:
                             negative += 1
 
                 P_tmp.append(positive / P_count)
@@ -58,7 +58,7 @@ class Classifier:
         prior = pa.DataFrame()
 
         for label in self.content["parameters"]["output labels"]:
-            prior[label] = [self.content["test data"][label]["expected"].count(1) / len(self.content["test data"][label]["expected"])]
+            prior[label] = [self.content["test data"]["outputs"][label]["expected"].count(1) / len(self.content["test data"]["outputs"][label]["expected"])]
 
         return prior
 

@@ -21,6 +21,7 @@ df = P_post
 thresholdIndex = 0
 print("Considered threshold: " + str(df["threshold"][thresholdIndex]), flush=True)
 
+print(prior)
 
 # plotting
 df = df.drop(["threshold"], axis=1) # delete "threshold" column
