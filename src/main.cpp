@@ -332,9 +332,9 @@ int main()
     //mnist();
     //vesta();
     //iris();
-    testLoader();
+    //testLoader();
     //generate();
-    //cryptoBot();
+    cryptoBot();
     //cube();
 
     return 0;

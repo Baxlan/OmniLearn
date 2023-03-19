@@ -9,7 +9,7 @@ CXXFLAGS =  -std=c++17 -O3 -Os -s -pthread -fopenmp -Wall -W -Wunused-macros -Ws
 
 LDFLAGS = -Wl,--no-as-needed
 
-NAME = test
+NAME = omnilearn.exe
 
 BINDIR = bin
 

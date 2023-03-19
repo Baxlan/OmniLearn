@@ -82,7 +82,7 @@ void omnilearn::NetworkIO::save(Network const& net) const
 
 void omnilearn::NetworkIO::load(Network& net, fs::path const& path, bool loadTestData)
 {
-  json jObj = json::parse(std::ifstream(path.string() + ".save"));
+  json jObj = json::parse(std::ifstream(path.string()));
 
   loadParameters(net, jObj.at("parameters"));
   loadInputPreprocess(net, jObj.at("preprocess").at("input"));
