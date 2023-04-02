@@ -68,6 +68,9 @@ void iris()
     netp.threads = 1;
     netp.batchSize = 1;
     netp.learningRate = 0.01;
+
+    netp.scheduleLearningRate = true;
+
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 15;
     netp.improvement = 0.01;
@@ -331,10 +334,10 @@ int main()
 {
     //mnist();
     //vesta();
-    //iris();
+    iris();
     //testLoader();
     //generate();
-    cryptoBot();
+    //cryptoBot();
     //cube();
 
     return 0;

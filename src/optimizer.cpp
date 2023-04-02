@@ -5,7 +5,7 @@
 
 
 void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2, double& previousUpdate, double gradient, bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator,
-                                double learningRate, double momentum, [[maybe_unused]] double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay, bool avoidZero)
+                                double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay, bool avoidZero)
 {
     gradient = gradient - (L2 * coefToUpdate) - (coefToUpdate > 0 ? L1 : -L1); // regularization
     previousGrad = (momentum * previousGrad) + ((1 - momentum) * gradient); // momentum (FIRST MOMENT OF GRADIENT)
@@ -17,10 +17,11 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
 
     // adaptive learning rate by exponential decay of past squared GRADIENTS (SECOND MOMENT OF GRADIENT)
     previousGrad2 = (window * previousGrad2) + ((1 - window) * std::pow(gradient, 2) / (1-std::pow(window, iteration)));
-    optimalPreviousGrad2 = (useMaxDenominator ? std::max(previousGrad2, optimalPreviousGrad2) : previousGrad2);
-    // the max operator is used to get AMSGrad : it forbids the LR to grow up (unlike RMSProp/Adam, leading to non convergence),
-    // and the LR doesn't become infinitesimal thank to the winow effect of exponential decay (unlike Adagrad)
+    // The LR doesn't become infinitesimal thank to the winow effect of exponential decay (unlike Adagrad)
     // the 1/(1-std::pow(window, iteration)) factor is here to unbias optimalPreviousGrad2 at the first iterations
+    optimalPreviousGrad2 = (useMaxDenominator ? std::max(previousGrad2, optimalPreviousGrad2 * (iteration > 1 ? std::pow((1-momentum) / (1-previousMomentum), 2) : 1)) : previousGrad2);
+    // the max operator is used to get AMSGrad : it forbids the LR to grow up (unlike RMSProp/Adam, leading to possible non convergence),
+    // the std::pow((1-momentum) / (1-previousMomentum), 2) factor is here to get AdamX (it corrects the convergence proof of AMSGrad)
 
     // adaptive learning rate by exponential decay of past squared UPDATES (SECOND MOMENT OF UPDATES) ==> Adadelta
     // (this is based on a second order method : the Newton's method with Hessian approximation)
@@ -28,7 +29,7 @@ void omnilearn::optimizedUpdate(double& coefToUpdate, double& previousGrad, doub
     // we must use the previous update, not the current one, because we don't know the curent one yet...
     // this is an approximation where we assume that the curvature of the loss function is locally smooth
 
-    // then applying the exponential decay previously calculated
+    // then, apply the exponential decay previously calculated
     learningRate /= (adaptiveLearningRate ? std::sqrt((optimalPreviousGrad2) + optimizerBias) : 1);
 
     double oldCoef = coefToUpdate;

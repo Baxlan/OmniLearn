@@ -62,7 +62,7 @@ struct NetworkParam
     maxBatchSize(100),
     maxBatchSizePercent(true),
     learningRate(0.01),
-    minLearningRate(0),
+    minLearningRate(1e-7),
     L1(0),
     L2(0),
     decay(0), // weight decay
@@ -229,7 +229,7 @@ private:
   void shuffleTrainData(); // shuffle train data each epoch
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void initCrossEntropyWeights();
-  void performeOneEpoch();
+  Vector performeOneEpoch();
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;
   Vector computeGradVector(Vector const& realResult, Vector const& predicted) const; // calculate error between expected and predicted outputs
@@ -241,7 +241,7 @@ private:
   void adaptMomentum();
   void check() const;
   size_t getNbParameters() const;
-  void list(double lowestLoss, bool initial) const;
+  void list(double lowestLoss, Vector meanParameters, bool initial) const;
 
 private:
   //parameters
@@ -277,9 +277,11 @@ private:
   double _nextMomentum;
   double _cumulativeMomentum;
   size_t _currentBatchSize;
-  size_t _nbBatch;
+  bool   _broke;
+  bool   _firstTimeMaxBatchSizeReached;
   size_t _missedData; // # of data ignored because the minibatch would be incomplete
   size_t _epochWhenBatchSizeReachedMax;
+  size_t _iterationWhenBatchSizeReachedMax;
   Vector _trainLosses;
   Vector _validLosses;
   Vector _testMetric;

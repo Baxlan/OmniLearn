@@ -126,17 +126,16 @@ void omnilearn::Network::learn()
     computeLoss();
     double lowestLoss = _validLosses[0];
     _optimalEpoch = 0;
-    list(lowestLoss, true);
+    list(lowestLoss, Vector(0), true);
     keep();
 
     _iteration = 0;
+    _broke = false;
+    _firstTimeMaxBatchSizeReached = true;
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
       shuffleTrainData();
-      adaptLearningRate(); // sets _currentLearningRate
-      adaptBatchSize(); // sets _currentBatchSize and _nbBatch
-      adaptMomentum(); // sets _currentMomentum, _previousMomentum and _nextMomentum
-      performeOneEpoch();
+      Vector meanParameters = performeOneEpoch();
       computeLoss();
 
       double low = lowestLoss;
@@ -147,7 +146,7 @@ void omnilearn::Network::learn()
         lowestLoss = _validLosses[_epoch];
         _optimalEpoch = _epoch;
       }
-      list(low, false);
+      list(low, meanParameters, false);
 
       if(std::isnan(_trainLosses[_epoch]) || std::isnan(_validLosses[_epoch]) || std::isnan(_testMetric[_epoch]))
       // the 2nd and 4rd metric could be NaN without problem
@@ -580,17 +579,44 @@ void omnilearn::Network::initCrossEntropyWeights()
 }
 
 
-void omnilearn::Network::performeOneEpoch()
+omnilearn::Vector omnilearn::Network::performeOneEpoch()
 {
   std::bernoulli_distribution nullDist(0); // used to prevent the output neurons to get droppedOut
 
-  for(size_t batch = 0; batch < _nbBatch; batch++)
+  std::vector<double> LR(0);
+  std::vector<double> BS(0);
+  std::vector<double> MO(0);
+
+  size_t passedFeatures = 0;
+
+  while(true) // loop exit condition is the break one
   {
+    if(_broke)
+      _broke = false;
+    else
+    {
+      adaptLearningRate();
+      adaptBatchSize();
+      adaptMomentum();
+    }
+
+    if(_currentBatchSize > _trainInputs.rows() - passedFeatures)
+    {
+      _broke = true; // to avoid first iteration of next epoch to re-update LR, BS and momentum twice
+      break;
+    }
+
     _iteration += 1;
+    LR.push_back(_currentLearningRate);
+    BS.push_back(static_cast<double>(_currentBatchSize));
+    MO.push_back(_currentMomentum);
+
     for(size_t feature = 0; feature < _currentBatchSize; feature++)
     {
-      Vector featureInput = _trainInputs.row(batch*_currentBatchSize + feature);
-      Vector featureOutput = _trainOutputs.row(batch*_currentBatchSize + feature);
+      Vector featureInput = _trainInputs.row(passedFeatures);
+      Vector featureOutput = _trainOutputs.row(passedFeatures);
+
+      passedFeatures++;
 
       for(size_t i = 0; i < _layers.size(); i++)
       {
@@ -605,24 +631,18 @@ void omnilearn::Network::performeOneEpoch()
       }
     }
 
-    // because momentum is constant within an epoch, _nextMomentum is only valid at the last iteration of the epoch (it equals _currentMomentum otherwise)
-    double mom = 0;
-    if(batch != _nbBatch - 1)
-      mom = _currentMomentum;
-    else
-      mom = _nextMomentum;
-
-    if(_epoch == 1 && _iteration == 1)
-      _cumulativeMomentum = _currentMomentum;
-    else
-      _cumulativeMomentum *= _currentMomentum;
-
     for(size_t i = 0; i < _layers.size(); i++)
     {
-      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.decay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.useMaxDenominator, _currentMomentum, _previousMomentum, mom, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
+      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.decay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.useMaxDenominator, _currentMomentum, _previousMomentum, _nextMomentum, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
     }
-    _previousMomentum = _currentMomentum; // because momentum is constant within an epoch, _previousMomentum was only valid at the first iteration of the epoch
   }
+  _missedData = _trainInputs.rows() - passedFeatures;
+
+  Vector means(3);
+  means(0) = stdToEigenVector(LR).mean();
+  means(1) = stdToEigenVector(BS).mean();
+  means(2) = stdToEigenVector(MO).mean();
+  return means;
 }
 
 
@@ -746,23 +766,27 @@ void omnilearn::Network::release()
 
 void omnilearn::Network::adaptLearningRate()
 {
-  if(_epoch == 1)
+  if(_iteration == 0)
     _currentLearningRate = _param.learningRate;
   else if(_param.scheduleLearningRate)
   {
     size_t epochToUse = _epoch;
+    size_t iterationToUse = _iteration;
     if(_param.scheduleBatchSize)
     {
-      if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize)))
+      if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows())/100 : _param.maxBatchSize)))
+      {
         epochToUse = _epoch - _epochWhenBatchSizeReachedMax;
+        iterationToUse = _iteration - _iterationWhenBatchSizeReachedMax;
+      }
       else
         return;
     }
 
     if(_param.scheduler == Scheduler::Exp)
-      _currentLearningRate = LRexp(_param.learningRate, epochToUse, _param.schedulerValue);
+      _currentLearningRate = LRexp(_param.learningRate, iterationToUse, _param.schedulerValue);
     else if(_param.scheduler == Scheduler::Step)
-      _currentLearningRate = LRstep(_param.learningRate, epochToUse, _param.schedulerValue, _param.schedulerDelay);
+      _currentLearningRate = LRstep(_param.learningRate, iterationToUse, _param.schedulerValue, _param.schedulerDelay);
     else if(_param.scheduler == Scheduler::Plateau)
       if(epochToUse - _optimalEpoch > _param.schedulerDelay)
         _currentLearningRate /= _param.schedulerValue;
@@ -776,30 +800,32 @@ void omnilearn::Network::adaptLearningRate()
 void omnilearn::Network::adaptBatchSize()
 {
   size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.rows())/100 : _param.batchSize);
+  size_t maxBatchSize = static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows())/100 : _param.maxBatchSize));
 
-  if(_epoch == 1)
+  if(_iteration == 0)
   {
     _currentBatchSize = batchSize;
     _epochWhenBatchSizeReachedMax = 1;
+    _iterationWhenBatchSizeReachedMax = 1;
   }
-  else if(_param.scheduleBatchSize && _currentBatchSize != static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize)))
+  else if(_param.scheduleBatchSize && _currentBatchSize != maxBatchSize)
   {
     if(_param.scheduler == Scheduler::Exp)
-      _currentBatchSize = static_cast<size_t>(std::round(BSexp(static_cast<double>(batchSize), _epoch, _param.schedulerValue)));
+      _currentBatchSize = static_cast<size_t>(std::round(BSexp(static_cast<double>(batchSize), _iteration, _param.schedulerValue)));
     else if(_param.scheduler == Scheduler::Step)
-      _currentBatchSize = static_cast<size_t>(std::round(BSstep(static_cast<double>(batchSize), _epoch, _param.schedulerValue, _param.schedulerDelay)));
+      _currentBatchSize = static_cast<size_t>(std::round(BSstep(static_cast<double>(batchSize), _iteration, _param.schedulerValue, _param.schedulerDelay)));
     else if(_param.scheduler == Scheduler::Plateau)
       if(_epoch - _optimalEpoch > _param.schedulerDelay)
           _currentBatchSize = static_cast<size_t>(std::round(static_cast<double>(_currentBatchSize) * _param.schedulerValue));
 
-    if(_currentBatchSize > static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize)))
+    if(_currentBatchSize >= maxBatchSize && _firstTimeMaxBatchSizeReached)
     {
-      _currentBatchSize = static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows()) : _param.maxBatchSize));
+      _currentBatchSize = maxBatchSize;
       _epochWhenBatchSizeReachedMax = _epoch;
+      _iterationWhenBatchSizeReachedMax = _iteration;
+      _firstTimeMaxBatchSizeReached = false;
     }
   }
-  _nbBatch = static_cast<size_t>(std::floor(_trainInputs.rows() / _currentBatchSize));
-  _missedData = _trainInputs.rows() % _currentBatchSize;
 }
 
 
@@ -808,13 +834,13 @@ void omnilearn::Network::adaptMomentum()
   _previousMomentum = _currentMomentum;
   if(_param.momentumScheduler == Scheduler::Exp)
   {
-    _currentMomentum = Mexp(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue);
-    _nextMomentum = Mexp(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue);
+    _currentMomentum = Mexp(_param.momentum, _param.maxMomentum, _iteration, _param.momentumSchedulerValue);
+    _nextMomentum = Mexp(_param.momentum, _param.maxMomentum, _iteration+1, _param.momentumSchedulerValue);
   }
   else if(_param.momentumScheduler == Scheduler::Step)
   {
-    _currentMomentum = Mstep(_param.momentum, _param.maxMomentum, _epoch, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
-    _nextMomentum = Mstep(_param.momentum, _param.maxMomentum, _epoch+1, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
+    _currentMomentum = Mstep(_param.momentum, _param.maxMomentum, _iteration, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
+    _nextMomentum = Mstep(_param.momentum, _param.maxMomentum, _iteration+1, _param.momentumSchedulerValue, _param.momentumSchedulerDelay);
   }
   else
   {
@@ -822,6 +848,11 @@ void omnilearn::Network::adaptMomentum()
     _nextMomentum = _param.momentum;
   }
   // there is no plateau growth because we wouldn't be able to predict _nextMomentum
+
+  if(_iteration == 0)
+    _cumulativeMomentum = _currentMomentum;
+  else
+    _cumulativeMomentum *= _currentMomentum;
 }
 
 
@@ -886,6 +917,9 @@ void omnilearn::Network::check() const
 
   if((_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy) && _param.preprocessOutputs.size() != 0)
     throw Exception("Outputs cannot be preprocessed when using (binary) cross-entropy loss.");
+
+  if(_param.scheduler != Scheduler::None)
+    *_io << "WARNING: LR and/or BS scheduler is used. Remind that the plateau scheduler updates parameters with epochs while others do it with iterations. Tweak the scheduler delay and value accordingly.\n";
 }
 
 
@@ -902,7 +936,7 @@ size_t omnilearn::Network::getNbParameters() const
 }
 
 
-void omnilearn::Network::list(double lowestLoss, bool initial) const
+void omnilearn::Network::list(double lowestLoss, Vector meanParameters, bool initial) const
 {
   std::ostringstream oss;
   std::string currentLearningRate;
@@ -921,7 +955,7 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
   }
   else
   {
-    oss << std::scientific << std::setprecision(4) << _currentLearningRate;
+    oss << std::scientific << std::setprecision(4) << (meanParameters.size() > 0 ? meanParameters(0) : 0);
     currentLearningRate = oss.str();
   }
 
@@ -930,15 +964,15 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
   {
     if(_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy)
     {
-      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting | Accuracy |    Mean    |    Mean    |   Mean     |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
-      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |  positive  |  negative  |   Cohen    |     LR     |   size    |          |   data    |   epochs  |\n";
-      *_io <<   "|           |            |            |                   |             |          | likelihood | likelihood |   kappa    |            |           |          |           |           |\n";
+      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting | Accuracy |    Mean    |    Mean    |   Mean     |    Mean    |   Mean    |   Mean   |  Ignored  | Remaining |\n";
+      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |  positive  |  negative  |   Cohen    |   global   |   batch   | Momentum |   data    |   epochs  |\n";
+      *_io <<   "|           |            |            |                   |             |          | likelihood | likelihood |   kappa    |     LR     |   size    |          |           |           |\n\n";
     }
     else
     {
-      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   MAE    |   RMSE    |     Mean    |  Mean cos  |   Global   |   Batch   | Momentum |  Ignored  | Remaining |\n";
-      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |           | correlation | similarity |     LR     |   size    |          |   data    |   epochs  |\n";
-      *_io <<   "|           |            |            |                   |             |          |           |             |            |            |           |          |           |           |\n";
+      *_io << "\n|   Epoch   | Validation |  Training  | Improvement since | Overfitting |   MAE    |   RMSE    |     Mean    |  Mean cos  |    Mean    |   Mean    |   Mean   |  Ignored  | Remaining |\n";
+      *_io <<   "|           |    Loss    |    Loss    |   optimal epoch   |             |          |           | correlation | similarity |   global   |   batch   | Momentum |   data    |   epochs  |\n";
+      *_io <<   "|           |            |            |                   |             |          |           |             |            |     LR     |   size    |          |           |           |\n";
     }
   }
   if(initial)
@@ -955,6 +989,6 @@ void omnilearn::Network::list(double lowestLoss, bool initial) const
     *_io << " |     " << std::setw(8) << std::round(gap*1e3)/1e3 << " %    |  " << std::setw(8) << std::round(100*(_validLosses[_epoch]-_trainLosses[_epoch])/_validLosses[_epoch] * 1e3)/1e3 << " % | ";
     *_io << std::setw(8) << _testMetric[_epoch] << " |  " << std::setw(9) << _testSecondMetric[_epoch] << " |  " << std::setw(8) << _testThirdMetric[_epoch] << "  |  " << std::setw(8) << _testFourthMetric[_epoch] << "  | ";
     *_io << std::setw(10) << (_param.automaticLearningRate ? "    -   " : currentLearningRate);
-    *_io << " | " << std::setw(9) << _currentBatchSize << " | " << std::setw(8) << _currentMomentum << " | " << std::setw(9) << _missedData << " | " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << " |\n";
+    *_io << " | " << std::setw(9) << meanParameters(1) << " | " << std::setw(8) << meanParameters(2) << " | " << std::setw(9) << _missedData << " | " << std::setw(9) << _optimalEpoch + _param.patience - _epoch << " |\n";
   }
 }
