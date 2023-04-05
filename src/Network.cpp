@@ -132,6 +132,7 @@ void omnilearn::Network::learn()
     _iteration = 0;
     _broke = false;
     _firstTimeMaxBatchSizeReached = true;
+    _iterationsSinceLastRestart = 0;
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
       shuffleTrainData();
@@ -766,15 +767,17 @@ void omnilearn::Network::release()
 
 void omnilearn::Network::adaptLearningRate()
 {
+  size_t epochToUse = _epoch;
+  size_t iterationToUse = _iteration;
+  bool maxBatchSizeReached = (_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows())/100 : _param.maxBatchSize)));
+
   if(_iteration == 0)
-    _currentLearningRate = _param.learningRate;
+    _maxLearningRate = _param.learningRate;
   else if(_param.scheduleLearningRate)
   {
-    size_t epochToUse = _epoch;
-    size_t iterationToUse = _iteration;
     if(_param.scheduleBatchSize)
     {
-      if(_currentBatchSize == static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows())/100 : _param.maxBatchSize)))
+      if(maxBatchSizeReached)
       {
         epochToUse = _epoch - _epochWhenBatchSizeReachedMax;
         iterationToUse = _iteration - _iterationWhenBatchSizeReachedMax;
@@ -784,15 +787,39 @@ void omnilearn::Network::adaptLearningRate()
     }
 
     if(_param.scheduler == Scheduler::Exp)
-      _currentLearningRate = LRexp(_param.learningRate, iterationToUse, _param.schedulerValue);
+      _maxLearningRate = LRexp(_param.learningRate, iterationToUse, _param.schedulerValue);
     else if(_param.scheduler == Scheduler::Step)
-      _currentLearningRate = LRstep(_param.learningRate, iterationToUse, _param.schedulerValue, _param.schedulerDelay);
+      _maxLearningRate = LRstep(_param.learningRate, iterationToUse, _param.schedulerValue, _param.schedulerDelay);
     else if(_param.scheduler == Scheduler::Plateau)
       if(epochToUse - _optimalEpoch > _param.schedulerDelay)
-        _currentLearningRate /= _param.schedulerValue;
+        _maxLearningRate /= _param.schedulerValue;
 
-    if(_currentLearningRate < _param.minLearningRate)
-      _currentLearningRate = _param.minLearningRate;
+    if(_maxLearningRate < _param.minLearningRate)
+      _maxLearningRate = _param.minLearningRate;
+  }
+
+  if(_param.warmRestart && (!_param.scheduleBatchSize || (_param.scheduleBatchSize && maxBatchSizeReached)))
+  {
+    constexpr double pi = std::atan(1)*4;
+    if(_iterationsSinceLastRestart == _param.warmRestartPeriod)
+    {
+      // this is warm restart
+      _currentLearningRate = _maxLearningRate;
+      _param.warmRestartPeriod = static_cast<size_t>(std::round(static_cast<double>(_param.warmRestartPeriod) * _param.warmRestartFactor));
+      _iterationsSinceLastRestart = 0;
+    }
+    else
+    {
+      // this is cosine LR annealing
+      _iterationsSinceLastRestart++;
+      _currentLearningRate = _param.minLearningRate + 0.5*(_maxLearningRate - _param.minLearningRate)*(1+std::cos(static_cast<double>(_iterationsSinceLastRestart) * pi/ static_cast<double>(_param.warmRestartPeriod)));
+    }
+
+    std::cout << _iterationsSinceLastRestart << " " << _currentLearningRate << " " << _maxLearningRate << std::endl;
+  }
+  else
+  {
+    _currentLearningRate = _maxLearningRate;
   }
 }
 

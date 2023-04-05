@@ -102,7 +102,10 @@ struct NetworkParam
     optimizer(Optimizer::Default),
     crossEntropyBias(1e-3),
     weights(),
-    weightMode(Weight::Disabled)
+    weightMode(Weight::Disabled),
+    warmRestart(false),
+    warmRestartPeriod(20),
+    warmRestartFactor(1)
     {
     }
 
@@ -155,6 +158,9 @@ struct NetworkParam
     double crossEntropyBias;
     Vector weights;
     Weight weightMode;
+    bool warmRestart;
+    size_t warmRestartPeriod;
+    double warmRestartFactor;
 };
 
 
@@ -271,7 +277,9 @@ private:
   size_t _epoch;
   size_t _optimalEpoch;
   size_t _iteration;
+  size_t _iterationsSinceLastRestart;
   double _currentLearningRate;
+  double _maxLearningRate;
   double _currentMomentum;
   double _previousMomentum;
   double _nextMomentum;

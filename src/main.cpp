@@ -69,8 +69,6 @@ void iris()
     netp.batchSize = 1;
     netp.learningRate = 0.01;
 
-    netp.scheduleLearningRate = true;
-
     netp.loss = omnilearn::Loss::CrossEntropy;
     netp.patience = 15;
     netp.improvement = 0.01;
@@ -85,7 +83,7 @@ void iris()
     netp.inputReductionThreshold = 0.99;
 
     netp.verbose = true;
-    netp.optimizer = omnilearn::Optimizer::Adadelta;
+    netp.optimizer = omnilearn::Optimizer::Nadam;
 
     netp.dropout = 0.5;
 
