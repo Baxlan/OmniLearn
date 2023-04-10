@@ -133,6 +133,16 @@ static std::map<Aggregation, std::function<std::unique_ptr<IAggregation>()>> agg
 
 
 
+static std::map<Aggregation, std::function<std::unique_ptr<IAggregation>(IAggregation const&)>> copyAggregationMap =
+{
+    {Aggregation::Dot, [](IAggregation const& a){return std::make_unique<Dot>(static_cast<Dot const&>(a));}},
+    {Aggregation::Distance, [](IAggregation const& a){return std::make_unique<Distance>(static_cast<Distance const&>(a));}},
+    {Aggregation::Pdistance, [](IAggregation const& a){return std::make_unique<Pdistance>(static_cast<Pdistance const&>(a));}},
+    {Aggregation::Maxout, [](IAggregation const& a){return std::make_unique<Maxout>(static_cast<Maxout const&>(a));}}
+};
+
+
+
 static std::map<std::string, Aggregation> stringToAggregationMap =
 {
     {"dot", Aggregation::Dot},

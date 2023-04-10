@@ -90,6 +90,7 @@ public:
     size_t inputSize() const;
     std::pair<double, double> L1L2(ThreadPool& t) const;
     size_t getNbParameters() const;
+    Layer getCopyForOptimalLearningRateDetection() const;
 
 private:
     LayerParam _param;

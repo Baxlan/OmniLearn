@@ -8,6 +8,8 @@
 omnilearn::Neuron::Neuron(Aggregation aggregation, Activation activation):
 _aggregation(aggregationMap[aggregation]()),
 _activation(activationMap[activation]()),
+_activationType(activation),
+_aggregationType(aggregation),
 _weights(Matrix(0, 0)),
 _bias(Vector(0)),
 _input(),
@@ -311,6 +313,46 @@ size_t omnilearn::Neuron::getNbParameters(bool lockWeights, bool lockBias, bool 
     nbParameters += (lockBias ? 0 : _bias.size());
     nbParameters += (lockParameters ? 0 : _activation->getNbParameters() + _aggregation->getNbParameters());
     return nbParameters;
+}
+
+
+omnilearn::Neuron omnilearn::Neuron::getCopyForOptimalLearningRateDetection() const
+{
+    Neuron neuron;
+
+    neuron._aggregation = copyAggregationMap[_aggregationType](*_aggregation);
+    neuron._activation = copyActivationMap[_activationType](*_activation);
+
+    neuron._activationType = _activationType;
+    neuron._aggregationType = _aggregationType;
+    neuron._weights = _weights;
+    neuron._bias = _bias;
+    neuron._input = _input;
+    neuron._aggregResult = _aggregResult;
+    neuron._actResult = _actResult;
+    neuron._dropped = _dropped;
+    neuron._connectDropped = _connectDropped;
+    neuron._biasDropped = _biasDropped;
+    neuron._actGradient = _actGradient;
+    neuron._gradients = _gradients;
+    neuron._biasGradients = _biasGradients;
+    neuron._featureGradient = _featureGradient;
+    neuron._count = _count;
+    neuron._counts = _counts;
+    neuron._biasCount = _biasCount;
+    neuron._previousWeightGradient = _previousWeightGradient;
+    neuron._previousBiasGradient = _previousBiasGradient;
+    neuron._previousWeightGradient2 = _previousWeightGradient2;
+    neuron._previousBiasGradient2 = _previousBiasGradient2;
+    neuron._optimalPreviousWeightGradient2 = _optimalPreviousWeightGradient2;
+    neuron._optimalPreviousBiasGradient2 = _optimalPreviousBiasGradient2;
+    neuron._previousWeightUpdate = _previousWeightUpdate;
+    neuron._previousBiasUpdate = _previousBiasUpdate;
+    neuron._savedWeights = _savedWeights;
+    neuron._savedBias = _savedBias;
+    neuron._generativeGradients = _generativeGradients;
+
+    return neuron;
 }
 
 

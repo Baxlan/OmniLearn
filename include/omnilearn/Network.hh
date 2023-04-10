@@ -75,6 +75,9 @@ struct NetworkParam
     loss(Loss::L2),
     schedulerValue(2),
     schedulerDelay(2),
+    optimalLearningRateDetection(false),
+    learningRateMovingAverage(5),
+    learningRateSampling(50),
     scheduler(Scheduler::None),
     classificationThreshold(0.5),
     threads(1),
@@ -130,6 +133,9 @@ struct NetworkParam
     Loss loss;
     double schedulerValue;
     size_t schedulerDelay;
+    bool optimalLearningRateDetection;
+    size_t learningRateMovingAverage;
+    size_t learningRateSampling;
     Scheduler scheduler;
     double classificationThreshold;
     size_t threads;
@@ -236,15 +242,18 @@ private:
   void initPreprocess(); // first preprocess : calculate and store all the preprocessing data
   void initCrossEntropyWeights();
   Vector performeOneEpoch();
+  double performeOptimalLearningRateDetection(std::vector<double>& LR, std::vector<double>& validationLoss, std::vector<double>& slopes);
   Matrix processForLoss(Matrix inputs) const; //takes preprocessed inputs, returns postprocessed outputs
   Matrix computeLossMatrix(Matrix const& realResult, Matrix const& predicted) const;
   Vector computeGradVector(Vector const& realResult, Vector const& predicted) const; // calculate error between expected and predicted outputs
   void computeLoss();
+  double computeLossForOptimalLearningRateDetection() const;
   void keep(); // store weights, bias and other coefs when optimal loss is found
   void release(); // release weights, bias and other coefs when learning is done
   void adaptLearningRate();
   void adaptBatchSize();
   void adaptMomentum();
+  void detectOptimalLearningRate();
   void check() const;
   size_t getNbParameters() const;
   void list(double lowestLoss, Vector meanParameters, bool initial) const;

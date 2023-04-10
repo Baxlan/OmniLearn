@@ -309,6 +309,22 @@ static std::map<Activation, std::function<std::unique_ptr<IActivation>()>> activ
 
 
 
+static std::map<Activation, std::function<std::unique_ptr<IActivation>(IActivation const&)>> copyActivationMap =
+{
+    {Activation::Linear, [](IActivation const& a){return std::make_unique<Linear>(static_cast<Linear const&>(a));}},
+    {Activation::Sigmoid, [](IActivation const& a){return std::make_unique<Sigmoid>(static_cast<Sigmoid const&>(a));}},
+    {Activation::Tanh, [](IActivation const& a){return std::make_unique<Tanh>(static_cast<Tanh const&>(a));}},
+    {Activation::Softplus, [](IActivation const& a){return std::make_unique<Softplus>(static_cast<Softplus const&>(a));}},
+    {Activation::Relu, [](IActivation const& a){return std::make_unique<Relu>(static_cast<Relu const&>(a));}},
+    {Activation::Prelu, [](IActivation const& a){return std::make_unique<Prelu>(static_cast<Prelu const&>(a));}},
+    {Activation::Elu, [](IActivation const& a){return std::make_unique<Elu>(static_cast<Elu const&>(a));}},
+    {Activation::Pelu, [](IActivation const& a){return std::make_unique<Pelu>(static_cast<Pelu const&>(a));}},
+    {Activation::Gauss, [](IActivation const& a){return std::make_unique<Gauss>(static_cast<Gauss const&>(a));}},
+    {Activation::Pgauss, [](IActivation const& a){return std::make_unique<Pgauss>(static_cast<Pgauss const&>(a));}}
+};
+
+
+
 static std::map<std::string, Activation> stringToActivationMap =
 {
     {"linear", Activation::Linear},

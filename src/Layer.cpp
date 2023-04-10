@@ -310,6 +310,22 @@ size_t omnilearn::Layer::getNbParameters() const
 }
 
 
+omnilearn::Layer omnilearn::Layer::getCopyForOptimalLearningRateDetection() const
+{
+    Layer layer;
+
+    layer._param = _param;
+    layer._inputSize = _inputSize;
+
+    layer._neurons = std::vector<Neuron>(0);
+    for(size_t i = 0; i < _neurons.size(); i++)
+    {
+        layer._neurons.push_back(_neurons[i].getCopyForOptimalLearningRateDetection());
+    }
+    return layer;
+}
+
+
 void omnilearn::to_json(json& jObj, Layer const& layer)
 {
     jObj["aggregation"] = aggregationToStringMap[layer._param.aggregation];

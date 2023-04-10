@@ -94,14 +94,14 @@ void omnilearn::Network::learn()
 
   try
   {
-    *_io << "\nChecking parameters...\n";
+    *_io << "\nChecking parameters\n";
     check();
     *_io << "Seed: " << _param.seed << "\n";
-    *_io << "Shuffling and splitting data...\n";
+    *_io << "Shuffling and splitting data\n";
     splitData();
     *_io << "Preprocessing data...\n";
     initPreprocess();
-    *_io << "Initializing layer and neuron parameters...\n";
+    *_io << "Initializing layer and neuron parameters\n";
     _layers[_layers.size()-1].resize(static_cast<size_t>(_trainOutputs.cols()));
     initLayers();
     *_io << "Total number of trainable parameters: " << getNbParameters() << "\n";
@@ -123,16 +123,19 @@ void omnilearn::Network::learn()
       _metricNormalization = normalize(_testNormalizedOutputsForMetric);
     }
 
-    computeLoss();
-    double lowestLoss = _validLosses[0];
-    _optimalEpoch = 0;
-    list(lowestLoss, Vector(0), true);
-    keep();
-
     _iteration = 0;
     _broke = false;
     _firstTimeMaxBatchSizeReached = true;
     _iterationsSinceLastRestart = 0;
+    _optimalEpoch = 0;
+    keep();
+
+    detectOptimalLearningRate();
+
+    computeLoss();
+    double lowestLoss = _validLosses[0];
+    list(lowestLoss, Vector(0), true);
+
     for(_epoch = 1; _epoch < _param.epoch; _epoch++)
     {
       shuffleTrainData();
@@ -413,22 +416,19 @@ void omnilearn::Network::splitData()
   _trainInputs = Matrix(_trainInputs.topRows(_trainInputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
   _trainOutputs = Matrix(_trainOutputs.topRows(_trainOutputs.rows() - static_cast<eigen_size_t>(validation) - static_cast<eigen_size_t>(test)));
 
-  if(!_param.batchSizePercent && (_param.batchSize < 1 || static_cast<eigen_size_t>(_param.batchSize) > _trainInputs.rows()))
+
+  // some checks about batch size
+  size_t batchSize = static_cast<size_t>(_param.batchSizePercent ? _param.batchSize * static_cast<double>(_trainInputs.rows())/100 : _param.batchSize);
+  size_t maxBatchSize = static_cast<size_t>(std::round(_param.maxBatchSizePercent ? _param.maxBatchSize * static_cast<double>(_trainInputs.rows())/100 : _param.maxBatchSize));
+
+  if(batchSize < 1 || static_cast<eigen_size_t>(batchSize) > _trainInputs.rows())
     throw Exception("Batch size cannot be inferior to 1 nor greater than the training size.");
 
-  if(_param.maxBatchSizePercent == _param.batchSizePercent)
-  {
-    if(_param.batchSize > _param.maxBatchSize)
-      throw Exception("BatchBize cannot be greater than maxBatchSize.");
-  }
-  else if(_param.maxBatchSizePercent && static_cast<eigen_size_t>(_param.batchSize) > static_cast<eigen_size_t>(_param.maxBatchSize*static_cast<double>(_trainInputs.rows())/100))
-  {
+  if(batchSize > maxBatchSize)
     throw Exception("BatchBize cannot be greater than maxBatchSize.");
-  }
-  else if(_param.batchSizePercent && static_cast<eigen_size_t>(_param.maxBatchSize) < static_cast<eigen_size_t>(_param.batchSize*static_cast<double>(_trainInputs.rows())/100))
-  {
-    throw Exception("BatchBize cannot be greater than maxBatchSize.");
-  }
+
+  if(_param.optimalLearningRateDetection && static_cast<eigen_size_t>(_param.learningRateSampling * batchSize) > _trainInputs.rows())
+    throw Exception("Optimal learning rate detection is enabled : the number of samples times the batch size cannot be inferior to the training size");
 }
 
 
@@ -647,6 +647,70 @@ omnilearn::Vector omnilearn::Network::performeOneEpoch()
 }
 
 
+double omnilearn::Network::performeOptimalLearningRateDetection(std::vector<double>& LR, std::vector<double>& validationLoss, std::vector<double>& slopes)
+{
+  // get the different learning rates to be tested
+  LR = std::vector<double>(0);
+  for(size_t i = 0; i < _param.learningRateSampling; i++)
+  {
+    double tmp = static_cast<double>(i)/static_cast<double>(_param.learningRateSampling-1);
+    tmp = _param.minLearningRate * std::exp(tmp*std::log(_param.learningRate/_param.minLearningRate));
+    LR.push_back(tmp);
+  }
+
+  std::bernoulli_distribution nullDist(0); // used to prevent the output neurons to get droppedOut
+  validationLoss = std::vector<double>(0);
+
+  for(size_t batch = 0; batch < _param.learningRateSampling; batch++)
+  {
+    _currentLearningRate = LR[batch];
+    for(size_t feature = 0; feature < _currentBatchSize; feature++)
+    {
+      Vector featureInput = _trainInputs.row(batch*_currentBatchSize + feature);
+      Vector featureOutput = _trainOutputs.row(batch*_currentBatchSize + feature);
+
+      for(size_t i = 0; i < _layers.size(); i++)
+      {
+        featureInput = _layers[i].processToLearn(featureInput, (i == _layers.size()-1 ? nullDist : _dropoutDist), _dropconnectDist, _generator, *_pool);
+      }
+
+      Vector gradients(computeGradVector(featureOutput, featureInput));
+      for(size_t i = 0; i < _layers.size(); i++)
+      {
+        _layers[_layers.size() - i - 1].computeGradients(gradients, *_pool);
+        gradients = _layers[_layers.size() - i - 1].getGradients(*_pool);
+      }
+    }
+
+    for(size_t i = 0; i < _layers.size(); i++)
+    {
+      _layers[i].updateWeights(_currentLearningRate, _param.L1, _param.L2, _param.decay, _param.automaticLearningRate, _param.adaptiveLearningRate, _param.useMaxDenominator, _currentMomentum, _previousMomentum, _nextMomentum, _cumulativeMomentum, _param.window, _param.optimizerBias, _iteration, *_pool);
+    }
+    validationLoss.push_back(computeLossForOptimalLearningRateDetection());
+  }
+
+  // select the optimal learning rate
+  slopes = std::vector<double>(0);
+  double optimal = std::numeric_limits<double>::max();
+  size_t optimalIndex = 0;
+  size_t MA = _param.learningRateMovingAverage + 1;
+  for(size_t i = MA; i < LR.size()-MA; i++)
+  {
+    slopes.push_back((validationLoss[i-MA] - validationLoss[i+MA]) / (std::log(LR[i-MA]) - std::log(LR[i+MA])));
+    if(!std::isnan(slopes[slopes.size()-1]) && slopes[slopes.size()-1] < optimal)
+    {
+      optimal = slopes[slopes.size()-1];
+      optimalIndex = i;
+    }
+  }
+
+  if(optimalIndex == 0)
+    throw Exception("No optimal leaning rate found, all result were probably NaN. This occurs when the learning rate range (sampling) is too high.");
+
+  return LR[optimalIndex];
+}
+
+
 // process taking already processed inputs and giving processed outputs
 // this allow to calculate loss without performing all the preprocessing
 omnilearn::Matrix omnilearn::Network::processForLoss(Matrix inputs) const
@@ -747,6 +811,28 @@ void omnilearn::Network::computeLoss()
 }
 
 
+double omnilearn::Network::computeLossForOptimalLearningRateDetection() const
+{
+  //L1 and L2 regularization loss
+  double L1 = 0;
+  double L2 = 0;
+  std::pair<double, double> L1L2;
+
+  for(size_t i = 0; i < _layers.size(); i++)
+  //for each layer
+  {
+    L1L2 = _layers[i].L1L2(*_pool);
+    L1 += L1L2.first;
+    L2 += L1L2.second;
+  }
+
+  L1 *= _param.L1;
+  L2 *= (_param.L2 * 0.5);
+
+  return averageLoss(computeLossMatrix(_validationOutputs, processForLoss(_validationInputs))) + L1 + L2;
+}
+
+
 void omnilearn::Network::keep()
 {
     for(size_t i = 0; i < _layers.size(); i++)
@@ -814,8 +900,6 @@ void omnilearn::Network::adaptLearningRate()
       _iterationsSinceLastRestart++;
       _currentLearningRate = _param.minLearningRate + 0.5*(_maxLearningRate - _param.minLearningRate)*(1+std::cos(static_cast<double>(_iterationsSinceLastRestart) * pi/ static_cast<double>(_param.warmRestartPeriod)));
     }
-
-    std::cout << _iterationsSinceLastRestart << " " << _currentLearningRate << " " << _maxLearningRate << std::endl;
   }
   else
   {
@@ -883,16 +967,60 @@ void omnilearn::Network::adaptMomentum()
 }
 
 
+void omnilearn::Network::detectOptimalLearningRate()
+{
+  if(_param.optimalLearningRateDetection)
+  {
+    *_io << "\nDetection of optimal learning rate\n";
+    Network net;
+
+    // copy done manually to avoid copying test which could be large
+    net._param = _param;
+    net._generator = _generator;
+    net._dropoutDist = _dropoutDist;
+    net._dropconnectDist = _dropconnectDist;
+
+    net._layers = std::vector<Layer>(0);
+    for(size_t i = 0; i < _layers.size(); i++)
+    {
+      net._layers.push_back(_layers[i].getCopyForOptimalLearningRateDetection());
+    }
+
+    net._pool = std::make_unique<ThreadPool>(_param.threads);
+    net._trainInputs = _trainInputs;
+    net._trainOutputs = _trainOutputs;
+    net._validationInputs = _validationInputs;
+    net._validationOutputs = _validationOutputs;
+    net._epoch = _epoch;
+    net._iteration = _iteration;
+
+    net.adaptBatchSize(); // to set the right batch size
+    net.adaptMomentum(); // to set the right momentums
+
+    std::vector<double> LR;
+    std::vector<double> loss;
+    std::vector<double> slope;
+
+    _param.learningRate = net.performeOptimalLearningRateDetection(LR, loss, slope);
+
+    *_io << "Learning rate, val. loss, slope" << "\n";
+    for(std::size_t i = 0; i < slope.size(); ++i)
+    {
+      *_io << LR[i+_param.learningRateMovingAverage+1] << " " << loss[i+_param.learningRateMovingAverage+1] << " " << slope[i] << "\n";
+    }
+
+    *_io << "\nOptimal LR is " << _param.learningRate << "\n\n";
+  }
+}
+
+
 void omnilearn::Network::check() const
 {
   if(_param.learningRate < _param.minLearningRate)
-    throw Exception("Learning rate cannot be inferior to minLearningRate.");
+    throw Exception("Learning rate cannot be inferior to minimum learning rate.");
 
   if(_param.batchSizePercent && (_param.batchSize <= 0 || _param.batchSize > 100))
     throw Exception("When batch size is expressed as percentage, it must be in ]0, 100].");
-
-  if(_param.learningRate < _param.minLearningRate)
-    throw Exception("Learning rate cannot be inferior to minimum learning rate.");
 
   if(_param.automaticLearningRate && !_param.adaptiveLearningRate)
     throw Exception("Cannot use automatic learning rate without adaptive learning rate.");
@@ -909,7 +1037,7 @@ void omnilearn::Network::check() const
   if(_param.dropconnect < 0 || _param.dropconnect >= 1 || _param.dropout < 0 || _param.dropout >= 1)
     throw Exception("Dropout and dropconnect must be in [0, 1[.");
 
-  if(_param.dropconnect > std::numeric_limits<double>::epsilon() && _param.dropout > std::numeric_limits<double>::epsilon())
+  if(_param.dropconnect > 0 && _param.dropout > 0)
     throw Exception("Dropout and dropconnect can't be used simultaneously.");
 
   if(_param.window < 0 || _param.window >= 1)
@@ -924,29 +1052,32 @@ void omnilearn::Network::check() const
   if(_param.momentumScheduler == Scheduler::Plateau)
     throw Exception("Momentum cannot use the plateau scheduler, the next momentum needed for Nesterov wouldn't be predictible.");
 
-  if(_param.scheduleBatchSize && _param.scheduler == Scheduler::None)
-    throw Exception("The batch size cannot be scheduled with the None scheduler.");
+  if(_param.automaticLearningRate && _param.optimalLearningRateDetection)
+    throw Exception("Optimal scheduler and automatic learning rate cannot be used at the same time.");
 
-  if((_param.scheduler == Scheduler::Plateau || _param.scheduler == Scheduler::Step) && _param.schedulerValue < 1)
-    throw Exception("The scheduler value must be in greater than 1 when the plateau or the step scheduler is used.");
+  if(_param.optimalLearningRateDetection && _param.learningRateSampling < 2*_param.learningRateMovingAverage + 4)
+    throw Exception("When the optimal scheduler is used, the sheduler value must be equal or greater than 4 + (2 x learningRateMovingAverage).");
 
-  if(_param.momentumScheduler == Scheduler::Step && _param.momentumSchedulerValue < 1)
-    throw Exception("The momentum scheduler value must be in greater than 1 when the step scheduler is used.");
+  if((_param.scheduler == Scheduler::Plateau || _param.scheduler == Scheduler::Step) && _param.schedulerValue <= 1)
+    throw Exception("The scheduler value must be greater than 1 when the plateau or the step scheduler is used.");
 
-  if(_param.schedulerDelay <= 0 || _param.momentumSchedulerDelay <= 0)
-    throw Exception("The different scheduler delays must be strictly positive.");
+  if(_param.scheduler == Scheduler::Exp && _param.schedulerValue <= 0)
+    throw Exception("The scheduler value must be greater than 0 when the exponential scheduler is used.");
+
+  if(_param.momentumScheduler == Scheduler::Step && _param.momentumSchedulerValue <= 1)
+    throw Exception("The momentum scheduler value must be greater than 1 when the step scheduler is used.");
+
+  if(_param.momentumScheduler == Scheduler::Exp && _param.momentumSchedulerValue <= 0)
+    throw Exception("The momentum scheduler value must be greater than 0 when the exponential scheduler is used.");
 
   if(_param.schedulerValue <= 0 || _param.momentumSchedulerValue <= 0)
-    throw Exception("The different scheduler values must be strictly positive.");
+    throw Exception("The scheduler values must be strictly positive.");
 
   if(_param.classificationThreshold < 0 || _param.classificationThreshold >= 1)
     throw Exception("The classification threshold must be in [0, 1[.");
 
   if((_param.loss == Loss::BinaryCrossEntropy || _param.loss == Loss::CrossEntropy) && _param.preprocessOutputs.size() != 0)
     throw Exception("Outputs cannot be preprocessed when using (binary) cross-entropy loss.");
-
-  if(_param.scheduler != Scheduler::None)
-    *_io << "WARNING: LR and/or BS scheduler is used. Remind that the plateau scheduler updates parameters with epochs while others do it with iterations. Tweak the scheduler delay and value accordingly.\n";
 }
 
 

@@ -49,10 +49,13 @@ public:
     size_t inputSize() const;
     std::pair<double, double> L1L2() const;
     size_t getNbParameters(bool lockWeights, bool lockBias, bool lockParameters) const;
+    Neuron getCopyForOptimalLearningRateDetection() const;
 
 private:
     std::unique_ptr<IAggregation> _aggregation;
     std::unique_ptr<IActivation> _activation;
+    Activation _activationType;
+    Aggregation _aggregationType;
 
     Matrix _weights;
     Vector _bias;
