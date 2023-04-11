@@ -10,28 +10,33 @@ void vesta()
 
     omnilearn::NetworkParam netp;
     netp.threads = 4;
-
     netp.validationRatio = 0.20;
     netp.testRatio = 0.20;
+
     netp.batchSize = 100;
+    netp.batchSizePercent = false;
     netp.maxBatchSize = 10;
     netp.maxBatchSizePercent = true;
     netp.scheduleBatchSize = true;
-    netp.scheduleLearningRate = true;
+
     netp.learningRate = 0.1;
     netp.minLearningRate = 1e-5;
-    netp.scheduler = omnilearn::Scheduler::Step;
-    netp.schedulerValue = 1.5;
-    netp.schedulerDelay = 1;
-
+    netp.scheduleBatchSize = true;
     netp.optimalLearningRateDetection = true;
     netp.learningRateMovingAverage = 5;
     netp.learningRateSampling = 100;
 
+    netp.scheduler = omnilearn::Scheduler::Plateau;
+    netp.schedulerValue = 2;
+    netp.schedulerDelay = 1;
+
+    netp.optimizer = omnilearn::Optimizer::Nadam;
+    netp.window = 0.99;
+
     netp.momentum = 0;
-    //netp.maxMomentum = 0.90;
-    //netp.momentumScheduler = omnilearn::Scheduler::Exp;
-    //netp.momentumSchedulerValue = 0.1;
+    netp.maxMomentum = 0.90;
+    netp.momentumScheduler = omnilearn::Scheduler::Exp;
+    netp.momentumSchedulerValue = 0.1;
 
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 10;
@@ -43,25 +48,19 @@ void vesta()
     netp.outputWhiteningType = omnilearn::WhiteningType::PCA;
 
     netp.verbose = true;
-    netp.optimizer = omnilearn::Optimizer::Default;
-    netp.window = 0.99;
 
     omnilearn::Network net;
     net.setParam(netp);
     net.setData(data);
-
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.size = 24;
-
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Relu;
     net.addLayer(lay);
-
     // output layer
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Linear;
     net.addLayer(lay);
-
     net.learn();
 }
 

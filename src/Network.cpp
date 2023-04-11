@@ -663,6 +663,7 @@ double omnilearn::Network::performeOptimalLearningRateDetection(std::vector<doub
 
   for(size_t batch = 0; batch < _param.learningRateSampling; batch++)
   {
+    _iteration += 1;
     _currentLearningRate = LR[batch];
     for(size_t feature = 0; feature < _currentBatchSize; feature++)
     {
@@ -1003,7 +1004,7 @@ void omnilearn::Network::detectOptimalLearningRate()
 
     _param.learningRate = net.performeOptimalLearningRateDetection(LR, loss, slope);
 
-    *_io << "Learning rate, val. loss, slope" << "\n";
+    *_io << "\nLearning rate, val. loss, slope" << "\n";
     for(std::size_t i = 0; i < slope.size(); ++i)
     {
       *_io << LR[i+_param.learningRateMovingAverage+1] << " " << loss[i+_param.learningRateMovingAverage+1] << " " << slope[i] << "\n";
