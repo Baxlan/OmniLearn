@@ -59,17 +59,14 @@ void omnilearn::Layer::init(size_t nbInputs, std::mt19937& generator)
 }
 
 
-void omnilearn::Layer::init(size_t nbInputs)
-{
-    _inputSize = nbInputs;
-}
-
-
-omnilearn::Matrix omnilearn::Layer::process(Matrix const& inputs, ThreadPool& t) const
+omnilearn::Matrix omnilearn::Layer::process(Matrix inputs, ThreadPool& t) const
 {
     //lines are features, columns are neurons
     Matrix output(inputs.rows(), _neurons.size());
     std::vector<std::future<void>> tasks(_neurons.size());
+
+    inputs.conservativeResize(inputs.rows(), inputs.cols()+1);
+    inputs.col(inputs.cols()-1) = Vector::Constant(inputs.rows(), 1);
 
     // only one instance of exception_ptr is required because all threads would throw the same exception
     std::exception_ptr ep = nullptr;
@@ -99,11 +96,14 @@ omnilearn::Matrix omnilearn::Layer::process(Matrix const& inputs, ThreadPool& t)
 }
 
 
-omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
+omnilearn::Vector omnilearn::Layer::processToLearn(Vector input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t)
 {
     //each element is associated to a neuron
     Vector output(_neurons.size());
     std::vector<std::future<void>> tasks(_neurons.size());
+
+    input.conservativeResize(input.size()+1);
+    input(input.size()-1) = 1;
 
     for(size_t i = 0; i < _neurons.size(); i++)
     {
@@ -118,11 +118,14 @@ omnilearn::Vector omnilearn::Layer::processToLearn(Vector const& input, std::ber
 }
 
 
-omnilearn::Vector omnilearn::Layer::processToGenerate(Vector const& input, ThreadPool& t)
+omnilearn::Vector omnilearn::Layer::processToGenerate(Vector input, ThreadPool& t)
 {
     //each element is associated to a neuron
     Vector output(_neurons.size());
     std::vector<std::future<void>> tasks(_neurons.size());
+
+    input.conservativeResize(input.size()+1);
+    input(input.size()-1) = 1;
 
     // only one instance of exception_ptr is required because all threads would throw the same exception
     std::exception_ptr ep = nullptr;
@@ -228,7 +231,7 @@ void omnilearn::Layer::updateWeights(double learningRate, double L1, double L2, 
     {
         tasks[i] = t.enqueue([=]()->void
         {
-            _neurons[i].updateWeights(learningRate, L1, L2, weightDecay, _param.maxNorm, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, _param.lockWeights, _param.lockBias, _param.lockParametric);
+            _neurons[i].updateWeights(learningRate, L1, L2, weightDecay, _param.maxNorm, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, _param.lockWeights);
         });
     }
     for(size_t i = 0; i < tasks.size(); i++)
@@ -278,7 +281,7 @@ void omnilearn::Layer::resize(size_t neurons)
 
 size_t omnilearn::Layer::inputSize() const
 {
-    return _neurons[0].inputSize();
+    return _inputSize;
 }
 
 
@@ -306,7 +309,7 @@ std::pair<double, double> omnilearn::Layer::L1L2(ThreadPool& t) const
 
 size_t omnilearn::Layer::getNbParameters() const
 {
-    return _neurons[0].getNbParameters(_param.lockWeights, _param.lockBias, _param.lockParametric) * size();
+    return _neurons[0].getNbParameters(_param.lockWeights) * size();
 }
 
 

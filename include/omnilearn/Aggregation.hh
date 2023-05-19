@@ -25,7 +25,7 @@ class IAggregation
 {
 public:
     virtual ~IAggregation(){}
-    virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const = 0; //double is the result, size_t is the index of the weight set used
+    virtual std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights) const = 0; //double is the result, size_t is the index of the weight set used
     virtual Vector prime(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each weight (weights from the index "index")
     virtual Vector primeInput(Vector const& inputs, Vector const& weights) const = 0; //return derivatives according to each input
     virtual void computeGradients(Vector const& inputs, Vector const& weights, double inputGrad) = 0;
@@ -44,7 +44,7 @@ class Dot : public IAggregation
 {
 public:
     Dot(Vector const& coefs = Vector(0));
-    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
+    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
@@ -63,7 +63,7 @@ class Distance : public IAggregation
 {
 public:
     Distance(Vector const& coefs = (Vector(1) << 2).finished());
-    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
+    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);
@@ -78,7 +78,6 @@ public:
 protected:
     double _order;
     double _savedOrder;
-    static const Vector _bias;
 };
 
 
@@ -108,7 +107,7 @@ class Maxout : public IAggregation
 {
 public:
     Maxout(Vector const& coefs = Vector(0));
-    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights, Vector const& bias) const;
+    std::pair<double, size_t> aggregate(Vector const& inputs, Matrix const& weights) const;
     Vector prime(Vector const& inputs, Vector const& weights) const;
     Vector primeInput(Vector const& inputs, Vector const& weights) const;
     void computeGradients(Vector const& inputs, Vector const& Weights, double inputGrad);

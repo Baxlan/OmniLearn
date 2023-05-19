@@ -38,9 +38,7 @@ struct LayerParam
     k(1),
     aggregation(Aggregation::Dot),
     activation(Activation::Relu),
-    lockWeights(false),
-    lockBias(false),
-    lockParametric(false)
+    lockWeights(false)
     {
     }
 
@@ -54,8 +52,6 @@ struct LayerParam
     Aggregation aggregation;
     Activation activation;
     bool lockWeights;
-    bool lockBias;
-    bool lockParametric;
 };
 
 
@@ -73,10 +69,9 @@ public:
     Layer() = default; // only used in NetworkIO::loadCoefs(). DO NOT USE MANUALLY
     Layer(LayerParam const& param);
     void init(size_t nbInputs, std::mt19937& generator);
-    void init(size_t nbInputs);
-    Matrix process(Matrix const& inputs, ThreadPool& t) const;
-    Vector processToLearn(Vector const& input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t);
-    Vector processToGenerate(Vector const& input, ThreadPool& t);
+    Matrix process(Matrix inputs, ThreadPool& t) const;
+    Vector processToLearn(Vector input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen, ThreadPool& t);
+    Vector processToGenerate(Vector input, ThreadPool& t);
     void computeGradients(Vector const& inputGradient, ThreadPool& t);
     void computeGradientsAccordingToInputs(Vector const& inputGradient, ThreadPool& t);
     void keep();

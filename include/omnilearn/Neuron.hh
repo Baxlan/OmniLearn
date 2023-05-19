@@ -38,7 +38,7 @@ public:
     double processToGenerate(Vector const& input);
     //compute gradients for one feature, finally summed for the whole batch
     void computeGradients(double inputGradient);
-    void updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, bool lockWeights, bool lockBias, bool lockParametric);
+    void updateWeights(double learningRate, double L1, double L2, double weightDecay, double maxNorm, bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, bool lockWeights);
     //one gradient per input neuron
     Vector getGradients() const;
     void keep();
@@ -46,9 +46,8 @@ public:
     void computeGradientsAccordingToInputs(double inputGradient);
     void updateInput(Vector& input, double learningRate); // for generation
     void resetGradientsForGeneration();
-    size_t inputSize() const;
     std::pair<double, double> L1L2() const;
-    size_t getNbParameters(bool lockWeights, bool lockBias, bool lockParameters) const;
+    size_t getNbParameters(bool lockWeights) const;
     Neuron getCopyForOptimalLearningRateDetection() const;
 
 private:
@@ -58,33 +57,23 @@ private:
     Aggregation _aggregationType;
 
     Matrix _weights;
-    Vector _bias;
 
     Vector _input;
     std::pair<double, size_t> _aggregResult;
     double _actResult;
     bool _dropped;
     BoolVector _connectDropped;
-    bool _biasDropped;
 
     double _actGradient; //gradient of activation according to aggregation result
     Matrix _gradients; //sum (over features of the batch) of partial gradient of aggregation according to each weight
-    Vector _biasGradients;
     Vector _featureGradient; // store gradients for the current feature (for the previous layer's neurons)
     size_t _count;
     Size_tVector _counts; // one count per weight, useful in case of dropconnect
-    size_t _biasCount;
     Matrix _previousWeightGradient; // used for optimizers (momentum effect)
-    Vector _previousBiasGradient; // used for optimizers (momentum effect)
     Matrix _previousWeightGradient2; // used for optimizers (window effect)
-    Vector _previousBiasGradient2; // used for optimizers (window effect)
     Matrix _optimalPreviousWeightGradient2; // used for optimizers (see AMSGrad documentation)
-    Vector _optimalPreviousBiasGradient2; // used for optimizers (see AMSGrad docimentation)
     Matrix _previousWeightUpdate; // used for optimizers (to replace learning rate)
-    Vector _previousBiasUpdate; // used for optimizers (to replace learning rate)
-
     Matrix _savedWeights;
-    Vector _savedBias;
 
     Vector _generativeGradients; // partial gradient for each input to tweak
 };

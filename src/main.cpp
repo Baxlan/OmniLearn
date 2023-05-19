@@ -21,9 +21,9 @@ void vesta()
 
     netp.learningRate = 0.1;
     netp.minLearningRate = 1e-5;
-    netp.scheduleBatchSize = true;
+    netp.scheduleLearningRate = true;
     netp.optimalLearningRateDetection = true;
-    netp.learningRateMovingAverage = 5;
+    netp.learningRateMovingAverage = 3;
     netp.learningRateSampling = 100;
 
     netp.scheduler = omnilearn::Scheduler::Plateau;
@@ -36,7 +36,7 @@ void vesta()
     netp.momentum = 0;
     netp.maxMomentum = 0.90;
     netp.momentumScheduler = omnilearn::Scheduler::Exp;
-    netp.momentumSchedulerValue = 0.1;
+    netp.momentumSchedulerValue = 0.01;
 
     netp.loss = omnilearn::Loss::L2;
     netp.patience = 10;
@@ -98,9 +98,7 @@ void iris()
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
     lay.size = 32;
-    //lay.lockBias = true;
     //lay.lockWeights = true;
-    //lay.lockParametric = true;
 
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Softplus;
@@ -179,7 +177,7 @@ void mnist()
 void testLoader()
 {
     omnilearn::Network genNet;
-    genNet.load("omnilearn_network2", true, 4);
+    genNet.load("omnilearn_network9.save", true, 4);
     //omnilearn::Data data = omnilearn::loadData("dataset/crypto_bot.csv", ';', 4);
     omnilearn::Data data = genNet.getTestData();
     std::array<double, 4> metric = omnilearn::classificationMetrics(data.outputs, genNet.process(data.inputs), 0.5);
@@ -219,36 +217,50 @@ void cryptoBot()
     omnilearn::NetworkParam netp;
 
     netp.threads = 4;
-    netp.batchSize = 50;
+    netp.classificationThreshold = 0.50;
+    netp.validationRatio = 0.20;
+    netp.testRatio = 0.30;
+    netp.verbose = true;
+
+    netp.batchSize = 100;
     netp.batchSizePercent = false;
-    netp.learningRate = 0.01;
+    netp.maxBatchSize = 10;
+    netp.maxBatchSizePercent = true;
+    netp.scheduleBatchSize = true;
+
+/*
+    netp.learningRate = 0.001;
+    netp.minLearningRate = 1e-7;
+    netp.scheduleLearningRate = true;
+
+    netp.optimalLearningRateDetection = true;
+    netp.learningRateMovingAverage = 10;
+    netp.learningRateSampling = 100;
+
+    netp.warmRestart = true;
+    netp.warmRestartPeriod = 100;
+    netp.warmRestartFactor = 1.3;
+*/
+
+    netp.scheduler = omnilearn::Scheduler::Exp;
+    netp.schedulerValue = 0.01;
+    //netp.schedulerDelay = 1;
+
+    netp.optimizer = omnilearn::Optimizer::Adadelta;
+
+    netp.momentum = 0.;
+    netp.maxMomentum = 0.9;
+    netp.momentumScheduler = omnilearn::Scheduler::Exp;
+    //netp.momentumSchedulerDelay = 1;
+    netp.momentumSchedulerValue = 0.008;
+
     netp.loss = omnilearn::Loss::BinaryCrossEntropy;
     netp.patience = 5 ;
     netp.improvement = 0.01;
 
-    netp.momentum = 0.;
-    netp.momentumScheduler = omnilearn::Scheduler::Exp;
-    netp.momentumSchedulerDelay = 1;
-    netp.momentumSchedulerValue = 0.005;
-    netp.maxMomentum = 0.9;
-
-    netp.scheduler = omnilearn::Scheduler::Exp;
-    netp.schedulerValue = 0.005;
-    //netp.schedulerDelay = 1;
-    netp.scheduleBatchSize = true;
-    netp.scheduleLearningRate = true;
-    netp.maxBatchSize = 10;
-    netp.maxBatchSizePercent = true;
-
-    netp.classificationThreshold = 0.50;
-    netp.validationRatio = 0.10;
-    netp.testRatio = 0.25;
-    netp.verbose = true;
-
     netp.preprocessInputs = {omnilearn::Preprocess::Standardize, omnilearn::Preprocess::Whiten, omnilearn::Preprocess::Reduce};
     netp.inputReductionThreshold = 0.95;
     netp.inputWhiteningType = omnilearn::WhiteningType::PCA;
-    netp.optimizer = omnilearn::Optimizer::Adadelta;
 
     //netp.weightMode = omnilearn::Weight::Automatic;
     //netp.weightMode = omnilearn::Weight::Enabled;
@@ -263,7 +275,7 @@ void cryptoBot()
 
     omnilearn::LayerParam lay = omnilearn::Layer::generateNonLinearLayerParam();
 
-    lay.size = 512;
+    lay.size = 1024;
     lay.aggregation = omnilearn::Aggregation::Dot;
     lay.activation = omnilearn::Activation::Prelu;
     net.addLayer(lay);
@@ -336,11 +348,11 @@ void cube()
 int main()
 {
     //mnist();
-    vesta();
+    //vesta();
     //iris();
     //testLoader();
     //generate();
-    //cryptoBot();
+    cryptoBot();
     //cube();
 
     return 0;

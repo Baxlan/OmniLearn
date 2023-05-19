@@ -296,6 +296,7 @@ private:
   size_t _currentBatchSize;
   bool   _broke;
   bool   _firstTimeMaxBatchSizeReached;
+  bool   _scheduled;
   size_t _missedData; // # of data ignored because the minibatch would be incomplete
   size_t _epochWhenBatchSizeReachedMax;
   size_t _iterationWhenBatchSizeReachedMax;

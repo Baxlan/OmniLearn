@@ -589,6 +589,7 @@ omnilearn::Vector omnilearn::Network::performeOneEpoch()
   std::vector<double> MO(0);
 
   size_t passedFeatures = 0;
+  _scheduled = false;
 
   while(true) // loop exit condition is the break one
   {
@@ -878,8 +879,11 @@ void omnilearn::Network::adaptLearningRate()
     else if(_param.scheduler == Scheduler::Step)
       _maxLearningRate = LRstep(_param.learningRate, iterationToUse, _param.schedulerValue, _param.schedulerDelay);
     else if(_param.scheduler == Scheduler::Plateau)
-      if(epochToUse - _optimalEpoch > _param.schedulerDelay)
+      if(epochToUse - _optimalEpoch > _param.schedulerDelay && !_scheduled)
+      {
         _maxLearningRate /= _param.schedulerValue;
+         _scheduled = true;
+      }
 
     if(_maxLearningRate < _param.minLearningRate)
       _maxLearningRate = _param.minLearningRate;
@@ -927,8 +931,11 @@ void omnilearn::Network::adaptBatchSize()
     else if(_param.scheduler == Scheduler::Step)
       _currentBatchSize = static_cast<size_t>(std::round(BSstep(static_cast<double>(batchSize), _iteration, _param.schedulerValue, _param.schedulerDelay)));
     else if(_param.scheduler == Scheduler::Plateau)
-      if(_epoch - _optimalEpoch > _param.schedulerDelay)
-          _currentBatchSize = static_cast<size_t>(std::round(static_cast<double>(_currentBatchSize) * _param.schedulerValue));
+      if(_epoch - _optimalEpoch > _param.schedulerDelay && !_scheduled)
+      {
+        _currentBatchSize = static_cast<size_t>(std::round(static_cast<double>(_currentBatchSize) * _param.schedulerValue));
+        _scheduled = true;
+      }
 
     if(_currentBatchSize >= maxBatchSize && _firstTimeMaxBatchSizeReached)
     {
