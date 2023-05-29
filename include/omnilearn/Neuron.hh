@@ -19,10 +19,6 @@ namespace omnilearn
 
 
 
-enum class Distrib {Uniform, Normal};
-
-
-
 class Neuron
 {
     friend void to_json(json& jObj, Neuron const& neuron);
@@ -31,7 +27,7 @@ class Neuron
 public:
     Neuron() = default; // only used in from_json(Layer). Segfault may occure if used manually. Cannot be private :(
     Neuron(Aggregation aggregation, Activation activation);
-    void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t k, std::mt19937& generator, bool useOutput);
+    void init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, std::mt19937& generator, bool useOutput);
     //each line of the input matrix is a feature. Returns one result per feature.
     Vector process(Matrix const& inputs) const;
     double processToLearn(Vector const& input, std::bernoulli_distribution& dropoutDist, std::bernoulli_distribution& dropconnectDist, std::mt19937& dropGen);
@@ -56,24 +52,20 @@ private:
     Activation _activationType;
     Aggregation _aggregationType;
 
-    Matrix _weights;
+    Vector _weights;
 
     Vector _input;
-    std::pair<double, size_t> _aggregResult;
+    double _aggregResult;
     double _actResult;
     bool _dropped;
     BoolVector _connectDropped;
 
     double _actGradient; //gradient of activation according to aggregation result
-    Matrix _gradients; //sum (over features of the batch) of partial gradient of aggregation according to each weight
     Vector _featureGradient; // store gradients for the current feature (for the previous layer's neurons)
+    std::vector<LearnableParameterInfos> _weightInfos;
     size_t _count;
     Size_tVector _counts; // one count per weight, useful in case of dropconnect
-    Matrix _previousWeightGradient; // used for optimizers (momentum effect)
-    Matrix _previousWeightGradient2; // used for optimizers (window effect)
-    Matrix _optimalPreviousWeightGradient2; // used for optimizers (see AMSGrad documentation)
-    Matrix _previousWeightUpdate; // used for optimizers (to replace learning rate)
-    Matrix _savedWeights;
+    Vector _savedWeights;
 
     Vector _generativeGradients; // partial gradient for each input to tweak
 };

@@ -12,8 +12,27 @@ namespace omnilearn
 
 
 
-void optimizedUpdate(double& coefToUpdate, double& previousGrad, double& previousGrad2, double& optimalPreviousGrad2,
-                    double& previousUpdate, double gradient, bool automaticLearningRate, bool adaptiveLearningRate,
+struct LearnableParameterInfos
+{
+    LearnableParameterInfos():
+    gradient(0),
+    previousGrad(0),
+    previousGrad2(0),
+    optimalPreviousGrad2(0),
+    previousUpdate(0)
+    {
+    }
+
+    double gradient; //sum (over features of the batch) of partial gradient of aggregation according to each weight
+    double previousGrad; // momentum effect
+    double previousGrad2; // window effect
+    double optimalPreviousGrad2; // see AMSGrad documentation
+    double previousUpdate; // replaces learning rate if asked
+};
+
+
+
+void optimizedUpdate(double& coefToUpdate, LearnableParameterInfos& parameterInfos, bool automaticLearningRate, bool adaptiveLearningRate,
                     bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum,
                     double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2,
                     double decay, bool avoidZero = false);

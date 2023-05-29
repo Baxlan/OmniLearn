@@ -8,6 +8,7 @@
 #include <string>
 
 #include "Matrix.hh"
+#include "omnilearn/optimizer.h"
 
 
 
@@ -16,6 +17,7 @@ namespace omnilearn
 
 
 
+enum class Distrib {Uniform, Normal};
 enum class Activation {Linear, Sigmoid, Tanh, Softplus, Relu, Prelu, Elu, Pelu, Gauss, Pgauss};
 
 
@@ -146,11 +148,7 @@ public:
     size_t getNbParameters() const;
 
 protected:
-    double _coefGradient;
-    double _previousCoefGrad;
-    double _previousCoefGrad2;
-    double _optimalPreviousCoefGrad2;
-    double _previousCoefUpdate;
+    LearnableParameterInfos _coefInfos;
     size_t _counter;
 };
 
@@ -193,18 +191,13 @@ public:
     size_t getNbParameters() const;
 
 protected:
-    double _coefGradient;
-    double _previousCoefGrad;
-    double _previousCoefGrad2;
-    double _optimalPreviousCoefGrad2;
-    double _previousCoefUpdate;
-    double _coef2Gradient;
-    double _previousCoef2Grad;
-    double _previousCoef2Grad2;
-    double _optimalPreviousCoef2Grad2;
-    double _previousCoef2Update;
+    LearnableParameterInfos _coef1Infos;
+    LearnableParameterInfos _coef2Infos;
     size_t _counter;
 };
+
+
+
 class Gauss : public IActivation
 {
 public:
@@ -242,18 +235,8 @@ public:
     size_t getNbParameters() const;
 
 protected:
-    double _centerGradient;
-    double _previousCenterGrad;
-    double _previousCenterGrad2;
-    double _optimalPreviousCenterGrad2;
-    double _previousCenterUpdate;
-
-    double _devGradient;
-    double _previousDevGrad;
-    double _previousDevGrad2;
-    double _optimalPreviousDevGrad2;
-    double _previousDevUpdate;
-
+    LearnableParameterInfos _centerInfos;
+    LearnableParameterInfos _devInfos;
     size_t _counter;
 };
 

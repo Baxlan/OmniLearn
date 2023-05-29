@@ -10,63 +10,49 @@ _aggregation(aggregationMap[aggregation]()),
 _activation(activationMap[activation]()),
 _activationType(activation),
 _aggregationType(aggregation),
-_weights(Matrix(0, 0)),
+_weights(Vector(0)),
 _input(),
 _aggregResult(),
 _actResult(),
 _dropped(false),
 _connectDropped(),
 _actGradient(),
-_gradients(),
 _featureGradient(),
+_weightInfos(),
 _count(0),
 _counts(),
-_previousWeightGradient(),
-_previousWeightGradient2(),
-_optimalPreviousWeightGradient2(),
-_previousWeightUpdate(),
 _savedWeights(),
 _generativeGradients()
 {
 }
 
 
-void omnilearn::Neuron::init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, size_t k, std::mt19937& generator, bool useOutput)
+void omnilearn::Neuron::init(Distrib distrib, double distVal1, double distVal2, size_t nbInputs, size_t nbOutputs, std::mt19937& generator, bool useOutput)
 {
-    if(_weights.rows() == 0)
+    if(_weights.size() == 0)
     {
-        _weights = Matrix(k, nbInputs+1); // +1 because last element is the bias
+        _weights = Vector(nbInputs+1); // +1 because last element is the bias
     }
     if(distrib == Distrib::Normal)
     {
         double deviation = std::sqrt(distVal2 / static_cast<double>(nbInputs + (useOutput ? nbOutputs : 0)));
         std::normal_distribution<double> normalDist(distVal1, deviation);
-        for(eigen_size_t i = 0; i < _weights.rows(); i++)
-        {
-            for(eigen_size_t j = 0; j < _weights.cols()-1; j++)
-                _weights(i, j) = normalDist(generator);
-            _weights(i, _weights.cols()-1) = 0; // setting bias to 0
-        }
+        for(eigen_size_t i = 0; i < _weights.size(); i++)
+            _weights(i) = normalDist(generator);
     }
     else if(distrib == Distrib::Uniform)
     {
         double boundary = std::sqrt(distVal2 / static_cast<double>(nbInputs + (useOutput ? nbOutputs : 0)));
         std::uniform_real_distribution<double> uniformDist(-boundary, boundary);
-        for(eigen_size_t i = 0; i < _weights.rows(); i++)
-        {
-            for(eigen_size_t j = 0; j < _weights.cols()-1; j++)
-                _weights(i, j) = uniformDist(generator);
-            _weights(i, _weights.cols()-1) = 0; // setting bias to 0
-        }
+        for(eigen_size_t i = 0; i < _weights.size(); i++)
+                _weights(i) = uniformDist(generator);
     }
-    _previousWeightUpdate = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
-    _previousWeightGradient = _previousWeightUpdate;
-    _previousWeightGradient2 = _previousWeightUpdate;
-    _optimalPreviousWeightGradient2 = _previousWeightUpdate;
+    _weightInfos = std::vector<LearnableParameterInfos>(_weights.size());
     _count = 0;
-    _counts = Size_tVector::Constant(_weights.cols(), 0);
-    _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
-    _generativeGradients = Vector::Constant(_weights.cols()-1, 0); // -1 to avoid bias
+    _counts = Size_tVector::Constant(_weights.size(), 0);
+    _generativeGradients = Vector::Constant(_weights.size()-1, 0); // -1 to avoid bias
+
+    _aggregation->init(distrib, distVal1, distVal2, nbInputs, nbOutputs, generator, useOutput);
 }
 
 
@@ -75,7 +61,7 @@ omnilearn::Vector omnilearn::Neuron::process(Matrix const& inputs) const
 {
     Vector results = Vector(inputs.rows());
     for(eigen_size_t i = 0; i < inputs.rows(); i++)
-        results[i] = _activation->activate(_aggregation->aggregate(inputs.row(i), _weights).first);
+        results[i] = _activation->activate(_aggregation->aggregate(inputs.row(i), _weights));
     return results;
 }
 
@@ -84,7 +70,7 @@ double omnilearn::Neuron::processToLearn(Vector const& input, std::bernoulli_dis
 {
     _input = input;
     _dropped = dropoutDist(dropGen);
-    _connectDropped = BoolVector::Constant(_weights.cols(), false);
+    _connectDropped = BoolVector::Constant(_weights.size(), false);
 
     if(_dropped)
     {
@@ -110,7 +96,7 @@ double omnilearn::Neuron::processToLearn(Vector const& input, std::bernoulli_dis
 
          //processing
         _aggregResult = _aggregation->aggregate(_input, _weights);
-        _actResult = _activation->activate(_aggregResult.first) / (1-dropoutDist.p());
+        _actResult = _activation->activate(_aggregResult) / (1-dropoutDist.p());
     }
 
     return _actResult;
@@ -123,7 +109,7 @@ double omnilearn::Neuron::processToGenerate(Vector const& input)
 
     //processing
     _aggregResult = _aggregation->aggregate(_input, _weights);
-    _actResult = _activation->activate(_aggregResult.first);
+    _actResult = _activation->activate(_aggregResult);
 
     return _actResult;
 }
@@ -134,20 +120,20 @@ void omnilearn::Neuron::computeGradients(double inputGradient)
 {
     if(!_dropped)
     {
-        _featureGradient = Vector(_weights.cols()-1);
+        _featureGradient = Vector(_weights.size()-1);
 
-        _actGradient = _activation->prime(_aggregResult.first);
-        Vector grad(_aggregation->prime(_input, _weights.row(_aggregResult.second)));
+        _actGradient = _activation->prime(_aggregResult);
+        Vector grad(_aggregation->prime(_input, _weights));
 
-        _activation->computeGradients(_aggregResult.first, inputGradient);
-        _aggregation->computeGradients(_input, _weights.row(_aggregResult.second), _actGradient * inputGradient);
+        _activation->computeGradients(_aggregResult, inputGradient);
+        _aggregation->computeGradients(_input, _weights, _actGradient * inputGradient);
 
         for(eigen_size_t i = 0; i < grad.size(); i++)
         {
-            _gradients(_aggregResult.second, i) += (inputGradient * _actGradient * grad[i]); // grad[i] is zero if dropconnected
+            _weightInfos[i].gradient += (inputGradient * _actGradient * grad[i]); // grad[i] is zero if dropconnected
             if(i < grad.size()-1) // entities extranal from current neuron don't need the bias gradient
             {
-                _featureGradient(i) = (inputGradient * _actGradient * grad[i] * _weights(_aggregResult.second, i));
+                _featureGradient(i) = (inputGradient * _actGradient * grad[i] * _weights(i));
             }
         }
 
@@ -166,36 +152,29 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
     if(_count != 0) // can be 0 because of dropout if batch size is 1
     {
         //average gradients over features
-        for(eigen_size_t i = 0; i < _gradients.rows(); i++)
-            for(eigen_size_t j = 0; j < _gradients.cols(); j++)
-                if(_counts[j] != 0)
-                    _gradients(i, j) /= static_cast<double>(_counts[j]);
+        for(size_t i = 0; i < _weightInfos.size(); i++)
+            if(_counts[i] != 0)
+                _weightInfos[i].gradient /= static_cast<double>(_counts[i]);
 
         _activation->updateCoefs(automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
         _aggregation->updateCoefs(automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
 
-        for(eigen_size_t i = 0; i < _weights.rows(); i++)
+        if(!lockWeights)
         {
-            if(!lockWeights)
-            {
-                for(eigen_size_t j = 0; j < _weights.cols()-1; j++) // -1 to avoid bias (not included in regularization)
-                    optimizedUpdate(_weights(i, j), _previousWeightGradient(i, j), _previousWeightGradient2(i, j), _optimalPreviousWeightGradient2(i, j), _previousWeightUpdate(i, j), _gradients(i, j), automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, weightDecay);
-                optimizedUpdate(_weights(i, _weights.cols()-1), _previousWeightGradient(i, _weights.cols()-1), _previousWeightGradient2(i, _weights.cols()-1), _optimalPreviousWeightGradient2(i, _weights.cols()-1), _previousWeightUpdate(i, _weights.cols()-1), _gradients(i, _weights.cols()-1), automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
-            }
+            for(eigen_size_t i = 0; i < _weights.size()-1; i++) // -1 to avoid bias (not included in regularization)
+                optimizedUpdate(_weights(i), _weightInfos[i], automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, weightDecay);
+            optimizedUpdate(_weights(_weights.size()-1), _weightInfos[_weights.size()-1], automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, 0, 0, 0);
         }
 
         //max norm constraint
         if(maxNorm > std::numeric_limits<double>::epsilon())
         {
-            for(eigen_size_t i = 0; i < _weights.rows(); i++)
+            double Norm = norm(_weights);
+            if(Norm > maxNorm)
             {
-                double Norm = norm(_weights);
-                if(Norm > maxNorm)
+                for(eigen_size_t i=0; i<_weights.size(); i++)
                 {
-                    for(eigen_size_t j=0; j<_weights.cols(); j++)
-                    {
-                        _weights(i, j) *= (maxNorm/Norm);
-                    }
+                    _weights(i) *= (maxNorm/Norm);
                 }
             }
         }
@@ -203,8 +182,8 @@ void omnilearn::Neuron::updateWeights(double learningRate, double L1, double L2,
 
     //reset gradients for the next batch
     _count = 0;
-    _counts = Size_tVector::Constant(_weights.cols(), 0);
-    _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+    _counts = Size_tVector::Constant(_weights.size(), 0);
+    _weightInfos = std::vector<LearnableParameterInfos>(_weights.size());
 }
 
 
@@ -233,8 +212,8 @@ void omnilearn::Neuron::release()
 
 void omnilearn::Neuron::computeGradientsAccordingToInputs(double inputGradient)
 {
-    _actGradient = _activation->prime(_aggregResult.first);
-    Vector grad(_aggregation->primeInput(_input, _weights.row(_aggregResult.second)));
+    _actGradient = _activation->prime(_aggregResult);
+    Vector grad(_aggregation->primeInput(_input, _weights));
 
     for(eigen_size_t i = 0; i < grad.size()-1; i++) // -1 to avoid bias
     {
@@ -250,13 +229,13 @@ void omnilearn::Neuron::updateInput(Vector& input, double learningRate)
         input[i] += (_generativeGradients[i] * learningRate);
     }
     //reset gradients for the next iteration
-    _generativeGradients = Vector::Constant(_weights.cols()-1, 0); // -1 to avoid bias
+    _generativeGradients = Vector::Constant(_weights.size()-1, 0); // -1 to avoid bias
 }
 
 
 void omnilearn::Neuron::resetGradientsForGeneration()
 {
-    _gradients = Matrix::Constant(_weights.rows(), _weights.cols(), 0);
+    _weightInfos = std::vector<LearnableParameterInfos>(_weights.size());
 }
 
 
@@ -264,13 +243,10 @@ std::pair<double, double> omnilearn::Neuron::L1L2() const
 {
     double L1 = 0;
     double L2 = 0;
-    for(eigen_size_t i = 0; i < _weights.rows(); i++)
+    for(eigen_size_t i = 0; i < _weights.size()-1; i++) // -1 to avoid bias (not included in regularization)
     {
-        for(eigen_size_t j = 0; j < _weights.cols()-1; j++) // -1 to avoid bias (not included in regularization)
-        {
-            L1 += std::abs(_weights(i, j));
-            L2 += std::pow(_weights(i, j), 2);
-        }
+        L1 += std::abs(_weights(i));
+        L2 += std::pow(_weights(i), 2);
     }
     return {L1, L2};
 }
@@ -279,7 +255,7 @@ std::pair<double, double> omnilearn::Neuron::L1L2() const
 size_t omnilearn::Neuron::getNbParameters(bool lockWeights) const
 {
     size_t nbParameters = 0;
-    nbParameters += (lockWeights ? 0 : _weights.cols()*_weights.rows());
+    nbParameters += (lockWeights ? 0 : _weights.size());
     nbParameters += _activation->getNbParameters() + _aggregation->getNbParameters();
     return nbParameters;
 }
@@ -301,14 +277,10 @@ omnilearn::Neuron omnilearn::Neuron::getCopyForOptimalLearningRateDetection() co
     neuron._dropped = _dropped;
     neuron._connectDropped = _connectDropped;
     neuron._actGradient = _actGradient;
-    neuron._gradients = _gradients;
     neuron._featureGradient = _featureGradient;
+    neuron._weightInfos = _weightInfos;
     neuron._count = _count;
     neuron._counts = _counts;
-    neuron._previousWeightGradient = _previousWeightGradient;
-    neuron._previousWeightGradient2 = _previousWeightGradient2;
-    neuron._optimalPreviousWeightGradient2 = _optimalPreviousWeightGradient2;
-    neuron._previousWeightUpdate = _previousWeightUpdate;
     neuron._savedWeights = _savedWeights;
     neuron._generativeGradients = _generativeGradients;
 
@@ -323,10 +295,7 @@ void omnilearn::to_json(json& jObj, Neuron const& neuron)
     jObj["aggregation"] = neuron._aggregation->getCoefs();
     jObj["activation"] = neuron._activation->getCoefs();
 
-    for(eigen_size_t i = 0; i < neuron._weights.rows(); i++)
-    {
-        jObj["weights"][i] = Vector(neuron._weights.row(i));
-    }
+    jObj["weights"] = neuron._weights;
 }
 
 
@@ -336,19 +305,11 @@ void omnilearn::from_json(json const& jObj, Neuron& neuron)
     neuron._activation = activationMap[stringToActivationMap[jObj.at("activation type")]]();
     neuron._aggregation->setCoefs(stdToEigenVector(jObj.at("aggregation")));
     neuron._activation->setCoefs(stdToEigenVector(jObj.at("activation")));
-
-    neuron._weights = Matrix(jObj.at("weights").size(), jObj.at("weights").at(0).size());
-
-    for(eigen_size_t i = 0; i < neuron._weights.rows(); i++)
-        neuron._weights.row(i) = stdToEigenVector(jObj.at("weights").at(i));
+    neuron._weights = stdToEigenVector(jObj.at("weights"));
 
     // init the neuron members
-    neuron._previousWeightUpdate = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
-    neuron._previousWeightGradient = neuron._previousWeightUpdate;
-    neuron._previousWeightGradient2 = neuron._previousWeightUpdate;
-    neuron._optimalPreviousWeightGradient2 = neuron._previousWeightUpdate;
+    neuron._weightInfos = std::vector<LearnableParameterInfos>(neuron._weights.size());
     neuron._count = 0;
-    neuron._counts = Size_tVector::Constant(neuron._weights.cols(), 0);
-    neuron._gradients = Matrix::Constant(neuron._weights.rows(), neuron._weights.cols(), 0);
-    neuron._generativeGradients = Vector::Constant(neuron._weights.cols()-1, 0); // -1 to avoid bias
+    neuron._counts = Size_tVector::Constant(neuron._weights.size(), 0);
+    neuron._generativeGradients = Vector::Constant(neuron._weights.size()-1, 0); // -1 to avoid bias
 }

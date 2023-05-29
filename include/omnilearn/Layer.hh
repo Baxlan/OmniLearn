@@ -35,7 +35,6 @@ struct LayerParam
         // use NORMAL distribution, set useOutput to false and set deviation_boundary to 2
     deviation_boundary(2),
     useOutput(false),
-    k(1),
     aggregation(Aggregation::Dot),
     activation(Activation::Relu),
     lockWeights(false)
@@ -45,10 +44,9 @@ struct LayerParam
     size_t size; //number of neurons
     double maxNorm;
     Distrib distrib;
-    double mean; //mean (if normal), nor used (if uniform)
+    double mean; //mean (if normal), not used (if uniform)
     double deviation_boundary; //deviation (if normal) or boundary (if uniform)
-    bool useOutput; // calculate boundary/deviation by taking output number into account
-    size_t k; //number of weight set for each neuron (for maxout)
+    bool useOutput; // calculate boundary/deviation by taking output size into account
     Aggregation aggregation;
     Activation activation;
     bool lockWeights;

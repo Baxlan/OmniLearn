@@ -2,7 +2,6 @@
 
 #include "omnilearn/Activation.hh"
 #include "omnilearn/Exception.hh"
-#include "omnilearn/optimizer.h"
 
 
 
@@ -419,11 +418,7 @@ size_t omnilearn::Relu::getNbParameters() const
 
 omnilearn::Prelu::Prelu(Vector const& coefs):
 Relu(coefs),
-_coefGradient(0),
-_previousCoefGrad(0),
-_previousCoefGrad2(0),
-_optimalPreviousCoefGrad2(0),
-_previousCoefUpdate(0),
+_coefInfos(),
 _counter(0)
 {
 }
@@ -431,17 +426,17 @@ _counter(0)
 
 void omnilearn::Prelu::computeGradients(double aggr, double inputGrad)
 {
-    _coefGradient -= inputGrad * (aggr < 0 ? aggr : 0);
+    _coefInfos.gradient -= inputGrad * (aggr < 0 ? aggr : 0);
     _counter += 1;
 }
 
 
 void omnilearn::Prelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
-    _coefGradient /= static_cast<double>(_counter);
-    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    _coefInfos.gradient /= static_cast<double>(_counter);
+    optimizedUpdate(_coef, _coefInfos, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
 
-    _coefGradient = 0;
+    _coefInfos = LearnableParameterInfos();
     _counter = 0;
 }
 
@@ -450,11 +445,7 @@ void omnilearn::Prelu::setCoefs(Vector const& coefs)
 {
     Relu::setCoefs(coefs);
 
-    _coefGradient = 0;
-    _previousCoefGrad = 0;
-    _previousCoefGrad2 = 0;
-    _optimalPreviousCoefGrad2 = 0;
-    _previousCoefUpdate = 0;
+    _coefInfos = LearnableParameterInfos();
     _counter = 0;
 }
 
@@ -583,16 +574,8 @@ size_t omnilearn::Elu::getNbParameters() const
 
 omnilearn::Pelu::Pelu(Vector const& coefs):
 Elu(coefs),
-_coefGradient(0),
-_previousCoefGrad(0),
-_previousCoefGrad2(0),
-_optimalPreviousCoefGrad2(0),
-_previousCoefUpdate(0),
-_coef2Gradient(0),
-_previousCoef2Grad(0),
-_previousCoef2Grad2(0),
-_optimalPreviousCoef2Grad2(0),
-_previousCoef2Update(0),
+_coef1Infos(),
+_coef2Infos(),
 _counter(0)
 {
 }
@@ -600,22 +583,22 @@ _counter(0)
 
 void omnilearn::Pelu::computeGradients(double aggr, double inputGrad)
 {
-    _coefGradient += inputGrad * (aggr < 0 ? std::exp(aggr/_coef2)-1 : aggr/_coef2);
-    _coef2Gradient += inputGrad * (aggr < 0 ? -aggr*_coef*std::exp(aggr/_coef2)/std::pow(_coef2, 2) : -_coef*aggr/std::pow(_coef2,2));
+    _coef1Infos.gradient += inputGrad * (aggr < 0 ? std::exp(aggr/_coef2)-1 : aggr/_coef2);
+    _coef2Infos.gradient += inputGrad * (aggr < 0 ? -aggr*_coef*std::exp(aggr/_coef2)/std::pow(_coef2, 2) : -_coef*aggr/std::pow(_coef2,2));
     _counter += 1;
 }
 
 
 void omnilearn::Pelu::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
-    _coefGradient /= static_cast<double>(_counter);
-    _coef2Gradient /= static_cast<double>(_counter);
+    _coef1Infos.gradient /= static_cast<double>(_counter);
+    _coef2Infos.gradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_coef, _previousCoefGrad, _previousCoefGrad2, _optimalPreviousCoefGrad2, _previousCoefUpdate, _coefGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-    optimizedUpdate(_coef2, _previousCoef2Grad, _previousCoef2Grad2, _optimalPreviousCoef2Grad2, _previousCoef2Update, _coef2Gradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
+    optimizedUpdate(_coef, _coef1Infos, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_coef2, _coef2Infos, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
 
-    _coefGradient = 0;
-    _coef2Gradient = 0;
+    _coef1Infos = LearnableParameterInfos();
+    _coef2Infos = LearnableParameterInfos();
     _counter = 0;
 }
 
@@ -624,16 +607,8 @@ void omnilearn::Pelu::setCoefs(Vector const& coefs)
 {
     Elu::setCoefs(coefs);
 
-    _coefGradient = 0;
-    _previousCoefGrad = 0;
-    _previousCoefGrad2 = 0;
-    _optimalPreviousCoefGrad2 = 0;
-    _previousCoefUpdate = 0;
-    _coef2Gradient = 0;
-    _previousCoef2Grad = 0;
-    _previousCoef2Grad2 = 0;
-    _optimalPreviousCoef2Grad2 = 0;
-    _previousCoef2Update = 0;
+    _coef1Infos = LearnableParameterInfos();
+    _coef2Infos = LearnableParameterInfos();
     _counter = 0;
 }
 
@@ -763,16 +738,8 @@ size_t omnilearn::Gauss::getNbParameters() const
 
 omnilearn::Pgauss::Pgauss(Vector const& coefs):
 Gauss(coefs),
-_centerGradient(0),
-_previousCenterGrad(0),
-_previousCenterGrad2(0),
-_optimalPreviousCenterGrad2(0),
-_previousCenterUpdate(0),
-_devGradient(0),
-_previousDevGrad(0),
-_previousDevGrad2(0),
-_optimalPreviousDevGrad2(0),
-_previousDevUpdate(0),
+_centerInfos(),
+_devInfos(),
 _counter(0)
 {
 }
@@ -780,22 +747,22 @@ _counter(0)
 
 void omnilearn::Pgauss::computeGradients(double aggr, double inputGrad)
 {
-    _centerGradient += inputGrad * (activate(aggr) * (aggr - _center) / std::pow(_dev, 2));
-    _devGradient += inputGrad * (activate(aggr) * std::pow((aggr - _center), 2) / std::pow(_dev, 3));
+    _centerInfos.gradient += inputGrad * (activate(aggr) * (aggr - _center) / std::pow(_dev, 2));
+    _devInfos.gradient += inputGrad * (activate(aggr) * std::pow((aggr - _center), 2) / std::pow(_dev, 3));
     _counter += 1;
 }
 
 
 void omnilearn::Pgauss::updateCoefs(bool automaticLearningRate, bool adaptiveLearningRate, bool useMaxDenominator, double learningRate, double momentum, double previousMomentum, double nextMomentum, double cumulativeMomentum, double window, double optimizerBias, size_t iteration, double L1, double L2, double decay)
 {
-    _centerGradient /= static_cast<double>(_counter);
-    _devGradient /= static_cast<double>(_counter);
+    _centerInfos.gradient /= static_cast<double>(_counter);
+    _devInfos.gradient /= static_cast<double>(_counter);
 
-    optimizedUpdate(_center, _previousCenterGrad, _previousCenterGrad2, _optimalPreviousCenterGrad2, _previousCenterUpdate, _centerGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
-    optimizedUpdate(_dev, _previousDevGrad, _previousDevGrad2, _optimalPreviousDevGrad2, _previousDevUpdate, _devGradient, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
+    optimizedUpdate(_center, _centerInfos, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay);
+    optimizedUpdate(_dev, _devInfos, automaticLearningRate, adaptiveLearningRate, useMaxDenominator, learningRate, momentum, previousMomentum, nextMomentum, cumulativeMomentum, window, optimizerBias, iteration, L1, L2, decay, true);
 
-    _centerGradient = 0;
-    _devGradient = 0;
+    _devInfos = LearnableParameterInfos();
+    _devInfos = LearnableParameterInfos();
     _counter = 0;
 }
 
@@ -804,18 +771,8 @@ void omnilearn::Pgauss::setCoefs(Vector const& coefs)
 {
     Gauss::setCoefs(coefs);
 
-    _centerGradient = 0;
-    _previousCenterGrad = 0;
-    _previousCenterGrad2 = 0;
-    _optimalPreviousCenterGrad2 = 0;
-    _previousCenterUpdate = 0;
-
-    _devGradient = 0;
-    _previousDevGrad = 0;
-    _previousDevGrad2 = 0;
-    _optimalPreviousDevGrad2 = 0;
-    _previousDevUpdate = 0;
-
+    _devInfos = LearnableParameterInfos();
+    _devInfos = LearnableParameterInfos();
     _counter = 0;
 }
 
